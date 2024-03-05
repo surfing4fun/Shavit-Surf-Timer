@@ -2570,7 +2570,7 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 {
 	if(IsClientInGame(client))
 	{
-		// UpdateTopLeftHUD(client, false);
+		UpdateKeyHint(client);
 	}
 }
 
@@ -2578,7 +2578,7 @@ public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	if (IsClientInGame(client))
 	{
-		// UpdateTopLeftHUD(client, false);
+		UpdateKeyHint(client);
 	}
 }
 
