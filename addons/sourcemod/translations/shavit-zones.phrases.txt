@@ -66,6 +66,11 @@
 		"#format"	"{1:s},{2:s}"
 		"en"		"You have to be {1}alive{2} to use this command."
 	}
+	"StageCommandTimerNotRunning"
+	{
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Your timer has to be {1}{2}{3} to use this command."
+	}
 	"ModifierCommandNoArgs"
 	{
 		"en"		"Usage: sm_modifier <decimal number>"
@@ -454,7 +459,7 @@
 	"ZoneStageEnter"
 	{
 		"#format"	"{1:s},{2:s},{3:d},{4:s},{5:s},{6:s}{7:s}"
-		"en"		"{1}Stage {2}{3}{4} @ {5}{6}{7} "
+		"en"		"{1}CP {2}{3}{4} | Time: {5}{6}{7} "
 	}
 	"Zone_Start"
 	{

@@ -13,13 +13,8 @@
 	}
 	"HudInStartZone"
 	{
-		"#format"	"{1:d}"
-		"en"		"In Start Zone\n\n{1}"
-	}
-	"HudInStartZoneNoSpeed"
-	{
-		"#format"	"{1:d}"
-		"en"		"In Start Zone"
+		"#format"	"{1:s}"
+		"en"		"In {1} Start"	
 	}
 	"HudInStartZoneCSGO"
 	{
@@ -32,13 +27,14 @@
 	}
 	"HudInEndZone"
 	{
-		"#format"	"{1:d}"
-		"en"		"In End Zone\n\n{1}"
+
+		"#format"	"{1:s}"
+		"en"		"In {1} End"
 	}
-	"HudInEndZoneNoSpeed"
+	"HudInStageStart"
 	{
 		"#format"	"{1:d}"
-		"en"		"In End Zone"
+		"en"		"In Stage {1} Start"
 	}
 	"HudInEndZoneCSGO"
 	{
@@ -53,9 +49,23 @@
 	{
 		"en"		"Time"
 	}
+	"HudStageTimeText"
+	{
+		"#format"	"{1:d}"
+		"en"		"Stage {1} Time"
+	}
+	"HudTimerStoppedText"
+	{
+		"#format"	"{1:s}"
+		"en"		"{1} Timer Stopped"
+	}
+	"HudNoTimerText"
+	{
+		"en"		"No Timer"
+	}
 	"HudBestText"
 	{
-		"en"		"Best"
+		"en"		"PB"
 	}
 	"HudJumpsText"
 	{
@@ -69,6 +79,15 @@
 	{
 		"en"		"Speed"
 	}
+	"HudStage"
+	{
+		"#format"		"{1:d},{2:d}"
+		"en"		"Stage {1} / {2}"
+	}
+	"HudLinearMap"
+	{
+		"en"		"Linear Map"
+	}
 	"HudStrafeText"
 	{
 		"en"		"Strafes"
@@ -80,6 +99,10 @@
 	"HudSync"
 	{
 		"en"		"Sync"
+	}
+	"HudStyle"
+	{
+		"en"		"Style"
 	}
 	"HudPerfs"
 	{
@@ -153,7 +176,7 @@
 	}
 	"HudTopLeft"
 	{
-		"en"		"Top left HUD (WR/PB)"
+		"en"		"Display WR/PB"
 	}
 	"Hud2dVel"
 	{
@@ -171,9 +194,9 @@
 	{
 		"en"		"Expected rank"
 	}
-	"HudTrackText"
+	"HudStageText"
 	{
-		"en"		"Timer track"
+		"en"		"Stage"
 	}
 	"HudSplitPbText"
 	{
@@ -202,7 +225,8 @@
 	// ---------- Record Bots ---------- //
 	"ReplayText"
 	{
-		"en"		"Replay"
+		"#format"	"{1:s}"
+		"en"		"{1} Replay"
 	}
 	"NoReplayData"
 	{

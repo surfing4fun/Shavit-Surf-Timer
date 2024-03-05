@@ -309,8 +309,13 @@
 	}
 	"WRNotice"
 	{
-		"#format"	"{1:s},{2:s}"
-		"en"		"{1}NEW {2} WR!!!"
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"{1}{2}{3} beat the map record!"
+	}
+	"WRNoticeFirstCompletion"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s},{6:s}"
+		"en"		"{1}{2}{3} is the first one completes the map by {4}{5}{6}. Well done!"
 	}
 	"AdvertisementsEnabled"
 	{
@@ -319,5 +324,25 @@
 	"AdvertisementsDisabled"
 	{
 		"en"		"Advertisements disabled"
+	}	
+	"PauseNotOnGround"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"You {1}are not{2} allowed to noclip when not on ground."
+	}
+	"PauseMoving"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"You {1}are not{2} allowed to noclip while moving."
+	}
+	"PauseDuck"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"You {1}are not{2} allowed to noclip while crouching."
+	}
+	"MessagePause"
+	{
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"{1}Timer has been {2}paused{3}."
 	}
 }

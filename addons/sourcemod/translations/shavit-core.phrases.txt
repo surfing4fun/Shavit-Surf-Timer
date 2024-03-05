@@ -40,11 +40,6 @@
 		"#format"   "{1:f},{2:f},{3:s}"
 		"en"        "Your time ({2}) was faster than the style's {3} setting ({1}) and did not count."
 	}
-	"TimeUnderMinimumTime2"
-	{
-		"#format"   "{1:f},{2:f}"
-		"en"        "Your time ({2}) was faster or equal to the timer's minimum ({1}) and did not count."
-	}
 	// ---------- Menus ---------- //
 	"StyleMenuTitle"
 	{
@@ -114,6 +109,11 @@
 		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
 		"en"		"{1}You {2}cannot{3} pause in the {4}start zone{5}."
 	}
+	"PauseStageStartZone"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
+		"en"		"{1}You {2}cannot{3} pause in the {4}stage start zone{5}."
+	}
 	"PauseEndZone"
 	{
 		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
@@ -144,6 +144,16 @@
 	{
 		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
 		"en"		"Your timer {1}will not{2} start because the {3}{4}{5} start zone is not set."
+	}
+	"EndZoneUndefined"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
+		"en"		"Your timer {1}will not{2} start because the {3}{4}{5} end zone is not set."
+	}
+	"TPToEndZoneUndefined"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"You {1}can't{2} teleport as an end zone for the map is not defined."
 	}
 	"EndZoneUndefined"
 	{
