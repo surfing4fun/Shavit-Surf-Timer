@@ -24,7 +24,8 @@
 #endif
 #define _shavit_checkpoints_included
 
-#define MORE_LADDER_CHECKPOINT_STUFF 1
+// disabled for now since it's a lot of bytes to add
+#define MORE_LADDER_CHECKPOINT_STUFF 0
 
 enum struct cp_cache_t
 {

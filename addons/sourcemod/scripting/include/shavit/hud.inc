@@ -79,13 +79,51 @@ enum ZoneHUD
 {
 	ZoneHUD_None,
 	ZoneHUD_Start,
-	ZoneHUD_End
+	ZoneHUD_End,
+	ZoneHUD_StageStart
 };
+
+// enum struct huddata_t
+// {
+// 	int iTarget;
+// 	float fTime;
+// 	int iSpeed;
+// 	int iStyle;
+// 	int iTrack;
+// 	int iJumps;
+// 	int iStrafes;
+// 	int iRank;
+// 	float fSync;
+// 	float fPB;
+// 	float fWR;
+// 	bool bReplay;
+// 	bool bPractice;
+// 	TimerStatus iTimerStatus;
+// 	ZoneHUD iZoneHUD;
+
+// 	int iHUDSettings;
+// 	int iHUD2Settings;
+
+// 	int iPreviousSpeed;
+// 	float fClosestReplayTime;
+// 	float fClosestVelocityDifference;
+// 	int iMapTier;
+// 	float fClosestReplayLength;
+
+// 	int iButtons;
+// 	int iScrolls;
+// 	int iScrollsPrev;
+// 	float fAngleDiff;
+// }
 
 enum struct huddata_t
 {
 	int iTarget;
+	int iCurrentStage;
+	int iStageCount;
+	int iZoneStage;
 	float fTime;
+	float fStageTime;
 	int iSpeed;
 	int iStyle;
 	int iTrack;
@@ -97,6 +135,7 @@ enum struct huddata_t
 	float fWR;
 	bool bReplay;
 	bool bPractice;
+	bool bInsideStageZone;
 	TimerStatus iTimerStatus;
 	ZoneHUD iZoneHUD;
 

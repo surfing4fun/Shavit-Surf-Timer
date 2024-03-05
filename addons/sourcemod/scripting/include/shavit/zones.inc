@@ -285,6 +285,16 @@ forward void Shavit_LoadZonesHere();
  */
 forward Action Shavit_OnStageMessage(int client, int stageNumber, char[] message, int maxlen);
 
+
+/**
+ * Called when a player leaves a zone.
+ *
+ * @param client                    Client index.
+
+ * @noreturn                        
+ */
+forward void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage, float stageStartTime, float stageFinishTime, bool stageOnly);
+
 /**
  * Checks if a mapzone exists.
  *
@@ -330,6 +340,16 @@ native int Shavit_GetZoneFlags(int zoneid);
 native void Shavit_Zones_DeleteMap(const char[] map);
 
 /**
+ * Checks if a player is inside a stage zone.
+ *
+ * @param client                    Client index.
+ * @param track                     Mapzone track, -1 to ignore track.
+ * @param zoneid                    Reference to variable that will hold the zone's stage.
+ * @return                          Boolean value.
+ */
+native bool Shavit_InsideZoneStage(int client, int track, int &stage);
+
+/**
  * Checks if a player is inside a mapzone.
  *
  * @param client                    Client index.
@@ -339,6 +359,7 @@ native void Shavit_Zones_DeleteMap(const char[] map);
  * @return                          Boolean value.
  */
 native bool Shavit_InsideZoneGetID(int client, int type, int track, int &zoneid);
+
 
 /**
  * Checks if a player is in the process of creating a mapzone.
@@ -352,9 +373,9 @@ native bool Shavit_IsClientCreatingZone(int client);
  * Retrieve the highest stage number for a given track.
  *
  * @param track                     Track number.
- * @return                          Highest stage number...
+ * @return                          Number of stages.
  */
-native int Shavit_GetHighestStage(int track);
+native int Shavit_GetStageCount(int track);
 
 /**
  * Retrieve the client's current stage number.
@@ -363,6 +384,15 @@ native int Shavit_GetHighestStage(int track);
  * @return                          The client's current stage number.
  */
 native int Shavit_GetClientLastStage(int client);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param stagenum                  Stage to set.
+ * @noreturn                          
+ */
+native void Shavit_SetClientLastStage(int client, int stagenum);
 
 /**
  * Returns the zone index for the entity if available.
@@ -426,6 +456,7 @@ native void Shavit_UnloadZones();
  */
 native int Shavit_GetZoneCount();
 
+
 /**
  * Retrieves the zone_cache_t for a zone.
  *
@@ -458,6 +489,48 @@ native int Shavit_AddZone(any[] zonecache, int size = sizeof(zone_cache_t));
  */
 native void Shavit_RemoveZone(int index);
 
+/**
+ * Get Client's current time of stage
+ *
+ * @param client		Client index
+ * @param stage			The stage number
+ *
+ * @return				Client's current stage time.
+ */
+native float Shavit_GetClientStageTime(int client, int track, int stage);
+
+/**
+ * Get Client's current start time of stage
+ *
+ * @param client		Client index
+ * @param stage			The stage number
+ *
+ * @return				Client's current stage start time.
+ */
+native float Shavit_GetStageStartTime(int client, int track, int stage);
+
+/**
+ * Get Client's current time of stage
+ *
+ * @param client		Client index
+ * @param stage			The stage number
+ * @param time			The time need to set
+ *
+ * @noreturn				
+ */
+native void Shavit_SetStageStartTime(int client, int track, int stage, float time);
+
+/**
+ * Get Client's current timer info of stage start
+ *
+ * @param client		Client index
+ * @param stage			The stage number
+ * @param time			The time need to set
+ *
+ * @noreturn				
+ */
+native void Shavit_GetStageStartInfo(int client, int track, int stage, any[] snapshot, int size);
+
 public SharedPlugin __pl_shavit_zones =
 {
 	name = "shavit-zones",
@@ -474,7 +547,7 @@ public void __pl_shavit_zones_SetNTVOptional()
 {
 	MarkNativeAsOptional("Shavit_GetZoneData");
 	MarkNativeAsOptional("Shavit_GetZoneFlags");
-	MarkNativeAsOptional("Shavit_GetHighestStage");
+	MarkNativeAsOptional("Shavit_GetStageCount");
 	MarkNativeAsOptional("Shavit_InsideZone");
 	MarkNativeAsOptional("Shavit_InsideZoneGetID");
 	MarkNativeAsOptional("Shavit_IsClientCreatingZone");
@@ -483,6 +556,7 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_SetStart");
 	MarkNativeAsOptional("Shavit_DeleteSetStart");
 	MarkNativeAsOptional("Shavit_GetClientLastStage");
+	MarkNativeAsOptional("Shavit_SetClientLastStage");
 	MarkNativeAsOptional("Shavit_GetZoneTrack");
 	MarkNativeAsOptional("Shavit_GetZoneType");
 	MarkNativeAsOptional("Shavit_GetZoneID");
@@ -492,5 +566,11 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetZone");
 	MarkNativeAsOptional("Shavit_AddZone");
 	MarkNativeAsOptional("Shavit_RemoveZone");
+	MarkNativeAsOptional("Shavit_GetClientStageTime");
+	MarkNativeAsOptional("Shavit_InsideZoneStage");
+	MarkNativeAsOptional("Shavit_GetClientStageTime");
+	MarkNativeAsOptional("Shavit_SetClientStageTime");
+	MarkNativeAsOptional("Shavit_GetStageStartInfo");
+	// MarkNativeAsOptional("Shavit_GetHighestStage");
 }
 #endif

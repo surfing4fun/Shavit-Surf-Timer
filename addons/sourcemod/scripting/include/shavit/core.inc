@@ -146,6 +146,11 @@ enum struct timer_snapshot_t
 	float fStrafeWarning;
 	float fLastInputVel[2];
 
+	int iLastStage;
+	float fStageStartTime;
+	bool bStageTimeValid;
+	bool bOnlyStageMode;
+
 	float fplayer_speedmod;
 	float fNextFrameTime;
 
@@ -283,8 +288,8 @@ stock void LessStupidGetMapDisplayName(const char[] map, char[] displayName, int
 	strcopy(temp, sizeof(temp), map);
 	ReplaceString(temp, sizeof(temp), "\\", "/", true);
 
-	int slashpos = FindCharInString(temp, '/', true);
-	strcopy(temp2, sizeof(temp2), temp[slashpos+1]);
+	int slashpos = FindCharInString(map, '/', true);
+	strcopy(temp2, sizeof(temp2), map[slashpos+1]);
 
 	int ugcpos = StrContains(temp2, ".ugc", true);
 
@@ -399,7 +404,14 @@ stock void FormatSeconds(float time, char[] newtime, int newtimesize, bool preci
 			int iHours = (iMinutes / 60);
 			iMinutes %= 60;
 
-			FormatEx(newtime, newtimesize, "%s%d:%s%d:%s%s", (time < 0.0)? "-":"", iHours, (iMinutes < 10)? "0":"", iMinutes, (fSeconds < 10)? "0":"", sSeconds);
+			if(iHours == 0)
+			{
+				FormatEx(newtime, newtimesize, "%s%s%d:%s%.2f", (time < 0.0)? "-":"", (iMinutes < 10)? "0":"", iMinutes, (fSeconds < 10)? "0":"", fSeconds);
+			}
+			else
+			{
+				FormatEx(newtime, newtimesize, "%s%d:%s%d:%s%.2f", (time < 0.0)? "-":"", iHours, (iMinutes < 10)? "0":"", iMinutes, (fSeconds < 10)? "0":"", fSeconds);
+			}
 		}
 	}
 }
@@ -551,15 +563,6 @@ stock void TrimDisplayString(const char[] str, char[] outstr, int outstrlen, int
 		Format(outstr, outstrlen, "%s...", outstr);
 }
 
-// TODO: surfacefriction
-stock float MaxPrestrafe(float runspeed, float accelerate, float friction, float tickinterval)
-{
-	return runspeed * SquareRoot(
-		(accelerate / friction) *
-		((2.0 - accelerate * tickinterval) / (2.0 - friction * tickinterval))
-	);
-}
-
 /**
  * Called before shavit-core processes the client's usercmd.
  * Before this is called, safety checks (fake/dead clients) happen.
@@ -608,10 +611,9 @@ forward void Shavit_OnTimeIncrementPost(int client, float time);
  *
  * @param client                    Client index.
  * @param track                     Timer track.
- * @param skipGroundTimer           Whether shavit-core can skip the on-ground-for-half-a-second check. shavit-misc uses this for some prespeed settings...
  * @return                          Plugin_Continue to do nothing or anything else to not start the timer.
  */
-forward Action Shavit_OnStartPre(int client, int track, bool& skipGroundTimer);
+forward Action Shavit_OnStartPre(int client, int track);
 
 /**
  * Called when a player's timer starts.
@@ -639,7 +641,7 @@ forward Action Shavit_OnRestartPre(int client, int track);
  * @param track						Timer track.
  * @noreturn
  */
-forward void Shavit_OnRestart(int client, int track);
+forward void Shavit_OnRestart(int client, int track, bool tostartzone);
 
 /**
  * Called when a player uses the !end command.
@@ -705,6 +707,9 @@ forward Action Shavit_OnFinishPre(int client, timer_snapshot_t snapshot);
  */
 forward void Shavit_OnFinish(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
 
+forward Action Shavit_OnFinishStagePre(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp);
+
+forward void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp);
 
 /**
  * Called when a player's timer paused.
@@ -872,10 +877,9 @@ native Database Shavit_GetDatabase(int& outdriver=0);
  *
  * @param client					Client index.
  * @param track						Timer track.
- * @param skipGroundCheck           Whether to skip checking if the player is on the ground. This is used in shavit-zones for when teleporting/!restarting players to a floating zone...
  * @noreturn
  */
-native void Shavit_StartTimer(int client, int track, bool skipGroundCheck=false);
+native void Shavit_StartTimer(int client, int track);
 
 /**
  * Restarts the timer for a player.
@@ -886,7 +890,7 @@ native void Shavit_StartTimer(int client, int track, bool skipGroundCheck=false)
  * @param force                     True to force the player to restart. False to call into Shavit_OnRestartPre and Shavit_OnStopPre first.
  * @return                          True on restart and False if a callback blocked the restart.
  */
-native bool Shavit_RestartTimer(int client, int track, bool force=true);
+native bool Shavit_RestartTimer(int client, int track, bool tostartzone, bool force=true);
 
 /**
  * Stops the timer for a player.
@@ -921,6 +925,17 @@ native bool Shavit_ChangeClientStyle(int client, int style, bool force = false, 
 native void Shavit_FinishMap(int client, int track);
 
 /**
+ * Finishes the stage for a player, with their current timer stats.
+ * Will not teleport the player to anywhere, it's handled inside the mapzones plugin.
+ *
+ * @param client					Client index.
+ * @param track						Timer track.
+ * @param stage						Stage number.
+ * @noreturn
+ */
+native void Shavit_FinishStage(int client, int track, int stage);
+
+/**
  * Retrieve a client's current time.
  *
  * @param client					Client index.
@@ -935,6 +950,15 @@ native float Shavit_GetClientTime(int client);
  * @return                          Timer track.
  */
 native int Shavit_GetClientTrack(int client);
+
+/**
+ * Set the client's track. (Track_Main/Track_Bonus etc..)
+ *
+ * @param client					Client index.
+ * @param track						Track index
+ * @return                          Timer track.
+ */
+native void Shavit_SetClientTrack(int client, int track);
 
 /**
  * Retrieve client jumps since timer start.
@@ -1399,6 +1423,25 @@ native bool Shavit_ShouldProcessFrame(int client);
  */
 native void Shavit_GotoEnd(int client, int track);
 
+/**
+ * Set the player's timer Only run on stage mode.
+ *
+ * @param client
+ * @param value
+ *
+ * @noreturn
+ */
+native void Shavit_SetOnlyStageMode(int client, bool value);
+
+/**
+ * If the player's timer is Only run on stage mode.
+ *
+ * @param client
+ *
+ * @return bool value
+ */
+native bool Shavit_IsOnlyStageMode(int client);
+
 public SharedPlugin __pl_shavit_core =
 {
 	name = "shavit",
@@ -1416,7 +1459,8 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_CanPause");
 	MarkNativeAsOptional("Shavit_ChangeClientStyle");
 	MarkNativeAsOptional("Shavit_FinishMap");
-	MarkNativeAsOptional("Shavit_GetAvgVelocity");
+	MarkNativeAsOptional("Shavit_FinishStage");
+	MarkNativeAsOptional("Shavit_FormatChat");
 	MarkNativeAsOptional("Shavit_GetBhopStyle");
 	MarkNativeAsOptional("Shavit_GetChatStrings");
 	MarkNativeAsOptional("Shavit_GetChatStringsStruct");
@@ -1424,7 +1468,6 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetClientTime");
 	MarkNativeAsOptional("Shavit_GetClientTrack");
 	MarkNativeAsOptional("Shavit_GetDatabase");
-	MarkNativeAsOptional("Shavit_GetMaxVelocity");
 	MarkNativeAsOptional("Shavit_GetOrderedStyles");
 	MarkNativeAsOptional("Shavit_GetPerfectJumps");
 	MarkNativeAsOptional("Shavit_GetStrafeCount");
@@ -1445,7 +1488,6 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_IsPaused");
 	MarkNativeAsOptional("Shavit_IsPracticeMode");
 	MarkNativeAsOptional("Shavit_LoadSnapshot");
-	MarkNativeAsOptional("Shavit_LogMessage");
 	MarkNativeAsOptional("Shavit_MarkKZMap");
 	MarkNativeAsOptional("Shavit_PauseTimer");
 	MarkNativeAsOptional("Shavit_PrintToChat");
@@ -1453,8 +1495,6 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_RestartTimer");
 	MarkNativeAsOptional("Shavit_ResumeTimer");
 	MarkNativeAsOptional("Shavit_SaveSnapshot");
-	MarkNativeAsOptional("Shavit_SetAvgVelocity");
-	MarkNativeAsOptional("Shavit_SetMaxVelocity");
 	MarkNativeAsOptional("Shavit_SetPracticeMode");
 	MarkNativeAsOptional("Shavit_StartTimer");
 	MarkNativeAsOptional("Shavit_StopChatSound");

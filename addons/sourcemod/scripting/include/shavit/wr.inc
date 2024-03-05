@@ -208,7 +208,7 @@ native float Shavit_GetTimeForRank(int style, int rank, int track);
  * @param stage                     Stage number.
  * @return                          The stage time of the WR run. Can be 0.0 if the WR run didn't hit the stage or if the stage doesn't exist.
  */
-native float Shavit_GetStageWR(int track, int style, int stage);
+native float Shavit_GetStageCPWR(int track, int style, int stage);
 
 /**
  * Retrieve the client's PB stage time.
@@ -218,8 +218,30 @@ native float Shavit_GetStageWR(int track, int style, int stage);
  * @param style                     Style index.
  * @param stage                     Stage number.
  * @return                          The stage time of the PB run. Can be 0.0 if the PB run didn't hit the stage or if the stage doesn't exist.
+ *									-1.0 if stage out of index (it will be happened when server reload the plugin)
  */
-//native float Shavit_GetStagePB(int client, int track, int style, int stage);
+native float Shavit_GetStageCPPB(int client, int track, int style, int stage);
+
+/**
+ * Retrieve the client's PB stage time.
+ *
+ * @param client                    Client index.
+ * @param stage                     Stage number.
+ *                           
+ * @return							If the stage time valid
+ */
+native bool Shavit_StageTimeValid(int client, int track, int stage);
+
+/**
+ * Retrieve the client's PB stage time.
+ *
+ * @param client                    Client index.
+ * @param stage                     Stage number.
+ * @param valid                     Bool value to set
+ *									
+ * @noreturn
+ */
+native bool Shavit_SetStageTimeValid(int client, int track, int stage, bool valid);
 
 //native float Shavit_GetStageWRCP(int track, int style, int stage);
 //native float Shavit_GetStagePBCP(int client, int track, int style, int stage);
@@ -273,7 +295,9 @@ public void __pl_shavit_wr_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_WR_DeleteMap");
 	MarkNativeAsOptional("Shavit_GetTimeForRank");
 	MarkNativeAsOptional("Shavit_DeleteWR");
-	MarkNativeAsOptional("Shavit_GetStageWR");
-	MarkNativeAsOptional("Shavit_GetStagePB");
+	MarkNativeAsOptional("Shavit_GetStageCPWR");
+	MarkNativeAsOptional("Shavit_GetStageCPPB");
+	MarkNativeAsOptional("Shavit_StageTimeValid");
+	MarkNativeAsOptional("Shavit_SetStageTimeValid");
 }
 #endif
