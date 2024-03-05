@@ -14,7 +14,7 @@
 
 # Change logs
 
-# shavit-core
+## shavit-core
 	
     - Add iLastStage to timer_snapshot_t: int variable, client's last reached stage zone number  
     - Add fStageStartTime to timer_snapshot_t: float variable, assign to client's current time when leave a stage zone/start zone.
@@ -23,7 +23,7 @@
     - Set player's last stage (gI_LastStage iLastStage) to 1 when StartTimer() called
     - Assign iLastStage fStageStartTime bStageTimeValid bOnlyStageMode when BuildSnapshot() called
 
-## APIs
+### APIs
 
     - Add native Shavit_SetClientTrack
     - Add native Shavit_IsOnlyStageMode
@@ -33,10 +33,10 @@
     - Add forward Shavit_OnFinishStagePre
     - Change forward Shavit_OnRestart(int client, int track) to Shavit_OnRestart(int client, int track, bool tostartzone)
 
-# shavit-checkpoint
+## shavit-checkpoint
     - Some change adapte to shavit-core's changes
 
-# shavit-hud
+## shavit-hud
 
     - Delete TopLeftHUD
     - Now WR/PB and Style are showing on Key Hint
@@ -48,17 +48,17 @@
     - Show start/end zone's track in ZoneHUD (eg. In Main Start)
     - Now main timer show as full min:sec instead dynamic format
 
-# shavit-misc
+## shavit-misc
 
     - Adapte bInStart to only stage mode when player inside a stage start zone
     - Now apply prespeed limit to a stage zone.
 
-# shavit-replay-recorder
+## shavit-replay-recorder
 
     - Adapte bInStart to only stage mode when player inside a stage start zone
     - Now preframes will reset when player in stage start while bOnlyStageMode is true
 
-# shavit-zones
+## shavit-zones
 
     - Add new global timer_snapshot_t struct gA_StageStartTimer
     - Add new command "sm_back"
@@ -68,7 +68,7 @@
     - Call Shavit_FinishStage when player entered stage zone which stage number equals gI_LastStage + 1
     - Assign 1 to gI_LastStage when player entered a start zone. (start zone recognize as a stage 1 zone)
 
-## APIs
+### APIs
 
     - Delete forward Shavit_OnStageMessage
     - Add forward Shavit_OnReachNextStage
@@ -80,7 +80,7 @@
     - Add native Shavit_InsideZoneStage
     - Implemente native Shavit_GetStageCount
 
-# shavit-Wr
+## shavit-Wr
     - Now plugin is able to load player's stage checkpoint personal best to cache
     - Add logic to Shavit_OnLeaveZone to check if player's prespeed greater than prespeed limit
     - Add logic to Shavit_OnFinish to print message correctly in a situation of first player finish the map.
@@ -93,7 +93,7 @@
     - Add new function UpdateClientStagePBCacheOnFinish
     - Change finish message to "<username> finished [<track>] in <time> (<WR diff> | <PB diff>). Rank: <rank> (<style>)"
 
-## APIs
+### APIs
 
     - Add new native Shavit_GetStageCPWR
     - Add new native Shavit_GetStageCPPB
