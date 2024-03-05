@@ -247,7 +247,12 @@ public Action Shavit_OnStart(int client)
 	}
 
 	int iMaxPreFrames = RoundToFloor(gCV_PlaybackPreRunTime.FloatValue * gF_Tickrate / Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed"));
-	bool bInStart = Shavit_InsideZone(client, Zone_Start, Shavit_GetClientTrack(client));
+	int iZoneStage;
+	int track = Shavit_GetClientTrack(client);
+	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage);
+	
+	bool bInStart = Shavit_InsideZone(client, Zone_Start, track) || 
+					(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 
 	if (bInStart)
 	{
@@ -459,6 +464,53 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	}
 }
 
+// public void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp)
+// {
+// 	if (Shavit_IsPracticeMode(client) || !gCV_Enabled.BoolValue || (gI_PlayerFrames[client]-gI_PlayerPrerunFrames[client] <= 10))
+// 	{
+// 		return;
+// 	}
+
+// 	// Someone using checkpoints presumably
+// 	if (gB_GrabbingPostFrames[client])
+// 	{
+// 		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client]);
+// 	}
+
+// 	gI_PlayerFinishFrame[client] = gI_PlayerFrames[client];
+
+// 	float fZoneOffset[2];
+// 	fZoneOffset[0] = Shavit_GetZoneOffset(client, 0);
+// 	fZoneOffset[1] = Shavit_GetZoneOffset(client, 1);
+
+// 	if (gCV_PlaybackPostRunTime.FloatValue > 0.0)
+// 	{
+// 		finished_run_info info;
+// 		info.iSteamID = GetSteamAccountID(client);
+// 		info.style = style;
+// 		info.time = time;
+// 		info.jumps = jumps;
+// 		info.strafes = strafes;
+// 		info.sync = sync;
+// 		info.track = track;
+// 		info.oldtime = oldtime;
+// 		info.perfs = perfs;
+// 		info.avgvel = avgvel;
+// 		info.maxvel = maxvel;
+// 		info.timestamp = timestamp;
+// 		info.fZoneOffset = fZoneOffset;
+
+// 		gA_FinishedRunInfo[client] = info;
+// 		gB_GrabbingPostFrames[client] = true;
+// 		delete gH_PostFramesTimer[client];
+// 		gH_PostFramesTimer[client] = CreateTimer(gCV_PlaybackPostRunTime.FloatValue, Timer_PostFrames, client, TIMER_FLAG_NO_MAPCHANGE);
+// 	}
+// 	else
+// 	{
+// 		DoReplaySaverCallbacks(GetSteamAccountID(client), client, style, time, jumps, strafes, sync, track, oldtime, perfs, avgvel, maxvel, timestamp, fZoneOffset);
+// 	}
+// }
+
 bool SaveReplay(int style, int track, float time, int steamid, int preframes, ArrayList playerrecording, int iSize, int postframes, int timestamp, float fZoneOffset[2], bool saveCopy, bool saveWR, char[] sPath, int sPathLen)
 {
 	char sTrack[4];
@@ -480,7 +532,7 @@ bool SaveReplay(int style, int track, float time, int steamid, int preframes, Ar
 	if (saveCopy)
 	{
 		FormatEx(sPath, sPathLen, "%s/copy/%d_%d_%s.replay", gS_ReplayFolder, timestamp, steamid, gS_Map);
-
+	
 		if (!(fCopy = OpenFile(sPath, "wb+")))
 		{
 			LogError("Failed to open 'copy' replay file for writing. ('%s')", sPath);
@@ -494,7 +546,7 @@ bool SaveReplay(int style, int track, float time, int steamid, int preframes, Ar
 		// I'm not really sure how we could reach this though as
 		//  `Shavit_Replay_CreateDirectories` should have failed if it couldn't create
 		//  a test file.
-		FormatEx(sPath, sPathLen, "%s/%d_%s%s_%d.replay", gS_ReplayFolder, style, gS_Map, sTrack, iSize-preframes-postframes);
+		FormatEx(sPath, sPathLen, "%s/%d_%d_%s%s.replay", gS_ReplayFolder, style, GetURandomInt() % 99, gS_Map, (track > 0)? sTrack:"");
 
 		if (!(fWR = OpenFile(sPath, "wb+")))
 		{
@@ -524,17 +576,6 @@ bool SaveReplay(int style, int track, float time, int steamid, int preframes, Ar
 
 public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float vel[3], const float angles[3], int weapon, int subtype, int cmdnum, int tickcount, int seed, const int mouse[2])
 {
-	static bool resizeFailed[MAXPLAYERS+1];
-
-	if (resizeFailed[client]) // rip
-	{
-		resizeFailed[client] = false;
-		gB_RecordingEnabled[client] = false;
-		ClearFrames(client);
-		LogError("failed to resize frames for %N... clearing frames I guess...", client);
-		return;
-	}
-
 	if (IsFakeClient(client) || !IsPlayerAlive(client))
 	{
 		return;
@@ -567,11 +608,9 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 
 	if (gA_PlayerFrames[client].Length <= gI_PlayerFrames[client])
 	{
-		resizeFailed[client] = true;
 		// Add about two seconds worth of frames so we don't have to resize so often
 		gA_PlayerFrames[client].Resize(gI_PlayerFrames[client] + (RoundToCeil(gF_Tickrate) * 2));
 		//PrintToChat(client, "resizing %d -> %d", gI_PlayerFrames[client], gA_PlayerFrames[client].Length);
-		resizeFailed[client] = false;
 	}
 
 	frame_t aFrame;

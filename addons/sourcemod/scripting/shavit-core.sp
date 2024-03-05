@@ -70,6 +70,8 @@ Handle gH_Forwards_Stop = null;
 Handle gH_Forwards_StopPre = null;
 Handle gH_Forwards_FinishPre = null;
 Handle gH_Forwards_Finish = null;
+Handle gH_Forwards_FinishStagePre = null;
+Handle gH_Forwards_FinishStage = null;
 Handle gH_Forwards_OnRestartPre = null;
 Handle gH_Forwards_OnRestart = null;
 Handle gH_Forwards_OnEndPre = null;
@@ -160,7 +162,6 @@ ConVar sv_friction = null;
 chatstrings_t gS_ChatStrings;
 
 // misc cache
-int gI_ClientProcessingMovement = 0;
 bool gB_StopChatSound = false;
 bool gB_HookedJump = false;
 char gS_LogPath[PLATFORM_MAX_PATH];
@@ -190,12 +191,6 @@ public Plugin myinfo =
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-#if SOURCEMOD_V_MAJOR == 1 && SOURCEMOD_V_MINOR >= 11
-#else
-	MarkNativeAsOptional("Int64ToString");
-	MarkNativeAsOptional("StringToInt64");
-#endif
-
 	new Convar("shavit_core_log_sql", "0", "Whether to log SQL queries from the timer.", 0, true, 0.0, true, 1.0);
 
 	Bhopstats_CreateNatives();
@@ -204,12 +199,14 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_CanPause", Native_CanPause);
 	CreateNative("Shavit_ChangeClientStyle", Native_ChangeClientStyle);
 	CreateNative("Shavit_FinishMap", Native_FinishMap);
+	CreateNative("Shavit_FinishStage", Native_FinishStage);
 	CreateNative("Shavit_GetBhopStyle", Native_GetBhopStyle);
 	CreateNative("Shavit_GetChatStrings", Native_GetChatStrings);
 	CreateNative("Shavit_GetChatStringsStruct", Native_GetChatStringsStruct);
 	CreateNative("Shavit_GetClientJumps", Native_GetClientJumps);
 	CreateNative("Shavit_GetClientTime", Native_GetClientTime);
 	CreateNative("Shavit_GetClientTrack", Native_GetClientTrack);
+	CreateNative("Shavit_SetClientTrack", Native_SetClientTrack);
 	CreateNative("Shavit_GetDatabase", Native_GetDatabase);
 	CreateNative("Shavit_GetPerfectJumps", Native_GetPerfectJumps);
 	CreateNative("Shavit_GetStrafeCount", Native_GetStrafeCount);
@@ -243,6 +240,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GotoEnd", Native_GotoEnd);
 	CreateNative("Shavit_UpdateLaggedMovement", Native_UpdateLaggedMovement);
 	CreateNative("Shavit_PrintSteamIDOnce", Native_PrintSteamIDOnce);
+	CreateNative("Shavit_IsOnlyStageMode", Native_IsOnlyStageMode);
+	CreateNative("Shavit_SetOnlyStageMode", Native_SetOnlyStageMode);
 
 	// registers library, check "bool LibraryExists(const char[] name)" in order to use with other plugins
 	RegPluginLibrary("shavit");
@@ -256,13 +255,15 @@ public void OnPluginStart()
 {
 	// forwards
 	gH_Forwards_Start = CreateGlobalForward("Shavit_OnStart", ET_Ignore, Param_Cell, Param_Cell);
-	gH_Forwards_StartPre = CreateGlobalForward("Shavit_OnStartPre", ET_Event, Param_Cell, Param_Cell, Param_CellByRef);
+	gH_Forwards_StartPre = CreateGlobalForward("Shavit_OnStartPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_Stop = CreateGlobalForward("Shavit_OnStop", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_StopPre = CreateGlobalForward("Shavit_OnStopPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_FinishPre = CreateGlobalForward("Shavit_OnFinishPre", ET_Hook, Param_Cell, Param_Array);
 	gH_Forwards_Finish = CreateGlobalForward("Shavit_OnFinish", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_FinishStagePre = CreateGlobalForward("Shavit_OnFinishStagePre", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_FinishStage = CreateGlobalForward("Shavit_OnFinishStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnRestartPre = CreateGlobalForward("Shavit_OnRestartPre", ET_Event, Param_Cell, Param_Cell);
-	gH_Forwards_OnRestart = CreateGlobalForward("Shavit_OnRestart", ET_Ignore, Param_Cell, Param_Cell);
+	gH_Forwards_OnRestart = CreateGlobalForward("Shavit_OnRestart", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnEndPre = CreateGlobalForward("Shavit_OnEndPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_OnEnd = CreateGlobalForward("Shavit_OnEnd", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_OnPause = CreateGlobalForward("Shavit_OnPause", ET_Event, Param_Cell, Param_Cell);
@@ -381,7 +382,7 @@ public void OnPluginStart()
 
 	gCV_Restart = new Convar("shavit_core_restart", "1", "Allow commands that restart the timer?", 0, true, 0.0, true, 1.0);
 	gCV_Pause = new Convar("shavit_core_pause", "1", "Allow pausing?", 0, true, 0.0, true, 1.0);
-	gCV_PauseMovement = new Convar("shavit_core_pause_movement", "0", "Allow movement/noclip while paused?", 0, true, 0.0, true, 1.0);
+	gCV_PauseMovement = new Convar("shavit_core_pause_movement", "1", "Allow movement/noclip while paused?", 0, true, 0.0, true, 1.0);
 	gCV_BlockPreJump = new Convar("shavit_core_blockprejump", "0", "Prevents jumping in the start zone.", 0, true, 0.0, true, 1.0);
 	gCV_NoZAxisSpeed = new Convar("shavit_core_nozaxisspeed", "1", "Don't start timer if vertical speed exists (btimes style).", 0, true, 0.0, true, 1.0);
 	gCV_VelocityTeleport = new Convar("shavit_core_velocityteleport", "0", "Teleport the client when changing its velocity? (for special styles)", 0, true, 0.0, true, 1.0);
@@ -391,7 +392,7 @@ public void OnPluginStart()
 	gCV_UseOffsets = new Convar("shavit_core_useoffsets", "1", "Calculates more accurate times by subtracting/adding tick offsets from the time the server uses to register that a player has left or entered a trigger", 0, true, 0.0, true, 1.0);
 	gCV_TimeInMessages = new Convar("shavit_core_timeinmessages", "0", "Whether to prefix SayText2 messages with the time.", 0, true, 0.0, true, 1.0);
 	gCV_DebugOffsets = new Convar("shavit_core_debugoffsets", "0", "Print offset upon leaving or entering a zone?", 0, true, 0.0, true, 1.0);
-	gCV_SaveIps = new Convar("shavit_core_save_ips", "1", "Whether to save player IPs in the 'users' database table. IPs are used to show player location on the !profile menu.\nTurning this off will not wipe existing IPs from the 'users' table.", 0, true, 0.0, true, 1.0);
+	gCV_SaveIps = new Convar("shavit_core_save_ips", "1", "Whether to save player IPs in the 'users' database table. IPs are used to show player location on the !profile menu.\nTurning this on will not wipe existing IPs from the 'users' table.", 0, true, 0.0, true, 1.0);
 	gCV_HijackTeleportAngles = new Convar("shavit_core_hijack_teleport_angles", "0", "Whether to hijack player angles on teleport so their latency doesn't fuck up their shit.", 0, true, 0.0, true, 1.0);
 	gCV_DefaultStyle.AddChangeHook(OnConVarChanged);
 
@@ -439,13 +440,6 @@ public void OnPluginStart()
 			}
 		}
 	}
-}
-
-public void OnPluginEnd()
-{
-	if (sv_enablebunnyhopping != null)
-		sv_enablebunnyhopping.Flags |= (FCVAR_REPLICATED | FCVAR_NOTIFY);
-	sv_airaccelerate.Flags |= (FCVAR_REPLICATED | FCVAR_NOTIFY);
 }
 
 public void OnAdminMenuCreated(Handle topmenu)
@@ -529,21 +523,6 @@ void LoadDHooks()
 	DHookAddParam(processMovementPost, HookParamType_CBaseEntity);
 	DHookAddParam(processMovementPost, HookParamType_ObjectPtr);
 	DHookRaw(processMovementPost, true, IGameMovement);
-
-	if (gEV_Type == Engine_TF2)
-	{
-		Handle PreventBunnyJumping = DHookCreateDetour(Address_Null, CallConv_THISCALL, ReturnType_Void, ThisPointer_Ignore);
-
-		if (!DHookSetFromConf(PreventBunnyJumping, gamedataConf, SDKConf_Signature, "CTFGameMovement::PreventBunnyJumping"))
-		{
-			SetFailState("Failed to set CTFGameMovement::PreventBunnyJumping signature");
-		}
-
-		if (!DHookEnableDetour(PreventBunnyJumping, false, DHook_PreventBunnyJumpingPre))
-		{
-			SetFailState("Failed to find CTFGameMovement::PreventBunnyJumping signature");
-		}
-	}
 
 	LoadPhysicsUntouch(gamedataConf);
 
@@ -690,9 +669,11 @@ public Action Command_StartTimer(int client, int args)
 	}
 
 	int track = Track_Main;
+	bool ForceTeleToStartZone = StrContains(sCommand, "sm_m", false) == 0;
 
 	if(StrContains(sCommand, "sm_b", false) == 0)
 	{
+		ForceTeleToStartZone = true;
 		// Pull out bonus number for commands like sm_b1 and sm_b2.
 		if ('1' <= sCommand[4] <= ('0' + Track_Bonus_Last))
 		{
@@ -729,7 +710,7 @@ public Action Command_StartTimer(int client, int args)
 		return Plugin_Handled;
 	}
 
-	Shavit_RestartTimer(client, track, false);
+	Shavit_RestartTimer(client, track, ForceTeleToStartZone, false);
 
 	return Plugin_Handled;
 }
@@ -788,7 +769,7 @@ public Action Command_TeleportEnd(int client, int args)
 
 	if (!gB_Zones || !(Shavit_ZoneExists(Zone_End, track) || gB_KZMap[track]))
 	{
-		Shavit_PrintToChat(client, "%T", "EndZoneUndefined", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "TPToEndZoneUndefined", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 		return Plugin_Handled;
 	}
 
@@ -853,6 +834,15 @@ public Action Command_TogglePause(int client, int args)
 	{
 		Shavit_PrintToChat(client, "%T", "PauseEndZone", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 
+		return Plugin_Handled;
+	}
+
+	int iZoneStage;
+	int iTrack = Shavit_GetClientTrack(client);
+	bool InsideStage = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+	if((Shavit_IsOnlyStageMode(client) && InsideStage && iZoneStage == Shavit_GetClientLastStage(client)))
+	{
+		Shavit_PrintToChat(client, "%T", "PauseStageStartZone", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 		return Plugin_Handled;
 	}
 
@@ -1431,6 +1421,7 @@ public int StyleMenu_Handler(Menu menu, MenuAction action, int param1, int param
 void CallOnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	gA_Timers[client].iTimerTrack = newtrack;
+	// gA_Timers[client].bOnlyStageMode = false;
 
 	Call_StartForward(gH_Forwards_OnTrackChanged);
 	Call_PushCell(client);
@@ -1592,13 +1583,24 @@ void ChangeClientStyle(int client, int style, bool manual)
 
 	if (gB_Zones && (Shavit_ZoneExists(Zone_Start, gA_Timers[client].iTimerTrack) || gB_KZMap[gA_Timers[client].iTimerTrack]))
 	{
-		Shavit_RestartTimer(client, gA_Timers[client].iTimerTrack);
+		Shavit_RestartTimer(client, gA_Timers[client].iTimerTrack, true);
 	}
 
 	char sStyle[4];
 	IntToString(style, sStyle, 4);
 
 	SetClientCookie(client, gH_StyleCookie, sStyle);
+}
+
+// used as an alternative for games where player_jump isn't a thing, such as TF2
+public void Shavit_Bhopstats_OnLeaveGround(int client, bool jumped, bool ladder)
+{
+	if(gB_HookedJump || !jumped || ladder)
+	{
+		return;
+	}
+
+	DoJump(client);
 }
 
 public void Player_Jump(Event event, const char[] name, bool dontBroadcast)
@@ -1750,6 +1752,14 @@ public int Native_GetClientTrack(Handle handler, int numParams)
 	return gA_Timers[GetNativeCell(1)].iTimerTrack;
 }
 
+public int Native_SetClientTrack(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+
+	CallOnTrackChanged(client, gA_Timers[client].iTimerTrack, GetNativeCell(2));
+	return 0;
+}
+
 public int Native_GetClientJumps(Handle handler, int numParams)
 {
 	return gA_Timers[GetNativeCell(1)].iJumps;
@@ -1777,7 +1787,7 @@ public int Native_IsKZMap(Handle handler, int numParams)
 
 public int Native_StartTimer(Handle handler, int numParams)
 {
-	StartTimer(GetNativeCell(1), GetNativeCell(2), numParams >= 3 ? GetNativeCell(3) : false);
+	StartTimer(GetNativeCell(1), GetNativeCell(2));
 	return 0;
 }
 
@@ -1897,22 +1907,29 @@ public int Native_ChangeClientStyle(Handle handler, int numParams)
 	return false;
 }
 
-void CalculateRunTime(timer_snapshot_t s, bool finished)
+public Action Shavit_OnFinishPre(int client, timer_snapshot_t snapshot)
 {
-	if (finished)
+	float minimum_time = GetStyleSettingFloat(snapshot.bsStyle, snapshot.iTimerTrack == Track_Main ? "minimum_time" : "minimum_time_bonus");
+
+	if (snapshot.fCurrentTime < minimum_time)
 	{
-		// Round up fractional ticks... mostly
-		if (s.iFractionalTicks > 100)
-			s.iFractionalTicks = 10000;
+		Shavit_PrintToChat(client, "%T", "TimeUnderMinimumTime", client, minimum_time, snapshot.fCurrentTime, snapshot.iTimerTrack == Track_Main ? "minimum_time" : "minimum_time_bonus");
+		Shavit_StopTimer(client);
+		return Plugin_Stop;
 	}
 
+	return Plugin_Continue;
+}
+
+void CalculateRunTime(timer_snapshot_t s, bool include_end_offset)
+{
 	float ticks = float(s.iFullTicks) + (s.iFractionalTicks / 10000.0);
 
 	if (gCV_UseOffsets.BoolValue)
 	{
 		ticks += s.fZoneOffset[Zone_Start];
 
-		if (finished)
+		if (include_end_offset)
 		{
 			ticks -= (1.0 - s.fZoneOffset[Zone_End]);
 		}
@@ -1949,13 +1966,8 @@ public int Native_FinishMap(Handle handler, int numParams)
 
 	CalculateRunTime(gA_Timers[client], true);
 
-	float minimum_time = GetStyleSettingFloat(gA_Timers[client].bsStyle, gA_Timers[client].iTimerTrack == Track_Main ? "minimum_time" : "minimum_time_bonus");
-	float current_time = gA_Timers[client].fCurrentTime;
-
-	if (current_time <= 0.11 || current_time < minimum_time)
+	if (gA_Timers[client].fCurrentTime <= 0.11)
 	{
-		Shavit_PrintToChat(client, "%T", (current_time <= 0.11) ? "TimeUnderMinimumTime2" : "TimeUnderMinimumTime", client, (current_time <= 0.11) ? 0.11 : minimum_time, current_time,
-		gA_Timers[client].iTimerTrack == Track_Main ? "minimum_time" : "minimum_time_bonus");
 		Shavit_StopTimer(client);
 		return 0;
 	}
@@ -1972,7 +1984,7 @@ public int Native_FinishMap(Handle handler, int numParams)
 	if(result != Plugin_Continue && result != Plugin_Changed)
 	{
 		return 0;
-	}
+	} 
 
 #if DEBUG
 	PrintToServer("0x%X %f -- startoffset=%f endoffset=%f fullticks=%d fracticks=%d", snapshot.fCurrentTime, snapshot.fCurrentTime, snapshot.fZoneOffset[Zone_Start], snapshot.fZoneOffset[Zone_End], snapshot.iFullTicks, snapshot.iFractionalTicks);
@@ -1997,6 +2009,74 @@ public int Native_FinishMap(Handle handler, int numParams)
 
 	StopTimer(client);
 	return 1;
+}
+
+public int Native_FinishStage(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+	int track = GetNativeCell(2);
+	int stage = GetNativeCell(3);
+	int timestamp = GetTime();
+
+	timer_snapshot_t end;
+	Shavit_SaveSnapshot(client, end, sizeof(end));
+
+	if(!gA_Timers[client].bOnlyStageMode)
+	{
+		timer_snapshot_t start;
+		Shavit_GetStageStartInfo(client, track, stage, start, sizeof(start));
+
+		end.fCurrentTime = Shavit_GetClientStageTime(client, track, stage);
+		end.iJumps -= start.iJumps;
+		end.iStrafes -= start.iStrafes;
+	}
+
+	float oldtime = 0.0;
+
+	Action result = Plugin_Continue;
+	Call_StartForward(gH_Forwards_FinishStagePre);
+	Call_PushCell(client);
+	Call_PushCell(track);
+	Call_PushCell(end.bsStyle);
+	Call_PushCell(stage);
+	Call_PushCell(end.fCurrentTime);
+	Call_PushCell(oldtime);
+	Call_PushCell(end.iJumps);
+	Call_PushCell(end.iStrafes);
+	Call_PushCell(CalcSync(end));
+	Call_PushCell(CalcPerfs(end));
+	Call_PushCell(end.fAvgVelocity);
+	Call_PushCell(end.fMaxVelocity);
+	Call_PushCell(timestamp);	//13 total
+	Call_Finish(result);
+
+	if(Shavit_IsOnlyStageMode(client))
+	{
+		Shavit_StopTimer(client);
+		Shavit_SetOnlyStageMode(client, false);
+	}
+
+	if(result != Plugin_Continue)
+	{
+		return 0;
+	}
+
+	Call_StartForward(gH_Forwards_FinishStage);
+	Call_PushCell(client);
+	Call_PushCell(track);
+	Call_PushCell(end.bsStyle);
+	Call_PushCell(stage);
+	Call_PushCell(end.fCurrentTime);
+	Call_PushCell(oldtime);
+	Call_PushCell(end.iJumps);
+	Call_PushCell(end.iStrafes);
+	Call_PushCell(CalcSync(end));
+	Call_PushCell(CalcPerfs(end));
+	Call_PushCell(end.fAvgVelocity);
+	Call_PushCell(end.fMaxVelocity);
+	Call_PushCell(timestamp);	//13 total
+	Call_Finish();
+
 }
 
 public int Native_PauseTimer(Handle handler, int numParams)
@@ -2160,7 +2240,8 @@ public int Native_RestartTimer(Handle handler, int numParams)
 {
 	int client = GetNativeCell(1);
 	int track = GetNativeCell(2);
-	bool force = (numParams < 3) || GetNativeCell(3);
+	bool tostartzone = GetNativeCell(3);
+	bool force = (numParams < 4) || GetNativeCell(4);
 
 	if (!force)
 	{
@@ -2189,6 +2270,7 @@ public int Native_RestartTimer(Handle handler, int numParams)
 	Call_StartForward(gH_Forwards_OnRestart);
 	Call_PushCell(client);
 	Call_PushCell(track);
+	Call_PushCell(tostartzone);
 	Call_Finish();
 
 	return 1;
@@ -2196,7 +2278,7 @@ public int Native_RestartTimer(Handle handler, int numParams)
 
 float CalcPerfs(timer_snapshot_t s)
 {
-	return (s.iMeasuredJumps == 0) ? 0.0 : (s.iPerfectJumps / float(s.iMeasuredJumps) * 100.0);
+	return (s.iMeasuredJumps == 0) ? 100.0 : (s.iPerfectJumps / float(s.iMeasuredJumps) * 100.0);
 }
 
 public int Native_GetPerfectJumps(Handle handler, int numParams)
@@ -2267,6 +2349,13 @@ public int Native_SetPracticeMode(Handle handler, int numParams)
 	return 1;
 }
 
+public int Native_SetOnlyStageMode(Handle handler, int numParams)
+{
+	gA_Timers[GetNativeCell(1)].bOnlyStageMode = GetNativeCell(2);
+
+	return 1;
+}
+
 public int Native_IsPaused(Handle handler, int numParams)
 {
 	return view_as<int>(gA_Timers[GetNativeCell(1)].bClientPaused);
@@ -2275,6 +2364,11 @@ public int Native_IsPaused(Handle handler, int numParams)
 public int Native_IsPracticeMode(Handle handler, int numParams)
 {
 	return view_as<int>(gA_Timers[GetNativeCell(1)].bPracticeMode);
+}
+
+public int Native_IsOnlyStageMode(Handle handler, int numParams)
+{
+	return view_as<int>(gA_Timers[GetNativeCell(1)].bOnlyStageMode);
 }
 
 public int Native_SaveSnapshot(Handle handler, int numParams)
@@ -2322,6 +2416,16 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 	{
 		CallOnStyleChanged(client, gA_Timers[client].bsStyle, snapshot.bsStyle, false);
 	}
+
+	//Added
+	if(Shavit_GetClientLastStage(client) != snapshot.iLastStage)
+	{
+		Shavit_SetClientLastStage(client, snapshot.iLastStage);
+	}
+
+	Shavit_SetStageStartTime(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.fStageStartTime);
+	Shavit_SetStageTimeValid(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.bStageTimeValid);
+	Shavit_SetOnlyStageMode(client, snapshot.bOnlyStageMode);
 
 	float oldts = gA_Timers[client].fTimescale;
 
@@ -2418,10 +2522,20 @@ public any Native_ShouldProcessFrame(Handle plugin, int numParams)
 
 public Action Shavit_OnStartPre(int client, int track)
 {
-	if (GetTimerStatus(client) == Timer_Paused && gCV_PauseMovement.BoolValue)
+	if (GetTimerStatus(client) == Timer_Paused) //&& gCV_PauseMovement.BoolValue)
 	{
 		return Plugin_Stop;
 	}
+
+	if(gB_Zones && !Shavit_ZoneExists(Zone_End, track))
+	{
+		return Plugin_Stop;
+	}
+
+	if(gB_Zones && !gA_Timers[client].bOnlyStageMode)
+	{
+		Shavit_SetClientLastStage(client, 1);
+	}		
 
 	return Plugin_Continue;
 }
@@ -2440,88 +2554,58 @@ TimerStatus GetTimerStatus(int client)
 	return Timer_Running;
 }
 
-float StyleMaxPrestrafe(int style)
+// TODO: surfacefriction
+float MaxPrestrafe(float runspeed, float accelerate, float friction, float tickinterval)
 {
-	float runspeed = GetStyleSettingFloat(style, "runspeed");
+	return runspeed * SquareRoot(
+		(accelerate / friction) *
+		((2.0 - accelerate * tickinterval) / (2.0 - friction * tickinterval))
+	);
+}
+
+float ClientMaxPrestrafe(int client)
+{
+	float runspeed = GetStyleSettingFloat(gA_Timers[client].bsStyle, "runspeed");
 	return MaxPrestrafe(runspeed, sv_accelerate.FloatValue, sv_friction.FloatValue, GetTickInterval());
 }
 
-bool CanStartTimer(int client, int track, bool skipGroundCheck)
+void StartTimer(int client, int track)
 {
 	if(!IsValidClient(client, true) || GetClientTeam(client) < 2 || IsFakeClient(client) || !gB_CookiesRetrieved[client])
 	{
-		return false;
+		return;
 	}
-
-	int style = gA_Timers[client].bsStyle;
-
-	int prespeed = GetStyleSettingInt(style, "prespeed");
-	if (prespeed == 1)
-		return true;
 
 	float fSpeed[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
-
-	int nozaxisspeed = GetStyleSettingInt(style, "nozaxisspeed");
-	if (nozaxisspeed < 0) nozaxisspeed = gCV_NoZAxisSpeed.IntValue;
-
-	if (nozaxisspeed && fSpeed[2] != 0.0)
-		return false;
-
-	if (prespeed == 2)
-		return true;
-
-	bool skipGroundTimer = false;
-	Action result = Plugin_Continue;
-	Call_StartForward(gH_Forwards_StartPre);
-	Call_PushCell(client);
-	Call_PushCell(track);
-	Call_PushCellRef(skipGroundTimer);
-	Call_Finish(result);
-
-	if (result != Plugin_Continue)
-		return false;
-
-	// re-grab velocity in case shavit-misc capped it
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
 	float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
 
-	// This helps with zones that are floating in the air (commonly for bonuses).
-	// Since you teleport into the air with 0-velocity...
-	if (curVel <= 50.0)
-		return true;
+	int nozaxisspeed = GetStyleSettingInt(gA_Timers[client].bsStyle, "nozaxisspeed");
 
-	float prestrafe = StyleMaxPrestrafe(style);
-	if (curVel > prestrafe)
-		return false;
-
-	if (skipGroundCheck || GetStyleSettingBool(style, "startinair"))
-		return true;
-
-#if 0
-	MoveType mtMoveType = GetEntityMoveType(client);
-	bool bInWater = (GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 2);
-	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	// gA_Timers[client].bOnGround isn't updated/correct when zones->touchpost->starttimer happens... frustrating...
-	bool bOnGround = (!bInWater && mtMoveType == MOVETYPE_WALK && iGroundEntity != -1);
-
-	if (!bOnGround) return false;
-#endif
-
-	if (skipGroundTimer) return true;
-
-	int halfSecOfTicks = RoundFloat(0.5 / GetTickInterval());
-	int onGroundTicks = gI_LastTickcount[client] - gI_FirstTouchedGround[client];
-
-	return onGroundTicks >= halfSecOfTicks;
-}
-
-void StartTimer(int client, int track, bool skipGroundCheck)
-{
-	if (CanStartTimer(client, track, skipGroundCheck))
+	if (nozaxisspeed < 0)
 	{
-		if (true) // fucking shit
+		nozaxisspeed = gCV_NoZAxisSpeed.BoolValue;
+	}
+
+	if (!nozaxisspeed ||
+		GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 1 ||
+		(fSpeed[2] == 0.0 && (GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 2 || curVel <= 50.0 ||
+			((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
+			  (gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))))) // beautiful
+	{
+		Action result = Plugin_Continue;
+		Call_StartForward(gH_Forwards_StartPre);
+		Call_PushCell(client);
+		Call_PushCell(track);
+		Call_Finish(result);
+
+		if(result == Plugin_Continue)
 		{
+			Call_StartForward(gH_Forwards_Start);
+			Call_PushCell(client);
+			Call_PushCell(track);
+			Call_Finish(result);
+
 			if (gA_Timers[client].bClientPaused)
 			{
 				//SetEntityMoveType(client, MOVETYPE_WALK);
@@ -2535,10 +2619,25 @@ void StartTimer(int client, int track, bool skipGroundCheck)
 			gA_Timers[client].iJumps = 0;
 			gA_Timers[client].iTotalMeasures = 0;
 			gA_Timers[client].iGoodGains = 0;
+			
+			gA_Timers[client].fStageStartTime = 0.0;
+			gA_Timers[client].bStageTimeValid = true;
+
 
 			if (gA_Timers[client].iTimerTrack != track)
 			{
 				CallOnTrackChanged(client, gA_Timers[client].iTimerTrack, track);
+			}
+
+			if (gA_Timers[client].bOnlyStageMode)
+			{
+				Shavit_InsideZoneStage(client, track, gA_Timers[client].iLastStage);
+				Shavit_SetClientLastStage(client, gA_Timers[client].iLastStage);
+			}
+			else
+			{
+				gA_Timers[client].iLastStage = 1;
+				Shavit_SetClientLastStage(client, gA_Timers[client].iLastStage);
 			}
 
 			gA_Timers[client].iTimerTrack = track;
@@ -2553,11 +2652,6 @@ void StartTimer(int client, int track, bool skipGroundCheck)
 			gA_Timers[client].fZoneOffset[Zone_End] = 0.0;
 			gA_Timers[client].fDistanceOffset[Zone_Start] = 0.0;
 			gA_Timers[client].fDistanceOffset[Zone_End] = 0.0;
-
-			float fSpeed[3];
-			GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
-			float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
-
 			gA_Timers[client].fAvgVelocity = curVel;
 			gA_Timers[client].fMaxVelocity = curVel;
 
@@ -2568,11 +2662,6 @@ void StartTimer(int client, int track, bool skipGroundCheck)
 			UpdateLaggedMovement(client, true);
 
 			SetEntityGravity(client, GetStyleSettingFloat(gA_Timers[client].bsStyle, "gravity"));
-
-			Call_StartForward(gH_Forwards_Start);
-			Call_PushCell(client);
-			Call_PushCell(track);
-			Call_Finish();
 		}
 #if 0
 		else if(result == Plugin_Handled || result == Plugin_Stop)
@@ -2592,7 +2681,7 @@ void StopTimer(int client)
 
 	if (gA_Timers[client].bClientPaused)
 	{
-		//SetEntityMoveType(client, MOVETYPE_WALK);
+		SetEntityMoveType(client, MOVETYPE_WALK);
 	}
 
 	gA_Timers[client].bTimerEnabled = false;
@@ -2635,7 +2724,7 @@ void ResumeTimer(int client)
 
 	gA_Timers[client].bClientPaused = false;
 	// setting is handled in usercmd
-	//SetEntityMoveType(client, MOVETYPE_WALK);
+	SetEntityMoveType(client, MOVETYPE_WALK);
 }
 
 public void OnClientDisconnect(int client)
@@ -3049,18 +3138,9 @@ public MRESReturn DHook_AcceptInput_player_speedmod_Post(int pThis, DHookReturn 
 	return MRES_Ignored;
 }
 
-public MRESReturn DHook_PreventBunnyJumpingPre()
-{
-	if (GetStyleSettingBool(gA_Timers[gI_ClientProcessingMovement].bsStyle, "bunnyhopping"))
-		return MRES_Supercede;
-	else
-		return MRES_Ignored;
-}
-
 public MRESReturn DHook_ProcessMovement(Handle hParams)
 {
 	int client = DHookGetParam(hParams, 1);
-	gI_ClientProcessingMovement = client;
 
 	// Causes client to do zone touching in movement instead of server frames.
 	// From https://github.com/rumourA/End-Touch-Fix
@@ -3139,7 +3219,7 @@ public MRESReturn DHook_ProcessMovementPost(Handle hParams)
 	}
 
 	float interval = GetTickInterval();
-	float ts = GetStyleSettingFloat(gA_Timers[client].bsStyle, "timescale") * gA_Timers[client].fTimescale;
+	float ts = GetStyleSettingFloat(gA_Timers[client].bsStyle, "timescale") * gA_Timers[client].fTimescale; // true tick interval is here
 	float time = interval * ts;
 
 	gA_Timers[client].iZoneIncrement++;
@@ -3240,6 +3320,11 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	snapshot = gA_Timers[client];
 	snapshot.fServerTime = GetEngineTime();
 	snapshot.fTimescale = (gA_Timers[client].fTimescale > 0.0) ? gA_Timers[client].fTimescale : 1.0;
+	
+	snapshot.iLastStage = Shavit_GetClientLastStage(client);
+	snapshot.fStageStartTime = Shavit_GetStageStartTime(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
+	snapshot.bStageTimeValid = Shavit_StageTimeValid(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
+	snapshot.bOnlyStageMode = Shavit_IsOnlyStageMode(client);
 	//snapshot.iLandingTick = ?????; // TODO: Think about handling segmented scroll? /shrug
 }
 
@@ -3254,17 +3339,17 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	int flags = GetEntityFlags(client);
 
-	if (gA_Timers[client].bClientPaused && IsPlayerAlive(client) && !gCV_PauseMovement.BoolValue)
-	{
-		buttons = 0;
-		vel = view_as<float>({0.0, 0.0, 0.0});
+	// if (gA_Timers[client].bClientPaused && IsPlayerAlive(client) && !gCV_PauseMovement.BoolValue)
+	// {
+	// 	buttons = 0;
+	// 	vel = view_as<float>({0.0, 0.0, 0.0});
 
-		SetEntityFlags(client, (flags | FL_ATCONTROLS));
+	// 	SetEntityFlags(client, (flags | FL_ATCONTROLS));
 
-		//SetEntityMoveType(client, MOVETYPE_NONE);
+	// 	SetEntityMoveType(client, MOVETYPE_NONE);
 
-		return Plugin_Changed;
-	}
+	// 	return Plugin_Changed;
+	// }
 
 	SetEntityFlags(client, (flags & ~FL_ATCONTROLS));
 
@@ -3509,36 +3594,21 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 
 	bool bInWater = (GetEntProp(client, Prop_Send, "m_nWaterLevel") >= 2);
-	int iOldButtons = GetEntProp(client, Prop_Data, "m_nOldButtons");
-
-	if (GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop") && gB_Auto[client] && (buttons & IN_JUMP) > 0 && mtMoveType == MOVETYPE_WALK && !bInWater)
-	{
-		SetEntProp(client, Prop_Data, "m_nOldButtons", (iOldButtons &= ~IN_JUMP));
-	}
-
-	int blockprejump = GetStyleSettingInt(gA_Timers[client].bsStyle, "blockprejump");
-
-	if (blockprejump < 0)
-	{
-		blockprejump = gCV_BlockPreJump.BoolValue;
-	}
-
-	if (bInStart && blockprejump && GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 0 && (vel[2] > 0 || (buttons & IN_JUMP) > 0))
-	{
-		vel[2] = 0.0;
-		buttons &= ~IN_JUMP;
-	}
 
 	// enable duck-jumping/bhop in tf2
-	if (gEV_Type == Engine_TF2 && GetStyleSettingBool(gA_Timers[client].bsStyle, "bunnyhopping") && (buttons & IN_JUMP) > 0 && !(iOldButtons & IN_JUMP) && iGroundEntity != -1)
+	if (gEV_Type == Engine_TF2 && GetStyleSettingBool(gA_Timers[client].bsStyle, "bunnyhopping") && (buttons & IN_JUMP) > 0 && iGroundEntity != -1)
 	{
 		float fSpeed[3];
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
 
 		fSpeed[2] = 289.0;
 		SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
+	}
 
-		DoJump(client);
+	if (GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop") && gB_Auto[client] && (buttons & IN_JUMP) > 0 && mtMoveType == MOVETYPE_WALK && !bInWater)
+	{
+		int iOldButtons = GetEntProp(client, Prop_Data, "m_nOldButtons");
+		SetEntProp(client, Prop_Data, "m_nOldButtons", (iOldButtons & ~IN_JUMP));
 	}
 
 	// perf jump measuring
@@ -3569,6 +3639,19 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				gA_Timers[client].iPerfectJumps++;
 			}
 		}
+	}
+
+	int blockprejump = GetStyleSettingInt(gA_Timers[client].bsStyle, "blockprejump");
+
+	if (blockprejump < 0)
+	{
+		blockprejump = gCV_BlockPreJump.BoolValue;
+	}
+
+	if (bInStart && blockprejump && GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 0 && (vel[2] > 0 || (buttons & IN_JUMP) > 0))
+	{
+		vel[2] = 0.0;
+		buttons &= ~IN_JUMP;
 	}
 
 	// This can be bypassed by spamming +duck on CSS which causes `iGroundEntity` to be `-1` here...
@@ -3722,7 +3805,7 @@ void TestAngles(int client, float dirangle, float yawdelta, const float vel[3])
 	}
 
 	// hsw (thanks nairda!)
-	else if((dirangle > 22.5 && dirangle < 67.5) || (dirangle > 292.5 && dirangle < 337.5))
+	else if((dirangle > 22.5 && dirangle < 67.5))
 	{
 		gA_Timers[client].iTotalMeasures++;
 

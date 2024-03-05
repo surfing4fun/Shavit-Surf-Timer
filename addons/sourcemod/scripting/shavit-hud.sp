@@ -28,6 +28,7 @@
 
 #include <shavit/core>
 #include <shavit/hud>
+#include <shavit/zones>
 
 #include <shavit/weapon-stocks>
 
@@ -588,19 +589,19 @@ void ToggleHUD(int client, int hud, bool chat)
 	}
 }
 
-void Frame_UpdateTopLeftHUD(int serial)
-{
-	int client = GetClientFromSerial(serial);
+// void Frame_UpdateTopLeftHUD(int serial)
+// {
+// 	int client = GetClientFromSerial(serial);
 
-	if (client)
-	{
-		UpdateTopLeftHUD(client, false);
-	}
-}
+// 	if (client)
+// 	{
+// 		UpdateTopLeftHUD(client, false);
+// 	}
+// }
 
 public Action Command_SpecNextPrev(int client, const char[] command, int args)
 {
-	RequestFrame(Frame_UpdateTopLeftHUD, GetClientSerial(client));
+	//RequestFrame(Frame_UpdateTopLeftHUD, GetClientSerial(client));
 	return Plugin_Continue;
 }
 
@@ -701,9 +702,9 @@ Action ShowHUDMenu(int client, int item)
 
 	if(IsSource2013(gEV_Type))
 	{
-		FormatEx(sInfo, 16, "!%d", HUD_SYNC);
-		FormatEx(sHudItem, 64, "%T", "HudSync", client);
-		menu.AddItem(sInfo, sHudItem);
+		// FormatEx(sInfo, 16, "!%d", HUD_SYNC);
+		// FormatEx(sHudItem, 64, "%T", "HudSync", client);
+		// menu.AddItem(sInfo, sHudItem);
 
 		FormatEx(sInfo, 16, "!%d", HUD_TIMELEFT);
 		FormatEx(sHudItem, 64, "%T", "HudTimeLeft", client);
@@ -781,7 +782,7 @@ Action ShowHUDMenu(int client, int item)
 	menu.AddItem(sInfo, sHudItem);
 
 	FormatEx(sInfo, 16, "@%d", HUD2_TRACK);
-	FormatEx(sHudItem, 64, "%T", "HudTrackText", client);
+	FormatEx(sHudItem, 64, "%T", "HudStageText", client);
 	menu.AddItem(sInfo, sHudItem);
 
 	FormatEx(sInfo, 16, "@%d", HUD2_SPLITPB);
@@ -1127,7 +1128,7 @@ void TriggerHUDUpdate(int client, bool keysonly = false) // keysonly because CS:
 	{
 		UpdateMainHUD(client);
 		SetEntProp(client, Prop_Data, "m_bDrawViewmodel", ((gI_HUDSettings[client] & HUD_HIDEWEAPON) > 0)? 0:1);
-		UpdateTopLeftHUD(client, true);
+//		UpdateTopLeftHUD(client, true);
 	}
 
 	bool draw_keys = HUD1Enabled(gI_HUDSettings[client], HUD_KEYOVERLAY);
@@ -1223,7 +1224,7 @@ public void Shavit_OnEnterZone(int client, int type, int track, int id, int enti
 	}
 }
 
-
+///////////////////////////////////////////
 int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int maxlen)
 {
 	int iLines = 0;
@@ -1259,18 +1260,9 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 		if(data.iStyle != -1 && Shavit_GetReplayStatus(data.iTarget) != Replay_Idle && Shavit_GetReplayCacheFrameCount(data.iTarget) > 0)
 		{
 			char sTrack[32];
-
-			if(data.iTrack != Track_Main && (gI_HUD2Settings[client] & HUD2_TRACK) == 0)
-			{
-				GetTrackName(client, data.iTrack, sTrack, 32);
-				Format(sTrack, 32, "(%s) ", sTrack);
-			}
-
-			if((gI_HUD2Settings[client] & HUD2_STYLE) == 0)
-			{
-				FormatEx(sLine, 128, "%s %s%T", gS_StyleStrings[data.iStyle].sStyleName, sTrack, "ReplayText", client);
-				AddHUDLine(buffer, maxlen, sLine, iLines);
-			}
+			GetTrackName(client, data.iTrack, sTrack, 32);
+			FormatEx(sTrack, 128, "%T", "ReplayText", client, sTrack);
+			AddHUDLine(buffer, maxlen, sTrack, iLines);
 
 			char sPlayerName[MAX_NAME_LENGTH];
 			Shavit_GetReplayCacheName(data.iTarget, sPlayerName, sizeof(sPlayerName));
@@ -1279,18 +1271,32 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
 			{
 				char sTime[32];
-				FormatSeconds(data.fTime, sTime, 32, false);
+				FormatSeconds(data.fTime < 0.0 ? 0.0 : data.fTime, sTime, 32, false);
 
-				char sWR[32];
-				FormatSeconds(data.fWR, sWR, 32, false);
+				// char sWR[32];
+				// FormatSeconds(data.fWR, sWR, 32, false);
 
-				FormatEx(sLine, 128, "%s / %s\n(%.1f％)", sTime, sWR, ((data.fTime < 0.0 ? 0.0 : data.fTime / data.fWR) * 100));
+				FormatEx(sLine, 128, "%T: %s (%.1f％)", "HudTimeText", client, sTime, ((data.fTime < 0.0 ? 0.0 : data.fTime / data.fWR) * 100));
 				AddHUDLine(buffer, maxlen, sLine, iLines);
+			}
+
+			if((gI_HUD2Settings[client] & HUD2_TRACK) == 0)
+			{
+				if(data.iStageCount > 1)
+				{
+					FormatEx(sLine, 128, "%T", "HudStage", client, data.iCurrentStage == 0 ? 1:data.iCurrentStage, data.iStageCount);
+					AddHUDLine(buffer, maxlen, sLine, iLines);
+				}
+				else if(data.iTrack == Track_Main)
+				{
+					FormatEx(sLine, 128, "Linear Map");
+					AddHUDLine(buffer, maxlen, sLine, iLines);
+				}
 			}
 
 			if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
 			{
-				FormatEx(sLine, 128, "%d u/s", data.iSpeed);
+				FormatEx(sLine, 128, "Speed: %d", data.iSpeed);
 				AddHUDLine(buffer, maxlen, sLine, iLines);
 			}
 		}
@@ -1302,137 +1308,213 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 
 		return iLines;
 	}
-
-	if((gI_HUDSettings[client] & HUD_ZONEHUD) > 0 && data.iZoneHUD != ZoneHUD_None)
+	else
 	{
-		if(gB_Rankings && (gI_HUD2Settings[client] & HUD2_MAPTIER) == 0)
+		char sTrack[32];
+		if((gI_HUDSettings[client] & HUD_ZONEHUD) > 0 && data.iZoneHUD != ZoneHUD_None)
 		{
-			FormatEx(sLine, 128, "%T", "HudZoneTier", client, data.iMapTier);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
 
-		if(data.iZoneHUD == ZoneHUD_Start)
+			if(data.iZoneHUD == ZoneHUD_Start)
+			{
+				GetTrackName(client, data.iTrack, sTrack, 32);
+				FormatEx(sLine, 128, "%T\n", "HudInStartZone", client, sTrack);
+			}
+			else if (data.iZoneHUD == ZoneHUD_StageStart)
+			{
+				FormatEx(sLine, 128, "In Stage %d Start\n", data.iZoneStage);
+			}
+			else
+			{
+				GetTrackName(client, data.iTrack, sTrack, 32);
+				FormatEx(sLine, 128, "%T\n", "HudInEndZone", client, sTrack);
+			}
+
+			AddHUDLine(buffer, maxlen, sLine, iLines);	
+		}
+		else if(data.iTimerStatus != Timer_Stopped)
 		{
-			FormatEx(sLine, 128, "%T ", (gI_HUD2Settings[client] & HUD2_SPEED) ? "HudInStartZoneNoSpeed" : "HudInStartZone", client, data.iSpeed);
+			if(data.bPractice || data.iTimerStatus == Timer_Paused)
+			{
+				FormatEx(sLine, 128, "%T", (data.iTimerStatus == Timer_Paused)? "HudPaused":"HudPracticeMode", client);
+				AddHUDLine(buffer, maxlen, sLine, iLines);
+			}
+
+			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
+			{
+				char sTime[32];
+				FormatSeconds(data.fTime, sTime, 32, false, false, true);
+
+				char sTimeDiff[32];
+
+				if ((gI_HUD2Settings[client] & HUD2_TIMEDIFFERENCE) == 0 && data.fClosestReplayTime != -1.0 && data.iZoneHUD != ZoneHUD_Start)
+				{
+					float fDifference = data.fTime - data.fClosestReplayTime;
+					FormatSeconds(fDifference, sTimeDiff, 32, false, FloatAbs(fDifference) >= 60.0);
+					Format(sTimeDiff, 32, " (%s%s)", (fDifference >= 0.0)? "+":"", sTimeDiff);
+				}
+
+				if((gI_HUD2Settings[client] & HUD2_RANK) == 0)
+				{
+					FormatEx(sLine, 128, "%s%s (#%d)", sTime, sTimeDiff, data.iRank);
+				}
+				else
+				{
+					FormatEx(sLine, 128, "%s%s", sTime, sTimeDiff);
+				}
+
+				AddHUDLine(buffer, maxlen, sLine, iLines);
+				AddHUDLine(buffer, maxlen, " ", iLines);
+			}
+
+			if((gI_HUD2Settings[client] & HUD2_TRACK) == 0)
+			{
+				GetTrackName(client, data.iTrack, sTrack, 32);
+				if(data.iStageCount > 1)
+				{
+					if(Shavit_IsOnlyStageMode(client))
+					{
+						FormatEx(sLine, 128, "%s%sStage %d", 
+						data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", data.iCurrentStage);
+						AddHUDLine(buffer, maxlen, sLine, iLines);
+					}
+					else
+					{
+						if(data.bInsideStageZone && data.fStageTime < 0.05)
+						{
+							FormatEx(sLine, 128, "%T", "HudInStageStart", client, data.iZoneStage);
+						}
+						else 
+						{
+							FormatEx(sLine, 128, "%s%s%T", 
+							data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
+							"HudStage", client, data.iCurrentStage, data.iStageCount);
+
+							AddHUDLine(buffer, maxlen, sLine, iLines);
+							char sStageTime[32];
+							FormatSeconds(data.fStageTime, sStageTime, 32, false);
+							FormatEx(sLine, 128, "%T: %s", "HudTimeText", client, sStageTime);
+						}
+						
+						AddHUDLine(buffer, maxlen, sLine, iLines);
+					}
+				}
+				else
+				{
+					if(data.iTrack == Track_Main)
+					{
+						FormatEx(sLine, 128, "%T", "HudLinearMap", client);
+					}
+					else
+					{
+						FormatEx(sLine, 128, sTrack);
+					}
+					AddHUDLine(buffer, maxlen, sLine, iLines);
+				}
+				AddHUDLine(buffer, maxlen, " ", iLines);
+			}
+
+			if((gI_HUD2Settings[client] & HUD2_JUMPS) == 0)
+			{
+				FormatEx(sLine, 128, "%T: %d", "HudJumpsText", client, data.iJumps);
+				AddHUDLine(buffer, maxlen, sLine, iLines);
+			}
+
+			if((gI_HUD2Settings[client] & HUD2_STRAFE) == 0)
+			{
+				if((gI_HUD2Settings[client] & HUD2_SYNC) == 0)
+				{
+					FormatEx(sLine, 128, "%T: %d (%.1f％)", "HudStrafeText", client, data.iStrafes, data.fSync);
+				}
+				else
+				{
+					FormatEx(sLine, 128, "%T: %d", "HudStrafeText", client, data.iStrafes);
+				}
+				//FormatEx(sLine, 128, "%T: %d", "HudStrafeText", client, data.iStrafes);
+				AddHUDLine(buffer, maxlen, sLine, iLines);
+			}
 		}
 		else
 		{
-			FormatEx(sLine, 128, "%T ", (gI_HUD2Settings[client] & HUD2_SPEED) ? "HudInEndZoneNoSpeed" : "HudInEndZone", client, data.iSpeed);
-		}
-
-		AddHUDLine(buffer, maxlen, sLine, iLines);
-		return iLines;
-	}
-
-	if(data.iTimerStatus != Timer_Stopped)
-	{
-		if((gI_HUD2Settings[client] & HUD2_STYLE) == 0)
-		{
-			AddHUDLine(buffer, maxlen, gS_StyleStrings[data.iStyle].sStyleName, iLines);
-		}
-
-		if(data.bPractice || data.iTimerStatus == Timer_Paused)
-		{
-			FormatEx(sLine, 128, "%T", (data.iTimerStatus == Timer_Paused)? "HudPaused":"HudPracticeMode", client);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
-
-		if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
-		{
-			char sTime[32];
-			FormatSeconds(data.fTime, sTime, 32, false);
-
-			char sTimeDiff[32];
-
-			if ((gI_HUD2Settings[client] & HUD2_TIMEDIFFERENCE) == 0 && data.fClosestReplayTime != -1.0)
+			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
 			{
-				float fDifference = data.fTime - data.fClosestReplayTime;
-				FormatSeconds(fDifference, sTimeDiff, 32, false, FloatAbs(fDifference) >= 60.0);
-				Format(sTimeDiff, 32, " (%s%s)", (fDifference >= 0.0)? "+":"", sTimeDiff);
+				if (Shavit_ZoneExists(Zone_Start, data.iTrack))
+				{
+					GetTrackName(client, data.iTrack, sTrack, 32);
+					FormatEx(sLine, 128, "%T%s", "HudTimerStoppedText", client, sTrack, (gI_HUD2Settings[client] & HUD2_SPEED) == 0 ? "\n":"");
+					AddHUDLine(buffer, maxlen, sLine, iLines);
+				}
+				else
+				{
+					FormatEx(sLine, 128, "%T%s", "HudNoTimerText", client, (gI_HUD2Settings[client] & HUD2_SPEED) == 0 ? "\n":"");
+					AddHUDLine(buffer, maxlen, sLine, iLines);
+				}
 			}
-
-			if((gI_HUD2Settings[client] & HUD2_RANK) == 0)
-			{
-				FormatEx(sLine, 128, "%T: %s%s (#%d)", "HudTimeText", client, sTime, sTimeDiff, data.iRank);
-			}
-			else
-			{
-				FormatEx(sLine, 128, "%T: %s%s", "HudTimeText", client, sTime, sTimeDiff);
-			}
-
-			AddHUDLine(buffer, maxlen, sLine, iLines);
 		}
 
-		if((gI_HUD2Settings[client] & HUD2_JUMPS) == 0)
+		if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
 		{
-			FormatEx(sLine, 128, "%T: %d", "HudJumpsText", client, data.iJumps);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
-
-		if((gI_HUD2Settings[client] & HUD2_STRAFE) == 0)
-		{
-			if((gI_HUD2Settings[client] & HUD2_SYNC) == 0)
+			if(data.iTimerStatus != Timer_Stopped && data.iZoneHUD == ZoneHUD_None)
 			{
-				FormatEx(sLine, 128, "%T: %d (%.1f％)", "HudStrafeText", client, data.iStrafes, data.fSync);
-			}
-			else
-			{
-				FormatEx(sLine, 128, "%T: %d", "HudStrafeText", client, data.iStrafes);
-			}
-			//FormatEx(sLine, 128, "%T: %d", "HudStrafeText", client, data.iStrafes);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
-	}
-
-	if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
-	{
-		// timer: Speed: %d
-		// no timer: straight up number
-		if(data.iTimerStatus != Timer_Stopped)
-		{
-			if (data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
-			{
-				float res = data.fClosestVelocityDifference;
-				FormatEx(sLine, 128, "%T: %d (%s%.0f)", "HudSpeedText", client, data.iSpeed, (res >= 0.0) ? "+":"", res);
+				if (data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
+				{
+					float res = data.fClosestVelocityDifference;
+					FormatEx(sLine, 128, "%T: %d (%s%.0f)", "HudSpeedText", client, data.iSpeed, (res >= 0.0) ? "+":"", res);
+				}
+				else
+				{
+					FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
+				}
 			}
 			else
 			{
 				FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
 			}
-		}
-		else
-		{
-			IntToString(data.iSpeed, sLine, 128);
-		}
-
-		AddHUDLine(buffer, maxlen, sLine, iLines);
-
-		float limit = Shavit_GetStyleSettingFloat(data.iStyle, "velocity_limit");
-
-		if (limit > 0.0 && gB_Zones && Shavit_InsideZone(data.iTarget, Zone_CustomSpeedLimit, data.iTrack))
-		{
-			if(gI_ZoneSpeedLimit[data.iTarget] == 0)
-			{
-				FormatEx(sLine, 128, "%T", "HudNoSpeedLimit", data.iTarget);
-			}
-			else
-			{
-				FormatEx(sLine, 128, "%T", "HudCustomSpeedLimit", client, gI_ZoneSpeedLimit[data.iTarget]);
-			}
 
 			AddHUDLine(buffer, maxlen, sLine, iLines);
 		}
+
+		return iLines;
 	}
 
-	if(data.iTimerStatus != Timer_Stopped && data.iTrack != Track_Main && (gI_HUD2Settings[client] & HUD2_TRACK) == 0)
-	{
-		char sTrack[32];
-		GetTrackName(client, data.iTrack, sTrack, 32);
+// 	if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
+// 	{
+// 		if(data.iTimerStatus != Timer_Stopped)
+// 		{
+// 			if (data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
+// 			{
+// 				float res = data.fClosestVelocityDifference;
+// 				FormatEx(sLine, 128, "%T: %d (%s%.0f)", "HudSpeedText", client, data.iSpeed, (res >= 0.0) ? "+":"", res);
+// 			}
+// 			else
+// 			{
+// 				FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
+// 			}
+// 		}
+// 		else
+// 		{
+// 			FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
+// 		}
 
-		AddHUDLine(buffer, maxlen, sTrack, iLines);
-	}
+// 		AddHUDLine(buffer, maxlen, sLine, iLines);
 
-	return iLines;
+// 		float limit = Shavit_GetStyleSettingFloat(data.iStyle, "velocity_limit");
+
+// 		if (limit > 0.0 && gB_Zones && Shavit_InsideZone(data.iTarget, Zone_CustomSpeedLimit, data.iTrack))
+// 		{
+// 			if(gI_ZoneSpeedLimit[data.iTarget] == 0)
+// 			{
+// 				FormatEx(sLine, 128, "%T", "HudNoSpeedLimit", data.iTarget);
+// 			}
+// 			else
+// 			{
+// 				FormatEx(sLine, 128, "%T", "HudCustomSpeedLimit", client, gI_ZoneSpeedLimit[data.iTarget]);
+// 			}
+
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
+// 	}
+
+// 	return iLines;
 }
 
 int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
@@ -1695,16 +1777,35 @@ void UpdateMainHUD(int client)
 	float fReplayLength = 0.0;
 
 	huddata_t huddata;
+	huddata.bInsideStageZone = false;
 	huddata.iStyle = (bReplay) ? Shavit_GetReplayBotStyle(target) : Shavit_GetBhopStyle(target);
 	huddata.iTrack = (bReplay) ? Shavit_GetReplayBotTrack(target) : Shavit_GetClientTrack(target);
 
+	if(huddata.iTrack == -1)
+	{
+		huddata.iStageCount = Shavit_GetStageCount(0);
+		huddata.iCurrentStage = 0;
+	}
+	else
+	{
+		huddata.iStageCount = Shavit_GetStageCount(huddata.iTrack);
+		huddata.iCurrentStage = Shavit_GetClientLastStage(target);
+	}
+
+
 	if(!bReplay)
 	{
-		if (gB_Zones && Shavit_GetClientTime(client) < 0.3)
+		huddata.bInsideStageZone = gB_Zones && Shavit_InsideZoneStage(target, huddata.iTrack, huddata.iZoneStage);
+		
+		if (gB_Zones && Shavit_GetClientTime(target) < 0.3)
 		{
 			if (Shavit_InsideZone(target, Zone_Start, huddata.iTrack))
 			{
 				iZoneHUD = ZoneHUD_Start;
+			}
+			else if (Shavit_IsOnlyStageMode(target) && huddata.bInsideStageZone && huddata.iZoneStage == huddata.iCurrentStage)
+			{
+				iZoneHUD = ZoneHUD_StageStart;
 			}
 			else if (Shavit_InsideZone(target, Zone_End, huddata.iTrack))
 			{
@@ -1731,7 +1832,9 @@ void UpdateMainHUD(int client)
 	huddata.iTarget = target;
 	huddata.iSpeed = RoundToNearest(fSpeedHUD);
 	huddata.iZoneHUD = iZoneHUD;
+
 	huddata.fTime = (bReplay)? fReplayTime:Shavit_GetClientTime(target);
+	huddata.fStageTime = (bReplay)? 0.0:Shavit_GetClientStageTime(target, huddata.iTrack, huddata.iCurrentStage);
 	huddata.iJumps = (bReplay)? 0:Shavit_GetClientJumps(target);
 	huddata.iStrafes = (bReplay)? 0:Shavit_GetStrafeCount(target);
 	huddata.iRank = (bReplay)? 0:Shavit_GetRankForTime(huddata.iStyle, huddata.fTime, huddata.iTrack);
@@ -1858,7 +1961,7 @@ void UpdateKeyOverlay(int client, Panel panel, bool &draw)
 	float fAngleDiff;
 	int buttons;
 
-	if (IsValidClient(target) && !IsFakeClient(target))
+	if (IsValidClient(target))
 	{
 		fAngleDiff = gF_AngleDiff[target];
 		buttons = gI_Buttons[target];
@@ -1946,16 +2049,8 @@ void UpdateCenterKeys(int client)
 
 	if (IsValidClient(target))
 	{
-		if (IsFakeClient(target))
-		{
-			buttons = Shavit_GetReplayButtons(target, fAngleDiff);
-		}
-		else
-		{
-			fAngleDiff = gF_AngleDiff[target];
-			buttons = gI_Buttons[target];
-		}
-
+		fAngleDiff = gF_AngleDiff[target];
+		buttons = gI_Buttons[target];
 		scrolls = gI_ScrollCount[target];
 		prevscrolls = gI_LastScrollCount[target];
 	}
@@ -2020,7 +2115,7 @@ void FillCenterKeys(int client, int target, int style, int buttons, float fAngle
 	}
 	else if (gB_AlternateCenterKeys[client])
 	{
-		FormatEx(buffer, buflen, "　%s　　%s\n%s   %s   %s\n%s　 %s 　%s\n　%s　　%s",
+		FormatEx(buffer, buflen, " %s　　%s\n%s  %s    %s\n%s　 %s 　%s\n　%s　　%s",
 			(buttons & IN_JUMP) > 0? "J":"_", (buttons & IN_DUCK) > 0? "C":"_",
 			(fAngleDiff > 0) ? "<":"  ", (buttons & IN_FORWARD) > 0 ? "W":" _", (fAngleDiff < 0) ? ">":"",
 			(buttons & IN_MOVELEFT) > 0? "A":"_", (buttons & IN_BACK) > 0? "S":"_", (buttons & IN_MOVERIGHT) > 0? "D":"_",
@@ -2028,11 +2123,22 @@ void FillCenterKeys(int client, int target, int style, int buttons, float fAngle
 	}
 	else
 	{
-		FormatEx(buffer, buflen, "　  %s　　%s\n  %s   %s   %s\n  %s　 %s 　%s\n　  %s　　%s",
-			(buttons & IN_JUMP) > 0? "Ｊ":"ｰ", (buttons & IN_DUCK) > 0? "Ｃ":"ｰ",
-			(fAngleDiff > 0) ? "<":"  ", (buttons & IN_FORWARD) > 0 ? "Ｗ":" ｰ", (fAngleDiff < 0) ? ">":"",
-			(buttons & IN_MOVELEFT) > 0? "Ａ":"ｰ", (buttons & IN_BACK) > 0? "Ｓ":"ｰ", (buttons & IN_MOVERIGHT) > 0? "Ｄ":"ｰ",
-			(buttons & IN_LEFT) > 0? "Ｌ":" ", (buttons & IN_RIGHT) > 0? "Ｒ":" ");
+		// FormatEx(buffer, buflen, "　  %s　　%s\n  %s   %s   %s\n  %s　 %s 　%s\n　  %s　　%s",
+		// 	(buttons & IN_JUMP) > 0? "Ｊ":"ｰ", (buttons & IN_DUCK) > 0? "Ｃ":"ｰ",
+		// 	(fAngleDiff > 0) ? "<":"  ", (buttons & IN_FORWARD) > 0 ? "Ｗ":" ｰ", (fAngleDiff < 0) ? ">":"",
+		// 	(buttons & IN_MOVELEFT) > 0? "Ａ":"ｰ", (buttons & IN_BACK) > 0? "Ｓ":"ｰ", (buttons & IN_MOVERIGHT) > 0? "Ｄ":"ｰ",
+		// 	(buttons & IN_LEFT) > 0? "Ｌ":" ", (buttons & IN_RIGHT) > 0? "Ｒ":" ");
+		// FormatEx(buffer, buflen, "　%s　　%s\n%s   %s   %s\n%s　 %s 　%s\n　%s　　%s",
+		// FormatEx(buffer, buflen, "  %s　　%s\n%s　 %s 　%s\n%s　 %s 　%s\n　%s　　%s",		
+		// 	(buttons & IN_JUMP) > 0? "J":"_", (buttons & IN_DUCK) > 0? "C":"_",
+		// 	(fAngleDiff > 0) ? "<":"  ", (buttons & IN_FORWARD) > 0 ? "W":"_", (fAngleDiff < 0) ? ">":"",
+		// 	(buttons & IN_MOVELEFT) > 0? "A":"_", (buttons & IN_BACK) > 0? "S":"_", (buttons & IN_MOVERIGHT) > 0? "D":"_",
+		// 	(buttons & IN_LEFT) > 0? "L":" ", (buttons & IN_RIGHT) > 0? "R":" ");		
+		FormatEx(buffer, buflen, "       %s\n %s%s     %s%s\n        %s\n     %s\n     %s",
+			(buttons & IN_FORWARD) > 0 ? "W":"  ", 
+			(fAngleDiff > 0) ? "←":"   ", (buttons & IN_MOVELEFT) > 0? "A":"  ", (buttons & IN_MOVERIGHT) > 0? "D":"  ", (fAngleDiff < 0) ? "→":"   ",
+			(buttons & IN_BACK) > 0? "S":"  ", (buttons & IN_JUMP) > 0? "JUMP":"", (buttons & IN_DUCK) > 0? "DUCK":""
+		);	
 	}
 
 	if(!Shavit_GetStyleSettingBool(style, "autobhop") && IsValidClient(target))
@@ -2260,16 +2366,19 @@ void UpdateTopLeftHUD(int client, bool wait)
 	}
 }
 
+
 void UpdateKeyHint(int client)
 {
-	if ((gI_Cycle % 10) == 0 && ((gI_HUDSettings[client] & HUD_SYNC) > 0 || (gI_HUDSettings[client] & HUD_TIMELEFT) > 0 || !(gI_HUD2Settings[client] & HUD2_PERFS)))
+	// if ((gI_Cycle % 10) == 0 && ((gI_HUDSettings[client] & HUD_SYNC) > 0 || (gI_HUDSettings[client] & HUD_TIMELEFT) > 0 || !(gI_HUD2Settings[client] & HUD2_PERFS)))
+	if ((gI_Cycle % 10) == 0 )
 	{
 		char sMessage[256];
+		char sStyle[64];
 		int iTimeLeft = -1;
 
 		if((gI_HUDSettings[client] & HUD_TIMELEFT) > 0 && GetMapTimeLeft(iTimeLeft) && iTimeLeft > 0)
 		{
-			FormatEx(sMessage, 256, (iTimeLeft > 150)? "%T: %d minutes":"%T: %d seconds", "HudTimeLeft", client, (iTimeLeft > 150) ? (iTimeLeft / 60)+1 : iTimeLeft);
+			FormatEx(sMessage, 256, (iTimeLeft > 60)? "%T: %d minutes":"%T: %d seconds", "HudTimeLeft", client, (iTimeLeft > 60) ? (iTimeLeft / 60)+1 : iTimeLeft);
 		}
 
 		int target = GetSpectatorTarget(client, client);
@@ -2283,22 +2392,112 @@ void UpdateKeyHint(int client)
 				return;
 			}
 
-			int style = bReplay ? Shavit_GetReplayBotStyle(target) : Shavit_GetBhopStyle(target);
+			int track = 0;
+			int style = 0;
+			float fTargetPB = 0.0;
 
-			if(!(0 <= style < gI_Styles))
+			if(!bReplay)
 			{
-				style = 0;
+				style = Shavit_GetBhopStyle(target);
+				track = Shavit_GetClientTrack(target);
+				fTargetPB = Shavit_GetClientPB(target, style, track);
 			}
+			else
+			{
+				style = Shavit_GetReplayBotStyle(target);
+				track = Shavit_GetReplayBotTrack(target);
+			}
+
+
+			if ((0 <= style < gI_Styles) && (0 <= track <= TRACKS_SIZE))
+			{
+				if(!(0 <= style < gI_Styles))
+				{
+					style = 0;
+				}
+
+				track = (track == -1) ? 0 : track;
+
+				if((gI_HUD2Settings[client] & HUD2_STYLE) == 0)
+				{
+					sStyle = gS_StyleStrings[style].sStyleName;
+					Format(sMessage, 256, "%s%s%T: %s", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStyle", client, sStyle);
+				}
+
+				if ((gI_HUDSettings[client] & HUD_TOPLEFT) > 0)
+				{
+					float fWRTime = Shavit_GetWorldRecord(style, track);
+
+					if (fWRTime != 0.0)
+					{
+						char sWRTime[16];
+						FormatSeconds(fWRTime, sWRTime, 16);
+
+						char sWRName[MAX_NAME_LENGTH];
+						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
+
+						// Format(sMessage, 256, "%s%sSR: %s", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sWRTime, client);
+
+						Format(sMessage, sizeof(sMessage), "%s%sSR: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sWRTime, sWRName);
+					}
+
+					char sTargetPB[64];
+					FormatSeconds(fTargetPB, sTargetPB, sizeof(sTargetPB));
+					Format(sTargetPB, sizeof(sTargetPB), "%T: %s", "HudBestText", client, sTargetPB);
+
+
+					float fSelfPB = Shavit_GetClientPB(client, style, track);
+					char sSelfPB[64];
+					FormatSeconds(fSelfPB, sSelfPB, sizeof(sSelfPB));
+					Format(sSelfPB, sizeof(sSelfPB), "%T: %s", "HudBestText", client, sSelfPB);
+
+					if(!bReplay)
+					{
+						if((gI_HUD2Settings[client] & HUD2_SPLITPB) == 0 && target != client)
+						{
+							if(fTargetPB != 0.0)
+							{
+								if((gI_HUD2Settings[client]& HUD2_TOPLEFT_RANK) == 0)
+								{
+									Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%N)", sMessage, sTargetPB, Shavit_GetRankForTime(style, fTargetPB, track), target);
+												
+								}
+								else
+								{
+									Format(sMessage, sizeof(sMessage), "%s\n%s (%N)", sMessage, sTargetPB, target);
+								}
+							}
+
+							if(fSelfPB != 0.0)
+							{
+								if((gI_HUD2Settings[client]& HUD2_TOPLEFT_RANK) == 0)
+								{
+									Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%N)", sMessage, sSelfPB, Shavit_GetRankForTime(style, fSelfPB, track), client);
+								}
+								else
+								{
+									Format(sMessage, sizeof(sMessage), "%s\n%s (%N)", sMessage, sSelfPB, client);
+								}
+							}
+						}
+						else if(fSelfPB != 0.0)
+						{
+							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d)", sMessage, sSelfPB, Shavit_GetRankForTime(style, fSelfPB, track));
+						}
+					}
+				}
+			}
+				
 
 			if (!bReplay && Shavit_GetTimerStatus(target) != Timer_Stopped)
 			{
 				bool perf_double_newline = true;
 
-				if ((gI_HUDSettings[client] & HUD_SYNC) > 0 && Shavit_GetStyleSettingBool(style, "sync"))
-				{
-					perf_double_newline = false;
-					Format(sMessage, 256, "%s%s%T: %.01f", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudSync", client, Shavit_GetSync(target));
-				}
+				// if ((gI_HUDSettings[client] & HUD_SYNC) > 0 && Shavit_GetStyleSettingBool(style, "sync"))
+				// {
+				// 	perf_double_newline = false;
+				// 	Format(sMessage, 256, "%s%s%T: %.01f", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudSync", client, Shavit_GetSync(target));
+				// }
 
 				if (!Shavit_GetStyleSettingBool(style, "autobhop") && (gI_HUD2Settings[client] & HUD2_PERFS) == 0)
 				{
@@ -2371,7 +2570,7 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 {
 	if(IsClientInGame(client))
 	{
-		UpdateTopLeftHUD(client, false);
+		// UpdateTopLeftHUD(client, false);
 	}
 }
 
@@ -2379,7 +2578,7 @@ public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateTopLeftHUD(client, false);
+		// UpdateTopLeftHUD(client, false);
 	}
 }
 

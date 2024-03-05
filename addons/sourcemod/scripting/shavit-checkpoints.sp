@@ -589,7 +589,7 @@ public Action Shavit_OnStart(int client)
 	return Plugin_Continue;
 }
 
-public void Shavit_OnRestart(int client, int track)
+public void Shavit_OnRestart(int client, int track, bool tostartzone)
 {
 	if(gB_InCheckpointMenu[client] &&
 		Shavit_GetStyleSettingInt(gI_Style[client], "kzcheckpoints") &&
@@ -1657,6 +1657,10 @@ void SaveCheckpointCache(int saver, int target, cp_cache_t cpcache, int index, H
 		snapshot.iTimerTrack = Shavit_GetReplayBotTrack(target);
 		snapshot.fTimescale = 1.0;
 		snapshot.fplayer_speedmod = 1.0;
+		snapshot.iLastStage = 1;
+		snapshot.fStageStartTime = 0.0;
+		snapshot.bStageTimeValid = false;
+		snapshot.bOnlyStageMode = false;
 
 		float ticks = float(Shavit_GetReplayBotCurrentFrame(target) - Shavit_GetReplayCachePreFrames(target));
 		float fraction = FloatFraction(ticks);

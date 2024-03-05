@@ -79,6 +79,11 @@ Handle gH_HideCookie = null;
 Handle gH_AutoRestartCookie = null;
 Cookie gH_BlockAdvertsCookie = null;
 
+// floats
+float gF_PauseOrigin[MAXPLAYERS+1][3];
+float gF_PauseAngles[MAXPLAYERS+1][3];
+float gF_PauseVelocity[MAXPLAYERS+1][3];
+
 // cvars
 Convar gCV_GodMode = null;
 Convar gCV_PreSpeed = null;
@@ -114,11 +119,8 @@ Convar gCV_RestrictNoclip = null;
 Convar gCV_SpecScoreboardOrder = null;
 Convar gCV_BadSetLocalAnglesFix = null;
 ConVar gCV_PauseMovement = null;
-Convar gCV_RestartWithFullHP = null;
 
 // external cvars
-ConVar sv_accelerate = null;
-ConVar sv_friction = null;
 ConVar sv_cheats = null;
 ConVar sv_disable_immunity_alpha = null;
 ConVar mp_humanteam = null;
@@ -162,6 +164,9 @@ public Plugin myinfo =
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	CreateNative("Shavit_IsClientUsingHide", Native_IsClientUsingHide);
+	CreateNative("Shavit_GetPrestrafeLimit", Native_GetPrestrafeLimit);
+
+	RegPluginLibrary("shavit-misc");
 
 	gB_Late = late;
 
@@ -189,7 +194,6 @@ public void OnPluginStart()
 	// spec
 	RegConsoleCmd("sm_spec", Command_Spec, "Moves you to the spectators' team. Usage: sm_spec [target]");
 	RegConsoleCmd("sm_spectate", Command_Spec, "Moves you to the spectators' team. Usage: sm_spectate [target]");
-	RegConsoleCmd("sm_specbot", Command_SpecBot, "Spectates the replay bot (usually)");
 
 	// hide
 	RegConsoleCmd("sm_hide", Command_Hide, "Toggle players' hiding.");
@@ -210,7 +214,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_practice", Command_Noclip, "Toggles noclip. (sm_nc alias)");
 	RegConsoleCmd("sm_nc", Command_Noclip, "Toggles noclip.");
 	RegConsoleCmd("sm_noclipme", Command_Noclip, "Toggles noclip. (sm_nc alias)");
-
+	
 	// qol
 	RegConsoleCmd("sm_autorestart", Command_AutoRestart, "Toggles auto-restart.");
 	RegConsoleCmd("sm_autoreset", Command_AutoRestart, "Toggles auto-restart.");
@@ -263,7 +267,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_adverts", Command_PrintAdverts, "Prints all the adverts to your chat");
 
 	// cvars and stuff
-	gCV_GodMode = new Convar("shavit_misc_godmode", "3", "Enable godmode for players?\n0 - Disabled\n1 - Only prevent fall/world damage.\n2 - Only prevent damage from other players.\n3 - Full godmode.\n4 - Prevent fall/world/entity damage (all except damage from other players).", 0, true, 0.0, true, 4.0);
+	gCV_GodMode = new Convar("shavit_misc_godmode", "3", "Enable godmode for players?\n0 - Disabled\n1 - Only prevent fall/world damage.\n2 - Only prevent damage from other players.\n3 - Full godmode.", 0, true, 0.0, true, 3.0);
 	gCV_PreSpeed = new Convar("shavit_misc_prespeed", "2", "Stop prespeeding in the start zone?\n0 - Disabled, fully allow prespeeding.\n1 - Limit relatively to prestrafelimit.\n2 - Block bunnyhopping in startzone.\n3 - Limit to prestrafelimit and block bunnyhopping.\n4 - Limit to prestrafelimit but allow prespeeding. Combine with shavit_core_nozaxisspeed 1 for SourceCode timer's behavior.\n5 - Limit horizontal speed to prestrafe but allow prespeeding.", 0, true, 0.0, true, 5.0);
 	gCV_HideTeamChanges = new Convar("shavit_misc_hideteamchanges", "1", "Hide team changes in chat?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_RespawnOnTeam = new Convar("shavit_misc_respawnonteam", "1", "Respawn whenever a player joins a team?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
@@ -296,11 +300,6 @@ public void OnPluginStart()
 	gCV_RestrictNoclip = new Convar("shavit_misc_restrictnoclip", "0", "Should noclip be be restricted\n0 - Disabled\n1 - No vertical velocity while in noclip in start zone\n2 - No noclip in start zone", 0, true, 0.0, true, 2.0);
 	gCV_SpecScoreboardOrder = new Convar("shavit_misc_spec_scoreboard_order", "1", "Use scoreboard ordering for players when changing target when spectating.", 0, true, 0.0, true, 1.0);
 
-	if (gEV_Type != Engine_TF2)
-	{
-		gCV_RestartWithFullHP = new Convar("shavit_misc_restart_with_full_hp", "1", "Reset hp on restart?", 0, true, 0.0, true, 1.0);
-	}
-
 	if (gEV_Type != Engine_CSGO)
 	{
 		gCV_BadSetLocalAnglesFix = new Convar("shavit_misc_bad_setlocalangles_fix", "1", "Fix 'Bad SetLocalAngles' on func_rotating entities.", 0, true, 0.0, true, 1.0);
@@ -313,9 +312,6 @@ public void OnPluginStart()
 	mp_humanteam = FindConVar((gEV_Type == Engine_TF2) ? "mp_humans_must_join_team" : "mp_humanteam");
 	sv_disable_radar = FindConVar("sv_disable_radar");
 	tf_dropped_weapon_lifetime = FindConVar("tf_dropped_weapon_lifetime");
-
-	sv_accelerate = FindConVar("sv_accelerate");
-	sv_friction = FindConVar("sv_friction");
 
 	// crons
 	CreateTimer(10.0, Timer_Cron, 0, TIMER_REPEAT);
@@ -875,19 +871,8 @@ public Action Command_Jointeam(int client, const char[] command, int args)
 		return Plugin_Continue;
 	}
 
-	char arg1[16];
-	GetCmdArg(1, arg1, sizeof(arg1));
-
-	if (gEV_Type == Engine_TF2)
-	{
-		if (StrEqual(arg1, "spectate", false) || StrEqual(arg1, "spectator", false))
-		{
-			Command_Spec(client, 0);
-			return Plugin_Stop;
-		}
-
-		return Plugin_Continue;
-	}
+	char arg1[8];
+	GetCmdArg(1, arg1, 8);
 
 	int iTeam = StringToInt(arg1);
 	int iHumanTeam = GetHumanTeam();
@@ -935,7 +920,11 @@ void CleanSwitchTeam(int client, int team)
 		event.Cancel();
 	}
 
-	if (gEV_Type != Engine_TF2 && team != 1)
+	if(gEV_Type == Engine_TF2)
+	{
+		TF2_ChangeClientTeam(client, view_as<TFTeam>(team));
+	}
+	else if(team != 1)
 	{
 		CS_SwitchTeam(client, team);
 	}
@@ -1287,7 +1276,10 @@ void DumbSetVelocity(int client, float fSpeed[3])
 public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float vel[3], float angles[3], TimerStatus status, int track, int style)
 {
 	bool bNoclip = (GetEntityMoveType(client) == MOVETYPE_NOCLIP);
-	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track);
+	int iZoneStage;
+	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage);
+	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track) || 
+								(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 
 	// i will not be adding a setting to toggle this off
 	if(bNoclip)
@@ -1327,7 +1319,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 
 		if (bestTime != 0 && current > bestTime)
 		{
-			Shavit_RestartTimer(client, track);
+			Shavit_RestartTimer(client, track, false);
 			Shavit_PrintToChat(client, "%T", "AutoRestartTriggered1", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 			Shavit_PrintToChat(client, "%T", "AutoRestartTriggered2", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 		}
@@ -1346,7 +1338,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 		}
 
 		int iPrevGroundEntity = (gI_GroundEntity[client] != -1) ? EntRefToEntIndex(gI_GroundEntity[client]) : -1;
-		if ((prespeed_type == 2 || prespeed_type == 3) && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0)
+		if ((prespeed_type == 2 || prespeed_type == 3 || prespeed_type == 4) && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0)
 		{
 			DumbSetVelocity(client, view_as<float>({0.0, 0.0, 0.0}));
 		}
@@ -1489,53 +1481,34 @@ void ClearViewPunch(int victim)
 	}
 }
 
-public Action OnTakeDamage(int victim, int& attacker, int& inflictor, float& damage, int& damagetype, int& weapon, float damageForce[3], float damagePosition[3])
+public Action OnTakeDamage(int victim, int& attacker)
 {
 	bool bBlockDamage;
 
 	switch(gCV_GodMode.IntValue)
 	{
-		case 0: // don't block damage
+		case 0:
 		{
 			bBlockDamage = false;
 		}
-		case 1: // block world/fall damage
+		case 1:
 		{
 			// 0 - world/fall damage
-			if (attacker == 0)
+			if(attacker == 0)
 			{
 				bBlockDamage = true;
 			}
 		}
-		case 2: // block player-dealt damage
+		case 2:
 		{
-			char sClassname[12];
-			if (IsValidClient(attacker) &&
-				( !IsValidEntity(inflictor) || !GetEntityClassname(inflictor, sClassname, sizeof(sClassname)) || !StrEqual(sClassname, "point_hurt") ) // This line ignores damage dealt by point_hurt (see https://developer.valvesoftware.com/wiki/Point_hurt)
-			   )
+			if(IsValidClient(attacker))
 			{
 				bBlockDamage = true;
 			}
 		}
-		case 3: // full godmode, blocks all damage
+		default:
 		{
 			bBlockDamage = true;
-		}
-		case 4: // block world/fall/entity damage (all damage except damage from other players)
-		{
-			// 0 - world/fall damage
-			if (attacker == 0 || attacker > MaxClients) // (attacker > MaxClients) for DMG_CRUSH, by moving/falling objects for example (with cs_enable_player_physics_box 1)
-			{
-				bBlockDamage = true;
-			}
-			else if (inflictor != attacker && IsValidEntity(inflictor)) // handles damage dealt by point_hurt (see https://developer.valvesoftware.com/wiki/Point_hurt)
-			{
-				char sClassname[12];
-				if (GetEntityClassname(inflictor, sClassname, sizeof(sClassname)) && StrEqual(sClassname, "point_hurt"))
-				{
-					bBlockDamage = true;
-				}
-			}
 		}
 	}
 
@@ -1593,12 +1566,23 @@ public void TF2_OnPreThink(int client)
 {
 	if(IsPlayerAlive(client))
 	{
+		float maxspeed;
+
 		if (GetEntityFlags(client) & FL_ONGROUND)
 		{
-			// not the best method, but only one i found for tf2
-			// ^ (which is relatively simple)
-			SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", Shavit_GetStyleSettingFloat(gI_Style[client], "runspeed"));
+			maxspeed = Shavit_GetStyleSettingFloat(gI_Style[client], "runspeed");
 		}
+		else
+		{
+			// This is used to stop CTFGameMovement::PreventBunnyJumping from destroying
+			// player velocity when doing uncrouch stuff. Kind of poopy.
+			float fSpeed[3];
+			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
+			maxspeed = GetVectorLength(fSpeed);
+		}
+
+		// not the best method, but only one i found for tf2
+		SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", maxspeed);
 	}
 }
 
@@ -1679,11 +1663,6 @@ public Action Command_Hide(int client, int args)
 	}
 
 	return Plugin_Handled;
-}
-
-public Action Command_SpecBot(int client, int args)
-{
-	return Command_Spec(client, 0);
 }
 
 public Action Command_Spec(int client, int args)
@@ -1970,7 +1949,7 @@ void DoEnd(int client)
 
 void DoRestart(int client)
 {
-	Shavit_RestartTimer(client, gI_LastStopInfo[client]);
+	Shavit_RestartTimer(client, gI_LastStopInfo[client], true);
 }
 
 void DoStyleChange(int client)
@@ -2057,6 +2036,7 @@ public Action Command_MaptimerCheckpoints(int client, int args)
 	return Plugin_Handled;
 }
 
+
 public Action Command_Noclip(int client, int args)
 {
 	if(!IsValidClient(client))
@@ -2093,21 +2073,84 @@ public Action Command_Noclip(int client, int args)
 
 	if(GetEntityMoveType(client) != MOVETYPE_NOCLIP)
 	{
-		if (gCV_PauseMovement.BoolValue && Shavit_IsPaused(client))
+		//if (gCV_PauseMovement.BoolValue && Shavit_IsPaused(client))
+		int iFlags = Shavit_CanPause(client);
+		int target = GetSpectatorTarget(client, client);
+		bool bPractice = Shavit_IsPracticeMode(target);
+		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
+
+		int iZoneStage;
+		int iTrack = Shavit_GetClientTrack(client);
+		bool InsideStage = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+
+
+		if (Shavit_IsPaused(client))
 		{
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			return Plugin_Handled;
 		}
+		else if((iFlags & CPR_InStartZone) > 0)
+		{
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			return Plugin_Handled;
+		}
+		else if((Shavit_IsOnlyStageMode(client) && InsideStage && iZoneStage == Shavit_GetClientLastStage(client)))
+		{
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			return Plugin_Handled;
+		}
+		else if(Shavit_GetTimerStatus(client) == Timer_Running)
+		{
+			if(bPractice || bSegmented)
+			{
+				Shavit_StopTimer(client);
+				SetEntityMoveType(client, MOVETYPE_NOCLIP);
+				return Plugin_Handled;
+			}
 
-		if(!ShouldDisplayStopWarning(client))
+			if((iFlags & CPR_NotOnGround) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseNotOnGround", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_Moving) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseMoving", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_Duck) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseDuck", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			GetClientAbsOrigin(client, gF_PauseOrigin[client]);
+			GetClientEyeAngles(client, gF_PauseAngles[client]);
+			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", gF_PauseVelocity[client]);
+			Shavit_PauseTimer(client);
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			Shavit_PrintToChat(client, "%T", "MessagePause", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		}
+		else
 		{
 			Shavit_StopTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 		}
-		else
-		{
-			OpenStopWarningMenu(client, DoNoclip);
-		}
+
+		// if(!ShouldDisplayStopWarning(client))
+		// {
+		// 	Shavit_StopTimer(client);
+		// 	SetEntityMoveType(client, MOVETYPE_NOCLIP);
+		// }
+		// else
+		// {
+		// 	OpenStopWarningMenu(client, DoNoclip);
+		// }
 	}
 	else
 	{
@@ -2133,14 +2176,65 @@ public Action CommandListener_Noclip(int client, const char[] command, int args)
 
 	if((gCV_NoclipMe.IntValue == 1 || (gCV_NoclipMe.IntValue == 2 && CheckCommandAccess(client, "noclipme", ADMFLAG_CHEATS))) && command[0] == '+')
 	{
-		if(!ShouldDisplayStopWarning(client))
+		// if(!ShouldDisplayStopWarning(client))
+		// {
+		// 	Shavit_StopTimer(client);
+		// 	SetEntityMoveType(client, MOVETYPE_NOCLIP);
+		// }
+		// else
+		// {
+		// 	OpenStopWarningMenu(client, DoNoclip);
+		// }
+		if (Shavit_IsPaused(client))
+		{
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			return Plugin_Handled;
+		}
+		else if(Shavit_GetTimerStatus(client) == Timer_Running)
+		{
+			int iFlags = Shavit_CanPause(client);
+			int target = GetSpectatorTarget(client, client);
+			bool bPractice = Shavit_IsPracticeMode(target);
+
+			if(bPractice)
+			{
+				Shavit_StopTimer(client);
+				SetEntityMoveType(client, MOVETYPE_NOCLIP);
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_NotOnGround) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseNotOnGround", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_Moving) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseMoving", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_Duck) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseDuck", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			GetClientAbsOrigin(client, gF_PauseOrigin[client]);
+			GetClientEyeAngles(client, gF_PauseAngles[client]);
+			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", gF_PauseVelocity[client]);
+			Shavit_PauseTimer(client);
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			Shavit_PrintToChat(client, "%T", "MessagePause", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		}		
+		else
 		{
 			Shavit_StopTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
-		}
-		else
-		{
-			OpenStopWarningMenu(client, DoNoclip);
 		}
 	}
 	else if(GetEntityMoveType(client) == MOVETYPE_NOCLIP)
@@ -2171,10 +2265,61 @@ public Action CommandListener_Real_Noclip(int client, const char[] command, int 
 			return Plugin_Stop;
 		}
 
-		if (ShouldDisplayStopWarning(client))
+		// if (ShouldDisplayStopWarning(client))
+		// {
+		// 	OpenStopWarningMenu(client, DoNoclip);
+		// 	return Plugin_Stop;
+		// }
+		if (Shavit_IsPaused(client))
 		{
-			OpenStopWarningMenu(client, DoNoclip);
-			return Plugin_Stop;
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			return Plugin_Handled;
+		}
+		else if(Shavit_GetTimerStatus(client) == Timer_Running)
+		{
+			int iFlags = Shavit_CanPause(client);
+			int target = GetSpectatorTarget(client, client);
+			bool bPractice = Shavit_IsPracticeMode(target);
+
+			if(bPractice)
+			{
+				Shavit_StopTimer(client);
+				SetEntityMoveType(client, MOVETYPE_NOCLIP);
+				return Plugin_Handled;
+			}
+			
+			if((iFlags & CPR_NotOnGround) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseNotOnGround", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_Moving) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseMoving", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			if((iFlags & CPR_Duck) > 0)
+			{
+				Shavit_PrintToChat(client, "%T", "PauseDuck", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+				return Plugin_Handled;
+			}
+
+			GetClientAbsOrigin(client, gF_PauseOrigin[client]);
+			GetClientEyeAngles(client, gF_PauseAngles[client]);
+			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", gF_PauseVelocity[client]);
+			Shavit_PauseTimer(client);
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			Shavit_PrintToChat(client, "%T", "MessagePause", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		}		
+		else
+		{
+			Shavit_StopTimer(client);
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 		}
 
 		gI_LastNoclipTick[client] = GetGameTickCount();
@@ -2258,67 +2403,11 @@ public Action Command_Specs(int client, int args)
 	return Plugin_Handled;
 }
 
-float StyleMaxPrestrafe(int style)
+public Action Shavit_OnStartPre(int client)
 {
-	float runspeed = Shavit_GetStyleSettingFloat(style, "runspeed");
-	return MaxPrestrafe(runspeed, sv_accelerate.FloatValue, sv_friction.FloatValue, GetTickInterval());
-}
-
-public Action Shavit_OnStartPre(int client, int track, bool& skipGroundTimer)
-{
-	if (GetEntityMoveType(client) == MOVETYPE_NOCLIP)
+	if (Shavit_GetStyleSettingInt(gI_Style[client], "prespeed") == 0 && GetEntityMoveType(client) == MOVETYPE_NOCLIP)
 	{
 		return Plugin_Stop;
-	}
-
-	if (Shavit_GetStyleSettingInt(gI_Style[client], "prespeed") == 0)
-	{
-		int prespeed_type = Shavit_GetStyleSettingInt(gI_Style[client], "prespeed_type");
-
-		if (prespeed_type == -1)
-		{
-			prespeed_type = gCV_PreSpeed.IntValue;
-		}
-
-		if (prespeed_type == 1 || prespeed_type >= 3)
-		{
-			float fSpeed[3];
-			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
-
-			float fLimit = (Shavit_GetStyleSettingFloat(gI_Style[client], "runspeed") + gCV_PrestrafeLimit.FloatValue);
-			float maxPrestrafe = StyleMaxPrestrafe(gI_Style[client]);
-			if (fLimit > maxPrestrafe) fLimit = maxPrestrafe;
-
-			// if trying to jump, add a very low limit to stop prespeeding in an elegant way
-			// otherwise, make sure nothing weird is happening (such as sliding at ridiculous speeds, at zone enter)
-			if (prespeed_type < 4 && fSpeed[2] > 0.0)
-			{
-				fLimit /= 3.0;
-			}
-
-			float fSpeedXY = (SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0)));
-			float fScale = (fLimit / fSpeedXY);
-
-			if(fScale < 1.0)
-			{
-				if (prespeed_type == 5)
-				{
-					float zSpeed = fSpeed[2];
-					fSpeed[2] = 0.0;
-
-					ScaleVector(fSpeed, fScale);
-					fSpeed[2] = zSpeed;
-				}
-				else
-				{
-					ScaleVector(fSpeed, fScale);
-				}
-
-				DumbSetVelocity(client, fSpeed);
-			}
-
-			skipGroundTimer = true;
-		}
 	}
 
 	return Plugin_Continue;
@@ -2334,47 +2423,30 @@ public Action Shavit_OnStart(int client)
 	return Plugin_Continue;
 }
 
-public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track)
+public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
 {
-	char sUpperCase[64];
-	strcopy(sUpperCase, 64, gS_StyleStrings[style].sStyleName);
-
-	for(int i = 0; i < strlen(sUpperCase); i++)
-	{
-		if(!IsCharUpper(sUpperCase[i]))
-		{
-			sUpperCase[i] = CharToUpper(sUpperCase[i]);
-		}
-	}
+	char sName[32+1];
+	SanerGetClientName(client, sName);
 
 	char sTrack[32];
 	GetTrackName(LANG_SERVER, track, sTrack, 32);
 
 	for(int i = 1; i <= gCV_WRMessages.IntValue; i++)
 	{
-		if(track == Track_Main)
-		{
-			Shavit_PrintToChatAll("%t", "WRNotice", gS_ChatStrings.sWarning, sUpperCase);
-		}
-		else
-		{
-			Shavit_PrintToChatAll("%s[%s]%s %t", gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText, "WRNotice", gS_ChatStrings.sWarning, sUpperCase);
-		}
+		Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText);
+	}
+
+	if (oldwr == 0.0)
+	{
+		Shavit_PrintToChatAll("%T", "WRNoticeFirstCompletion", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 	}
 }
 
-public void Shavit_OnRestart(int client, int track)
+public void Shavit_OnRestart(int client, int track, bool tostartzone)
 {
 	if(gEV_Type != Engine_TF2)
 	{
 		SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
-
-		if (gCV_RestartWithFullHP.BoolValue)
-		{
-			SetEntityHealth(client, 100);
-			SetEntProp(client, Prop_Send, "m_ArmorValue", 100);
-			SetEntProp(client, Prop_Send, "m_bHasHelmet", 1);
-		}
 	}
 }
 
@@ -2454,7 +2526,7 @@ public Action Respawn(Handle timer, any data)
 
 		if(gCV_RespawnOnRestart.BoolValue)
 		{
-			Shavit_RestartTimer(client, Shavit_GetClientTrack(client));
+			Shavit_RestartTimer(client, Shavit_GetClientTrack(client), true);
 		}
 	}
 
@@ -2476,7 +2548,7 @@ public void Player_Spawn(Event event, const char[] name, bool dontBroadcast)
 
 		if (gCV_StartOnSpawn.BoolValue && !(gB_Checkpoints && Shavit_HasSavestate(client)))
 		{
-			Shavit_RestartTimer(client, Shavit_GetClientTrack(client));
+			Shavit_RestartTimer(client, Shavit_GetClientTrack(client), true);
 		}
 
 		if(gCV_Scoreboard.BoolValue)
@@ -2829,4 +2901,9 @@ public Action Command_AutoRestart(int client, int args)
 public int Native_IsClientUsingHide(Handle plugin, int numParams)
 {
 	return gB_Hide[GetNativeCell(1)];
+}
+
+public int Native_GetPrestrafeLimit(Handle plugin, int numParams)
+{
+	return view_as<int>((Shavit_GetStyleSettingFloat(gI_Style[GetNativeCell(1)], "runspeed") + gCV_PrestrafeLimit.FloatValue));
 }
