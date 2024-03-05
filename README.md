@@ -1,6 +1,7 @@
-#Surf timer base on shavit timer
+##Surf timer base on shavit timer
 
-#Main Changes
+##Main Changes
+
 1. Implemented storeage of StageCP Personal Best.
     - show time difference to PB/WR when player reached next stage
     - add HUD option "stage"
@@ -14,15 +15,16 @@
 #Change logs
 
 #shavit-core
-    - Add iLastStage fStageStartTime bStageTimeValid bOnlyStageMode to timer_snapshot_t
-        iLastStage: int variable, client's last reached stage zone number  
-        fStageStartTime: float variable, assign to client's current time when leave a stage zone/start zone.
-        bStageTimeValid: bool variable, assign when client leave a stage zone, check if client's velocity greater than prespeed limit
-        bOnlyStageMode: bool variable, timer will start in a stage zone if bOnlyStageMode is true. reset to false when player Finishe an stage or enter start zone
+	
+    - Add iLastStage to timer_snapshot_t: int variable, client's last reached stage zone number  
+    - Add fStageStartTime to timer_snapshot_t: float variable, assign to client's current time when leave a stage zone/start zone.
+    - Add bStageTimeValid to timer_snapshot_t: bool variable, assign when client leave a stage zone, check if client's velocity greater than prespeed limit
+    - Add bOnlyStageMode to timer_snapshot_t: bool variable, timer will start in a stage zone if bOnlyStageMode is true.
     - Set player's last stage (gI_LastStage iLastStage) to 1 when StartTimer() called
     - Assign iLastStage fStageStartTime bStageTimeValid bOnlyStageMode when BuildSnapshot() called
 
-    #APIs
+##APIs
+
     - Add native Shavit_SetClientTrack
     - Add native Shavit_IsOnlyStageMode
     - Add native Shavit_SetOnlyStageMode
@@ -35,6 +37,7 @@
     - Some change adapte to shavit-core's changes
 
 #shavit-hud
+
     - Delete TopLeftHUD
     - Now WR/PB and Style are showing on Key Hint
     - Add iCurrentStage iStageCount iZoneStage fStageTime bInsideStageZone to huddata_t
@@ -46,14 +49,17 @@
     - Now main timer show as full min:sec instead dynamic format
 
 #shavit-misc
+
     - Adapte bInStart to only stage mode when player inside a stage start zone
     - Now apply prespeed limit to a stage zone.
 
 #shavit-replay-recorder
+
     - Adapte bInStart to only stage mode when player inside a stage start zone
     - Now preframes will reset when player in stage start while bOnlyStageMode is true
 
 #shavit-zones
+
     - Add new global timer_snapshot_t struct gA_StageStartTimer
     - Add new command "sm_back"
     - Add new logic to function Command_Stages
@@ -62,7 +68,8 @@
     - Call Shavit_FinishStage when player entered stage zone which stage number equals gI_LastStage + 1
     - Assign 1 to gI_LastStage when player entered a start zone. (start zone recognize as a stage 1 zone)
 
-    #APIs
+##APIs
+
     - Delete forward Shavit_OnStageMessage
     - Add forward Shavit_OnReachNextStage
     - Add native Shavit_SetClientLastStage
@@ -86,7 +93,8 @@
     - Add new function UpdateClientStagePBCacheOnFinish
     - Change finish message to "<username> finished [<track>] in <time> (<WR diff> | <PB diff>). Rank: <rank> (<style>)"
 
-    #APIs
+##APIs
+
     - Add new native Shavit_GetStageCPWR
     - Add new native Shavit_GetStageCPPB
     - Add new native Shavit_StageTimeValid
