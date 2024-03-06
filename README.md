@@ -1,4 +1,4 @@
-# Surf timer base on shavit timer
+# Surf timer base on shavit timer (CS:S ONLY)
 
 ## Main Changes
 
