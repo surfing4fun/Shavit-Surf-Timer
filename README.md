@@ -2,4 +2,4 @@
 
 This timer is still in developing please do not use it in ANY SERVER.
 
-### See change logs in CHANGELOGS.md
+### See change logs in CHANGELOG.md
