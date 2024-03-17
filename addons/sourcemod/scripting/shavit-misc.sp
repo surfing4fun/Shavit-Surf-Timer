@@ -118,7 +118,8 @@ Convar gCV_BhopSounds = null;
 Convar gCV_RestrictNoclip = null;
 Convar gCV_SpecScoreboardOrder = null;
 Convar gCV_BadSetLocalAnglesFix = null;
-ConVar gCV_PauseMovement = null;
+Convar gCV_PrestrafeZone = null;
+//ConVar gCV_PauseMovement = null;
 
 // external cvars
 ConVar sv_cheats = null;
@@ -268,12 +269,13 @@ public void OnPluginStart()
 
 	// cvars and stuff
 	gCV_GodMode = new Convar("shavit_misc_godmode", "3", "Enable godmode for players?\n0 - Disabled\n1 - Only prevent fall/world damage.\n2 - Only prevent damage from other players.\n3 - Full godmode.", 0, true, 0.0, true, 3.0);
-	gCV_PreSpeed = new Convar("shavit_misc_prespeed", "2", "Stop prespeeding in the start zone?\n0 - Disabled, fully allow prespeeding.\n1 - Limit relatively to prestrafelimit.\n2 - Block bunnyhopping in startzone.\n3 - Limit to prestrafelimit and block bunnyhopping.\n4 - Limit to prestrafelimit but allow prespeeding. Combine with shavit_core_nozaxisspeed 1 for SourceCode timer's behavior.\n5 - Limit horizontal speed to prestrafe but allow prespeeding.", 0, true, 0.0, true, 5.0);
+	gCV_PreSpeed = new Convar("shavit_misc_prespeed", "4", "Stop prespeeding in the start zone?\n0 - Disabled, fully allow prespeeding.\n1 - Limit relatively to prestrafelimit.\n2 - Block bunnyhopping in startzone.\n3 - Limit to prestrafelimit and block bunnyhopping.\n4 - Limit to prestrafelimit but allow prespeeding. Combine with shavit_core_nozaxisspeed 1 for SourceCode timer's behavior.\n5 - Limit horizontal speed to prestrafe but allow prespeeding.", 0, true, 0.0, true, 5.0);
+	gCV_PrestrafeZone = new Convar("shavit_misc_prestrafezones", "2", "What situation should prestrafe limit excute when player inside a start zone?\n0 - Disabled, no prestrafe limit in any start zone.\n1 - Only excute prestrafe limit in start zone.\n2 - Excute prestrafe limit in both start zone and stage start zone.\n3 - Excute prestrafe limit in both start zone and stage start zone, but prestrafe limit would not excute in stage start zone when player's main timer is running.", 0, true, 0.0, true, 3.0);
 	gCV_HideTeamChanges = new Convar("shavit_misc_hideteamchanges", "1", "Hide team changes in chat?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_RespawnOnTeam = new Convar("shavit_misc_respawnonteam", "1", "Respawn whenever a player joins a team?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_RespawnOnRestart = new Convar("shavit_misc_respawnonrestart", "1", "Respawn a dead player if they use the timer restart command?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_StartOnSpawn = new Convar("shavit_misc_startonspawn", "1", "Restart the timer for a player after they spawn?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
-	gCV_PrestrafeLimit = new Convar("shavit_misc_prestrafelimit", "30", "Prestrafe limitation in startzone.\nThe value used internally is style run speed + this.\ni.e. run speed of 250 can prestrafe up to 278 (+28) with regular settings.", 0, true, 0.0, false);
+	gCV_PrestrafeLimit = new Convar("shavit_misc_prestrafelimit", "90", "Prestrafe limitation in startzone.\nThe value used internally is style run speed + this.\ni.e. run speed of 250 can prestrafe up to 278 (+28) with regular settings.", 0, true, 0.0, false);
 	gCV_HideRadar = new Convar("shavit_misc_hideradar", "1", "Should the plugin hide the in-game radar?", 0, true, 0.0, true, 1.0);
 	gCV_TeleportCommands = new Convar("shavit_misc_tpcmds", "1", "Enable teleport-related commands? (sm_goto/sm_tpto)\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_NoWeaponDrops = new Convar("shavit_misc_noweapondrops", "1", "Remove every dropped weapon.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
@@ -283,7 +285,7 @@ public void OnPluginStart()
 	gCV_CreateSpawnPoints = new Convar("shavit_misc_createspawnpoints", "6", "Amount of spawn points to add for each team.\n0 - Disabled", 0, true, 0.0, true, 32.0);
 	gCV_DisableRadio = new Convar("shavit_misc_disableradio", "1", "Block radio commands.\n0 - Disabled (radio commands work)\n1 - Enabled (radio commands are blocked)", 0, true, 0.0, true, 1.0);
 	gCV_Scoreboard = new Convar("shavit_misc_scoreboard", "1", "Manipulate scoreboard so score is -{time} and deaths are {rank})?\nDeaths part requires shavit-rankings.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
-	gCV_WeaponCommands = new Convar("shavit_misc_weaponcommands", "2", "Enable sm_usp, sm_glock, sm_knife, and infinite ammo?\n0 - Disabled\n1 - Enabled\n2 - Also give infinite reserve ammo for USP & Glocks.\n3 - Also give infinite clip ammo for USP & Glocks.\n4 - Also give infinite reserve for all weapons (and grenades).\n5 - Also give infinite clip ammo for all weapons (and grenades).", 0, true, 0.0, true, 5.0);
+	gCV_WeaponCommands = new Convar("shavit_misc_weaponcommands", "5", "Enable sm_usp, sm_glock, sm_knife, and infinite ammo?\n0 - Disabled\n1 - Enabled\n2 - Also give infinite reserve ammo for USP & Glocks.\n3 - Also give infinite clip ammo for USP & Glocks.\n4 - Also give infinite reserve for all weapons (and grenades).\n5 - Also give infinite clip ammo for all weapons (and grenades).", 0, true, 0.0, true, 5.0);
 	gCV_PlayerOpacity = new Convar("shavit_misc_playeropacity", "69", "Player opacity (alpha) to set on spawn.\n-1 - Disabled\nValue can go up to 255. 0 for invisibility.", 0, true, -1.0, true, 255.0);
 	gCV_StaticPrestrafe = new Convar("shavit_misc_staticprestrafe", "1", "Force prestrafe for every pistol.\n250 is the default value and some styles will have 260.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_NoclipMe = new Convar("shavit_misc_noclipme", "1", "Allow +noclip, sm_p and all the noclip commands?\n0 - Disabled\n1 - Enabled\n2 - requires 'admin_noclipme' override or ADMFLAG_CHEATS flag.", 0, true, 0.0, true, 2.0);
@@ -295,7 +297,7 @@ public void OnPluginStart()
 	gCV_SpectatorList = new Convar("shavit_misc_speclist", "1", "Who to show in !specs?\n0 - everyone\n1 - all admins (admin_speclisthide override to bypass)\n2 - players you can target", 0, true, 0.0, true, 2.0);
 	gCV_HideChatCommands = new Convar("shavit_misc_hidechatcmds", "1", "Hide commands from chat?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_StopTimerWarning = new Convar("shavit_misc_stoptimerwarning", "180", "Time in seconds to display a warning before stopping the timer with noclip or !stop.\n0 - Disabled");
-	gCV_WRMessages = new Convar("shavit_misc_wrmessages", "3", "How many \"NEW <style> WR!!!\" messages to print?\n0 - Disabled", 0,  true, 0.0, true, 100.0);
+	gCV_WRMessages = new Convar("shavit_misc_wrmessages", "1", "How many messages to print when break a WR?\n0 - Disabled", 0,  true, 0.0, true, 100.0);
 	gCV_BhopSounds = new Convar("shavit_misc_bhopsounds", "1", "Should bhop (landing and jumping) sounds be muted?\n1 - Blocked while !hide is enabled\n2 - Always blocked", 0,  true, 1.0, true, 2.0);
 	gCV_RestrictNoclip = new Convar("shavit_misc_restrictnoclip", "0", "Should noclip be be restricted\n0 - Disabled\n1 - No vertical velocity while in noclip in start zone\n2 - No noclip in start zone", 0, true, 0.0, true, 2.0);
 	gCV_SpecScoreboardOrder = new Convar("shavit_misc_spec_scoreboard_order", "1", "Use scoreboard ordering for players when changing target when spectating.", 0, true, 0.0, true, 1.0);
@@ -334,7 +336,7 @@ public void OnPluginStart()
 
 public void OnAllPluginsLoaded()
 {
-	gCV_PauseMovement = FindConVar("shavit_core_pause_movement");
+	
 }
 
 void LoadDHooks()
@@ -1278,8 +1280,30 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 	bool bNoclip = (GetEntityMoveType(client) == MOVETYPE_NOCLIP);
 	int iZoneStage;
 	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage);
-	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track) || 
-								(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+
+	bool bInStart = false;
+
+	if (gCV_PrestrafeZone.IntValue > 0)
+	{
+		if (gCV_PrestrafeZone.IntValue > 1)
+		{
+			if (gCV_PrestrafeZone.IntValue == 2)
+			{
+				bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track) ||
+				(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+			}
+			else if (gCV_PrestrafeZone.IntValue == 3)
+			{
+				bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track) ||
+				(Shavit_GetTimerStatus(client) == Timer_Running && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+			}
+		}
+		else
+		{
+			bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track);
+		}
+	}
+	
 
 	// i will not be adding a setting to toggle this off
 	if(bNoclip)
@@ -1338,7 +1362,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 		}
 
 		int iPrevGroundEntity = (gI_GroundEntity[client] != -1) ? EntRefToEntIndex(gI_GroundEntity[client]) : -1;
-		if ((prespeed_type == 2 || prespeed_type == 3 || prespeed_type == 4) && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0)
+		if ((prespeed_type == 2 || prespeed_type == 4) && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0)
 		{
 			DumbSetVelocity(client, view_as<float>({0.0, 0.0, 0.0}));
 		}
@@ -2073,28 +2097,23 @@ public Action Command_Noclip(int client, int args)
 
 	if(GetEntityMoveType(client) != MOVETYPE_NOCLIP)
 	{
-		//if (gCV_PauseMovement.BoolValue && Shavit_IsPaused(client))
 		int iFlags = Shavit_CanPause(client);
 		int target = GetSpectatorTarget(client, client);
-		bool bPractice = Shavit_IsPracticeMode(target);
-		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
-
 		int iZoneStage;
 		int iTrack = Shavit_GetClientTrack(client);
-		bool InsideStage = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
-
-
+		
+		bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+		bool bPractice = Shavit_IsPracticeMode(target);
+		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
+		bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
+								(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+		
 		if (Shavit_IsPaused(client))
 		{
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			return Plugin_Handled;
 		}
-		else if((iFlags & CPR_InStartZone) > 0)
-		{
-			SetEntityMoveType(client, MOVETYPE_NOCLIP);
-			return Plugin_Handled;
-		}
-		else if((Shavit_IsOnlyStageMode(client) && InsideStage && iZoneStage == Shavit_GetClientLastStage(client)))
+		else if(bInStart)//(iFlags & CPR_InStartZone) > 0)
 		{
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			return Plugin_Handled;

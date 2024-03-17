@@ -30,6 +30,7 @@
 
 #undef REQUIRE_PLUGIN
 #include <shavit/rankings>
+#include <shavit/hud>
 #include <shavit/zones>
 #include <adminmenu>
 
@@ -3147,6 +3148,10 @@ public void Shavit_OnReachNextStage(int client, int track, int startStage, int e
 	if(endStage == startStage + 1)
 	{
 		Shavit_FinishStage(client, track, startStage);
+		if(Shavit_IsOnlyStageMode(client))
+		{
+			return;
+		}
 	}
 
 	if (Shavit_GetTimerStatus(client) == Timer_Stopped)
@@ -3333,7 +3338,10 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 	if (type == Zone_Start && Shavit_GetClientTime(client) <= 0.8 && curVel >= 15.0)
 	{
 		gA_StageTimeValid[client][track][1] = true;
-		Shavit_PrintToChat(client, "Start: %s%.2f %su/s", gS_ChatStrings.sVariable, curVel, gS_ChatStrings.sText);
+		if (Shavit_GetHUDSettings(client) & HUD_SPEEDTRAP > 0)
+		{
+			Shavit_PrintToChat(client, "Start: %s%.2f %su/s", gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText);
+		}
 	}
 	else if (type == Zone_Stage)
 	{
@@ -3344,9 +3352,12 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 
 		if(stage == num && curVel >= 15.0)
 		{
-			Shavit_PrintToChat(client, "Stage %s%d %sStart: %s%.2f %su/s", 
-			gS_ChatStrings.sVariable2, stage, gS_ChatStrings.sText, 
-			gA_StageTimeValid[client][track][num] ? gS_ChatStrings.sVariable:gS_ChatStrings.sWarning, curVel, gS_ChatStrings.sText);
+			if (Shavit_GetHUDSettings(client) & HUD_SPEEDTRAP > 0)
+			{
+				Shavit_PrintToChat(client, "Stage %s%d %sStart: %s%.2f %su/s", 
+				gS_ChatStrings.sVariable2, stage, gS_ChatStrings.sText, 
+				gA_StageTimeValid[client][track][num] ? gS_ChatStrings.sVariable:gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+			}
 
 			// if(!gA_StageTimeValid[client][track][num])
 			// {

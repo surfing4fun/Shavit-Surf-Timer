@@ -132,7 +132,7 @@ TopMenuObject gH_TimerCommands = INVALID_TOPMENUOBJECT;
 // cvars
 Convar gCV_Restart = null;
 Convar gCV_Pause = null;
-Convar gCV_PauseMovement = null;
+//Convar gCV_PauseMovement = null;
 Convar gCV_BlockPreJump = null;
 Convar gCV_NoZAxisSpeed = null;
 Convar gCV_VelocityTeleport = null;
@@ -382,9 +382,9 @@ public void OnPluginStart()
 
 	gCV_Restart = new Convar("shavit_core_restart", "1", "Allow commands that restart the timer?", 0, true, 0.0, true, 1.0);
 	gCV_Pause = new Convar("shavit_core_pause", "1", "Allow pausing?", 0, true, 0.0, true, 1.0);
-	gCV_PauseMovement = new Convar("shavit_core_pause_movement", "1", "Allow movement/noclip while paused?", 0, true, 0.0, true, 1.0);
+	//gCV_PauseMovement = new Convar("shavit_core_pause_movement", "1", "Allow movement/noclip while paused?", 0, true, 0.0, true, 1.0);
 	gCV_BlockPreJump = new Convar("shavit_core_blockprejump", "0", "Prevents jumping in the start zone.", 0, true, 0.0, true, 1.0);
-	gCV_NoZAxisSpeed = new Convar("shavit_core_nozaxisspeed", "1", "Don't start timer if vertical speed exists (btimes style).", 0, true, 0.0, true, 1.0);
+	gCV_NoZAxisSpeed = new Convar("shavit_core_nozaxisspeed", "0", "Don't start timer if vertical speed exists (btimes style).", 0, true, 0.0, true, 1.0);
 	gCV_VelocityTeleport = new Convar("shavit_core_velocityteleport", "0", "Teleport the client when changing its velocity? (for special styles)", 0, true, 0.0, true, 1.0);
 	gCV_DefaultStyle = new Convar("shavit_core_defaultstyle", "0", "Default style ID.\nAdd the '!' prefix to disable style cookies - i.e. \"!3\" to *force* scroll to be the default style.", 0, true, 0.0);
 	gCV_NoChatSound = new Convar("shavit_core_nochatsound", "0", "Disables click sound for chat messages.", 0, true, 0.0, true, 1.0);
@@ -2018,6 +2018,25 @@ public int Native_FinishStage(Handle handler, int numParams)
 	int stage = GetNativeCell(3);
 	int timestamp = GetTime();
 
+
+	if(gCV_UseOffsets.BoolValue)
+	{
+		CalculateTickIntervalOffset(client, Zone_End);
+
+		if(gCV_DebugOffsets.BoolValue)
+		{
+			char sOffsetMessage[100];
+			char sOffsetDistance[8];
+			FormatEx(sOffsetDistance, 8, "%.1f", gA_Timers[client].fDistanceOffset[Zone_End]);
+			FormatEx(sOffsetMessage, sizeof(sOffsetMessage), "[END] %T %d", "DebugOffsets", client, gA_Timers[client].fZoneOffset[Zone_End], sOffsetDistance, gA_Timers[client].iZoneIncrement);
+			PrintToConsole(client, "%s", sOffsetMessage);
+			Shavit_StopChatSound();
+			Shavit_PrintToChat(client, "%s", sOffsetMessage);
+		}
+	}
+
+	CalculateRunTime(gA_Timers[client], true);
+
 	timer_snapshot_t end;
 	Shavit_SaveSnapshot(client, end, sizeof(end));
 
@@ -2053,7 +2072,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 	if(Shavit_IsOnlyStageMode(client))
 	{
 		Shavit_StopTimer(client);
-		Shavit_SetOnlyStageMode(client, false);
+		//Shavit_SetOnlyStageMode(client, false);
 	}
 
 	if(result != Plugin_Continue)
@@ -2522,7 +2541,7 @@ public any Native_ShouldProcessFrame(Handle plugin, int numParams)
 
 public Action Shavit_OnStartPre(int client, int track)
 {
-	if (GetTimerStatus(client) == Timer_Paused) //&& gCV_PauseMovement.BoolValue)
+	if (GetTimerStatus(client) == Timer_Paused)
 	{
 		return Plugin_Stop;
 	}
@@ -3264,6 +3283,7 @@ void CalculateTickIntervalOffset(int client, int zonetype)
 
 	if (zonetype == Zone_Start)
 	{
+									//now			before
 		TR_EnumerateEntitiesHull(localOrigin, gF_Origin[client][1], mins, maxs, PARTITION_TRIGGER_EDICTS, TREnumTrigger, client);
 	}
 	else

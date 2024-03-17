@@ -33,7 +33,6 @@
 
 #undef REQUIRE_PLUGIN
 #include <shavit/replay-recorder>
-#include <shavit/tas> // for the `IsSurfing` stock
 #include <adminmenu>
 
 #include <shavit/maps-folder-stocks>
@@ -207,7 +206,6 @@ DynamicDetour gH_TeamFull = null;
 bool gB_TeamFullDetoured = false;
 int gI_WEAPONTYPE_UNKNOWN = 123123123;
 int gI_LatestClient = -1;
-bool gB_ExpectingBot = false;
 bot_info_t gA_BotInfo_Temp; // cached when creating a bot so we can use an accurate name in player_connect
 int gI_LastReplayFlags[MAXPLAYERS + 1];
 float gF_EyeOffset;
@@ -238,7 +236,6 @@ Convar gCV_DisableHibernation = null;
 ConVar sv_duplicate_playernames_ok = null;
 ConVar bot_join_after_player = null;
 ConVar mp_randomspawn = null;
-ConVar gCV_PauseMovement = null;
 
 // timer settings
 int gI_Styles = 0;
@@ -353,8 +350,6 @@ public void OnAllPluginsLoaded()
 #if USE_BHOPTIMER_HELPER
 	gB_BhoptimerHelper = LibraryExists("bhoptimer_helper");
 #endif
-
-	gCV_PauseMovement = FindConVar("shavit_core_pause_movement");
 }
 
 public void OnPluginStart()
@@ -396,11 +391,6 @@ public void OnPluginStart()
 	if (bot_stop != null)
 	{
 		bot_stop.Flags &= ~FCVAR_CHEAT;
-	}
-
-	if (gEV_Type == Engine_TF2)
-	{
-		FindConVar("tf_bot_count").Flags &= ~FCVAR_NOTIFY; // silence please
 	}
 
 	bot_join_after_player = FindConVar(gEV_Type == Engine_TF2 ? "tf_bot_join_after_player" : "bot_join_after_player");
@@ -1438,6 +1428,11 @@ public int Native_GetClosestReplayTime(Handle plugin, int numParams)
 
 	int client = GetNativeCell(1);
 
+	if(Shavit_IsOnlyStageMode(client))
+	{
+		return view_as<int>(-1.0);
+	}
+
 	if (numParams > 1)
 	{
 		SetNativeCellRef(2, gF_TimeDifferenceLength[client]);
@@ -1786,7 +1781,6 @@ public void Shavit_OnReplaySaved(int client, int style, float time, int jumps, i
 int InternalCreateReplayBot()
 {
 	gI_LatestClient = -1;
-	gB_ExpectingBot = true;
 
 	if (gEV_Type == Engine_TF2)
 	{
@@ -1846,7 +1840,6 @@ int InternalCreateReplayBot()
 		//bool success = (0xFF & ret) != 0;
 	}
 
-	gB_ExpectingBot = false;
 	return gI_LatestClient;
 }
 
@@ -2120,7 +2113,7 @@ public void OnClientPutInServer(int client)
 
 		SDKHook(client, SDKHook_PostThink, ForceObserveProp);
 	}
-	else if (gB_ExpectingBot)
+	else
 	{
 		char sName[MAX_NAME_LENGTH];
 		FillBotName(gA_BotInfo_Temp, sName);
@@ -2713,14 +2706,6 @@ Action ReplayOnPlayerRunCmd(bot_info_t info, int &buttons, int &impulse, float v
 			{
 				TeleportEntity(info.iEnt, NULL_VECTOR, ang, vecVelocity);
 			}
-
-			if (isClient && gEV_Type == Engine_TF2 && (buttons & IN_DUCK))
-			{
-				if (IsSurfing(info.iEnt))
-				{
-					buttons &= ~IN_DUCK;
-				}
-			}
 		}
 	}
 
@@ -2832,7 +2817,7 @@ public Action BotEvents(Event event, const char[] name, bool dontBroadcast)
 	{
 		event.BroadcastDisabled = true;
 
-		if (StrContains(name, "player_connect") != -1 && gB_ExpectingBot)
+		if (StrContains(name, "player_connect") != -1)
 		{
 			char sName[MAX_NAME_LENGTH];
 			FillBotName(gA_BotInfo_Temp, sName);
@@ -3769,9 +3754,6 @@ public void OnGameFrame()
 	int valid = 0;
 	int modtick = GetGameTickCount() % gCV_DynamicTimeTick.IntValue;
 
-	// use this because i want velocity-difference with pause_movement
-	bool pause_movement = gCV_PauseMovement.BoolValue;
-
 	for (int client = 1; client <= MaxClients; client++)
 	{
 		if (IsValidClient(client, true)
@@ -3793,7 +3775,7 @@ public void OnGameFrame()
 				continue;
 			}
 
-			if (!pause_movement && status != Timer_Running)
+			if (status != Timer_Running)
 			{
 				continue;
 			}
