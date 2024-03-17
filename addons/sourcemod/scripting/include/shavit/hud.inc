@@ -32,8 +32,8 @@
 #define HUD_SPECTATORS          (1 << 4) // show list of spectators
 #define HUD_KEYOVERLAY          (1 << 5) // show a key overlay
 #define HUD_HIDEWEAPON          (1 << 6) // hide the player's weapon
-#define HUD_TOPLEFT             (1 << 7) // show top left white HUD with WR/PB times
-#define HUD_SYNC                (1 << 8) // shows sync at right side of the screen (css only)
+#define HUD_WRPB             	(1 << 7) // show top left white HUD with WR/PB times
+#define HUD_SPEEDTRAP           (1 << 8) // shows sync at right side of the screen (css only)
 #define HUD_TIMELEFT            (1 << 9) // shows time left at right tside of the screen (css only)
 #define HUD_2DVEL               (1 << 10) // shows 2d velocity
 #define HUD_NOSOUNDS            (1 << 11) // disables sounds on personal best, world record etc
@@ -56,13 +56,13 @@
 #define HUD2_MAPTIER            (1 << 9)
 #define HUD2_TIMEDIFFERENCE     (1 << 10)
 #define HUD2_PERFS              (1 << 11)
-#define HUD2_TOPLEFT_RANK       (1 << 12)
+#define HUD2_STAGETIME     		(1 << 12)
 #define HUD2_VELOCITYDIFFERENCE (1 << 13)
 #define HUD2_USPSILENCER        (1 << 14) // spawns usps with a silencer on
 #define HUD2_GLOCKBURST         (1 << 15) // spawns glocks with burst
 #define HUD2_CENTERKEYS         (1 << 16) // CSGO option to toggle whether !keys is shown as center-text or in that panel thing.
 
-#define HUD_DEFAULT             (HUD_MASTER|HUD_CENTER|HUD_ZONEHUD|HUD_OBSERVE|HUD_TOPLEFT|HUD_SYNC|HUD_TIMELEFT|HUD_2DVEL|HUD_SPECTATORS)
+#define HUD_DEFAULT             (HUD_MASTER|HUD_CENTER|HUD_ZONEHUD|HUD_OBSERVE|HUD_WRPB|HUD_SPEEDTRAP|HUD_TIMELEFT|HUD_2DVEL|HUD_SPECTATORS)
 #define HUD_DEFAULT2            (HUD2_PERFS)
 
 stock bool HUD1Enabled(int hudbits, int flag)
