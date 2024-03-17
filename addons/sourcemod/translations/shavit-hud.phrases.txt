@@ -96,9 +96,9 @@
 	{
 		"en"		"Time left"
 	}
-	"HudSync"
+	"HudSpeedTrap"
 	{
-		"en"		"Sync"
+		"en"		"Use speed trap message"
 	}
 	"HudStyle"
 	{
@@ -162,6 +162,10 @@
 	{
 		"en"		"Spectator list"
 	}
+	"HudSync"
+	{
+		"en"		"Sync"
+	}
 	"HudSpectatorsDead"
 	{
 		"en"		"Spectator list (only when dead)"
@@ -174,7 +178,7 @@
 	{
 		"en"		"Hide weapons"
 	}
-	"HudTopLeft"
+	"HudWRPB"
 	{
 		"en"		"Display WR/PB"
 	}
@@ -194,9 +198,9 @@
 	{
 		"en"		"Expected rank"
 	}
-	"HudStageText"
+	"HudTrackText"
 	{
-		"en"		"Stage"
+		"en"		"Track / Stage"
 	}
 	"HudSplitPbText"
 	{
@@ -210,9 +214,9 @@
 	{
 		"en"		"Time Difference"
 	}
-	"HudTopLeftRankText"
+	"HudStageTime"
 	{
-		"en"		"Top left Rank"
+		"en"		"Stage Time"
 	}
 	"HudVelocityDifference"
 	{
