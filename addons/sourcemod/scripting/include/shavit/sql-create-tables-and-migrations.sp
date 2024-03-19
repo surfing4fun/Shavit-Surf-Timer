@@ -43,7 +43,8 @@ enum
 	Migration_Lowercase_maptiers,
 	Migration_Lowercase_mapzones,
 	Migration_Lowercase_playertimes,
-	Migration_Lowercase_stagetimeswr, // 20
+	//Migration_Lowercase_stagetimeswr, // 20
+	Migration_Lowercase_stagecpwr,
 	Migration_Lowercase_startpositions,
 	Migration_AddPlayertimesPointsCalcedFrom, // points calculated from wr float added to playertimes
 	Migration_RemovePlayertimesPointsCalcedFrom, // lol
@@ -77,7 +78,8 @@ char gS_MigrationNames[][] = {
 	"Lowercase_maptiers",
 	"Lowercase_mapzones",
 	"Lowercase_playertimes",
-	"Lowercase_stagetimeswr",
+	"Lowercase_stagecpwr",
+	//"Lowercase_stagetimeswr",
 	"Lowercase_startpositions",
 	"AddPlayertimesPointsCalcedFrom",
 	"RemovePlayertimesPointsCalcedFrom",
@@ -208,13 +210,35 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 
 	AddQueryLog(trans, sQuery);
 
+	//
+	//// storage of cp times and stage wrs/pbs
+	//
+
+	if (driver == Driver_mysql)
+	{
+		FormatEx(sQuery, sizeof(sQuery),																														///////////////////////////////////////
+			"CREATE TABLE IF NOT EXISTS `%sstagetimes` (`id` INT NOT NULL AUTO_INCREMENT, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `stage` TINYINT NOT NULL DEFAULT 0,`time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, PRIMARY KEY (`id`), INDEX `map` (`map`, `style`, `track`, `time`), INDEX `auth` (`auth`, `date`, `points`), INDEX `time` (`time`), INDEX `map2` (`map`), CONSTRAINT `%spt_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT) ENGINE=INNODB;",
+			gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
+	}
+	else
+	{
+		FormatEx(sQuery, sizeof(sQuery),																												 ////////////////////////////////////
+			"CREATE TABLE IF NOT EXISTS `%sstagetimes` (`id` INTEGER PRIMARY KEY, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `stage` TINYINT NOT NULL DEFAULT 0, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, CONSTRAINT `%spt_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT);",
+			gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
+		strcopy(SQLitePTQuery, sizeof(SQLitePTQuery), sQuery);
+	}
+
+	AddQueryLog(trans, sQuery);
+
 	FormatEx(sQuery, sizeof(sQuery),
-		"CREATE TABLE IF NOT EXISTS `%sstagetimeswr` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `stage`)) %s;",
+		//"CREATE TABLE IF NOT EXISTS `%sstagetimeswr` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `stage`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%sstagecpwr` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `stage`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
 	FormatEx(sQuery, sizeof(sQuery),
-		"CREATE TABLE IF NOT EXISTS `%sstagetimespb` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `stage`)) %s;",
+		//"CREATE TABLE IF NOT EXISTS `%sstagetimespb` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `stage`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%sstagecppb` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `stage`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
@@ -275,8 +299,9 @@ public void Trans_CreateTables_Error(Database db, any data, int numQueries, cons
 		"maptiers",
 		"styleplaytime",
 		"playertimes",
-		"stagetimeswr",
-		"stagetimespb",
+		"stagetimes",
+		"stagecpwr",
+		"stagecppb",
 		"wrs_min",
 		"wrs",
 		"mapzones",
@@ -359,7 +384,8 @@ void ApplyMigration(int migration)
 		case Migration_Lowercase_maptiers: ApplyMigration_LowercaseMaps("maptiers", migration);
 		case Migration_Lowercase_mapzones: ApplyMigration_LowercaseMaps("mapzones", migration);
 		case Migration_Lowercase_playertimes: ApplyMigration_LowercaseMaps("playertimes", migration);
-		case Migration_Lowercase_stagetimeswr: ApplyMigration_LowercaseMaps("stagetimewrs", migration);
+		//case Migration_Lowercase_stagetimeswr: ApplyMigration_LowercaseMaps("stagetimewrs", migration);
+		case Migration_Lowercase_stagecpwr: ApplyMigration_LowercaseMaps("stagecpwrs", migration);
 		case Migration_Lowercase_startpositions: ApplyMigration_LowercaseMaps("startpositions", migration);
 		case Migration_AddPlayertimesPointsCalcedFrom: ApplyMigration_AddPlayertimesPointsCalcedFrom();
 		case Migration_RemovePlayertimesPointsCalcedFrom: ApplyMigration_RemovePlayertimesPointsCalcedFrom();

@@ -64,7 +64,7 @@ forward void Shavit_OnFinish_Post(int client, int style, float time, int jumps, 
  * @param timestamp                 System time of when player finished.
  * @noreturn
  */
-forward void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
+forward void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
 
 /**
  * Called when an admin deletes a WR.

@@ -2442,22 +2442,38 @@ public Action Shavit_OnStart(int client)
 	return Plugin_Continue;
 }
 
-public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
+public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
 {
 	char sName[32+1];
 	SanerGetClientName(client, sName);
 
 	char sTrack[32];
 	GetTrackName(LANG_SERVER, track, sTrack, 32);
+	if(stage == 0)
+	{
+		Format(sTrack, 32, "[%s%s%s]", gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
+	}
+	else
+	{
+		Format(sTrack, 32, "[%sStage %d%s]", gS_ChatStrings.sVariable, stage, gS_ChatStrings.sText);
+	}
+
 
 	for(int i = 1; i <= gCV_WRMessages.IntValue; i++)
 	{
-		Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText);
+		if(stage == 0)
+		{
+			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, track == 0 ? "map":"bonus ", track == 0 ? "":sTrack);
+		}
+		else
+		{
+			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, "stage ", sTrack);
+		}
 	}
 
 	if (oldwr == 0.0)
 	{
-		Shavit_PrintToChatAll("%T", "WRNoticeFirstCompletion", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+		Shavit_PrintToChatAll("%T", "WRNoticeFirstCompletion", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, sTrack, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 	}
 }
 

@@ -2069,12 +2069,6 @@ public int Native_FinishStage(Handle handler, int numParams)
 	Call_PushCell(timestamp);	//13 total
 	Call_Finish(result);
 
-	if(Shavit_IsOnlyStageMode(client))
-	{
-		Shavit_StopTimer(client);
-		//Shavit_SetOnlyStageMode(client, false);
-	}
-
 	if(result != Plugin_Continue)
 	{
 		return 0;
@@ -2096,6 +2090,11 @@ public int Native_FinishStage(Handle handler, int numParams)
 	Call_PushCell(timestamp);	//13 total
 	Call_Finish();
 
+	if(Shavit_IsOnlyStageMode(client))
+	{
+		Shavit_StopTimer(client);
+		//Shavit_SetOnlyStageMode(client, false);
+	}
 }
 
 public int Native_PauseTimer(Handle handler, int numParams)

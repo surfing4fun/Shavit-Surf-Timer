@@ -34,6 +34,7 @@
  * @param strafes                   Amount of strafes.
  * @param sync                      Sync percentage (0.0 to 100.0) or -1.0 when not measured.
  * @param track                     Timer track.
+ * @param stage						Stage numbers, if value is 0 means this run is a full run instead of a stage run.
  * @param oldtime                   The player's best time on the map before this finish.
  * @param perfs                     Perfect jump percentage (0.0 to 100.0) or 100.0 when not measured.
  * @param avgvel                    Player's average velocity throughout the run.
@@ -44,7 +45,7 @@
  *
  * @return                          Return Plugin_Changed (or higher) to cause a copy of the replay to be saved. Return Plugin_Continue otherwise.
  */
-forward Action Shavit_ShouldSaveReplayCopy(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp, bool isbestreplay, bool istoolong);
+forward Action Shavit_ShouldSaveReplayCopy(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldtime, float perfs, float avgvel, float maxvel, int timestamp, bool isbestreplay, bool istoolong);
 
 /**
  * Called when either a WR replay or a copy of a replay has been saved.
@@ -56,6 +57,7 @@ forward Action Shavit_ShouldSaveReplayCopy(int client, int style, float time, in
  * @param strafes                   Amount of strafes.
  * @param sync                      Sync percentage (0.0 to 100.0) or -1.0 when not measured.
  * @param track                     Timer track.
+ * @param stage						Stage numbers, if value is 0 means this run is a full run instead of a stage run.
  * @param oldtime                   The player's best time on the map before this finish.
  * @param perfs                     Perfect jump percentage (0.0 to 100.0) or 100.0 when not measured.
  * @param avgvel                    Player's average velocity throughout the run.
@@ -72,7 +74,7 @@ forward Action Shavit_ShouldSaveReplayCopy(int client, int style, float time, in
  *
  * @noreturn
  */
-forward void Shavit_OnReplaySaved(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp, bool isbestreplay, bool istoolong, bool iscopy, const char[] replaypath, ArrayList frames, int preframes, int postframes, const char[] name);
+forward void Shavit_OnReplaySaved(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldtime, float perfs, float avgvel, float maxvel, int timestamp, bool isbestreplay, bool istoolong, bool iscopy, const char[] replaypath, ArrayList frames, int preframes, int postframes, const char[] name);
 
 /**
  * Retrieves a client's frame count.
