@@ -2050,6 +2050,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 		end.iStrafes -= start.iStrafes;
 	}
 
+	float oldtime = 0.0;
 
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_FinishStagePre);
@@ -2058,7 +2059,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 	Call_PushCell(end.bsStyle);
 	Call_PushCell(stage);
 	Call_PushCell(end.fCurrentTime);
-	Call_PushCell(Shavit_GetClientStagePB(client, end.bsStyle, stage));
+	Call_PushCell(oldtime);
 	Call_PushCell(end.iJumps);
 	Call_PushCell(end.iStrafes);
 	Call_PushCell(CalcSync(end));
@@ -2079,7 +2080,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 	Call_PushCell(end.bsStyle);
 	Call_PushCell(stage);
 	Call_PushCell(end.fCurrentTime);
-	Call_PushCell(Shavit_GetClientStagePB(client, end.bsStyle, stage));
+	Call_PushCell(oldtime);
 	Call_PushCell(end.iJumps);
 	Call_PushCell(end.iStrafes);
 	Call_PushCell(CalcSync(end));

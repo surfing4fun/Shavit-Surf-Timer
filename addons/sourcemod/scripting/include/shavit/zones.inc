@@ -25,7 +25,7 @@
 #define _shavit_zones_included
 
 #define MAX_ZONES 128
-#define MAX_STAGES 50
+#define MAX_STAGES 69
 
 enum
 {
@@ -285,19 +285,15 @@ forward void Shavit_LoadZonesHere();
  */
 forward Action Shavit_OnStageMessage(int client, int stageNumber, char[] message, int maxlen);
 
+
 /**
  * Called when a player leaves a zone.
  *
  * @param client                    Client index.
- * @param track						Track index.
- * @param startStage				Stage number which client start.
- * @param endStage					Stage number which stage zone client touched.
- * @param stageStartTime			The time when player leave the start stage zone.
- * @param stageFinishTime			The time when player touch the stage zone.
- * 
+
  * @noreturn                        
  */
-forward void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage, float stageStartTime, float stageFinishTime);
+forward void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage, float stageStartTime, float stageFinishTime, bool stageOnly);
 
 /**
  * Checks if a mapzone exists.

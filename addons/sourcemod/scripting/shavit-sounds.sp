@@ -235,44 +235,6 @@ public void Shavit_OnFinish_Post(int client, int style, float time, int jumps, i
 	}
 }
 
-public void Shavit_OnFinishStage_Post(int client, int style, float time, int jumps, int strafes, float sync, int rank, int overwrite, int stage, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
-{
-	if(!gCV_Enabled.BoolValue)
-	{
-		return;
-	}
-
-	char sSound[PLATFORM_MAX_PATH];
-	bool bEveryone = false;
-
-	char sRank[8];
-	IntToString(rank, sRank, 8);
-
-	if((time < oldtime || oldtime == 0.0) && gSM_RankSounds.GetString(sRank, sSound, PLATFORM_MAX_PATH))
-	{
-		bEveryone = true;
-	}
-	else if(gA_WorldSounds.Length != 0 && rank == 1)
-	{
-		bEveryone = true;
-
-		gA_WorldSounds.GetString(GetRandomInt(0, gA_WorldSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
-	}
-	else if(gA_PersonalSounds.Length != 0 && time < oldtime)
-	{
-		gA_PersonalSounds.GetString(GetRandomInt(0, gA_PersonalSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
-	}
-	else if(gA_FirstSounds.Length != 0 && overwrite == 1)
-	{
-		gA_FirstSounds.GetString(GetRandomInt(0, gA_FirstSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
-	}
-
-	if(StrContains(sSound, ".") != -1) // file has an extension?
-	{
-		PlayEventSound(client, bEveryone, sSound);
-	}
-}
-
 public void Shavit_OnWorstRecord(int client, int style, float time, int jumps, int strafes, float sync, int track)
 {
 	if(!gCV_Enabled.BoolValue)

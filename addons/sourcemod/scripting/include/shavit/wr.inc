@@ -25,7 +25,7 @@
 #define _shavit_wr_included
 
 /**
- * Like Shavit_OnFinishStage, but after the insertion query was called.
+ * Like Shavit_OnFinish, but after the insertion query was called.
  * Called from shavit-wr
  *
  * @param client                    Client index.
@@ -36,7 +36,7 @@
  * @param sync                      Sync percentage (0.0 to 100.0) or -1.0 when not measured.
  * @param rank                      Rank on map.
  * @param overwrite                 1 - brand new record. 2 - update.
- * @param stage                     Stage number.
+ * @param track                     Timer track.
  * @param oldtime                   The player's best time on the map before this finish.
  * @param perfs                     Perfect jump percentage (0.0 to 100.0) or 100.0 when not measured.
  * @param avgvel                    Player's average velocity throughout the run.
@@ -44,7 +44,7 @@
  * @param timestamp                 System time of when player finished.
  * @noreturn
  */
-forward void Shavit_OnFinishStage_Post(int client, int style, float time, int jumps, int strafes, float sync, int rank, int overwrite, int stage, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
+forward void Shavit_OnFinish_Post(int client, int style, float time, int jumps, int strafes, float sync, int rank, int overwrite, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
 
 /**
  * Called when there's a new WR on the map.
@@ -67,29 +67,6 @@ forward void Shavit_OnFinishStage_Post(int client, int style, float time, int ju
 forward void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
 
 /**
- * Like Shavit_OnFinish, but after the insertion query was called.
- * Called from shavit-wr
- *
- * @param client                    Client index.
- * @param style                     Style the record was done on.
- * @param time                      Record time.
- * @param jumps                     Jumps amount.
- * @param strafes                   Amount of strafes.
- * @param sync                      Sync percentage (0.0 to 100.0) or -1.0 when not measured.
- * @param rank                      Rank on map.
- * @param overwrite                 1 - brand new record. 2 - update.
- * @param track                     Timer track.
- * @param oldtime                   The player's best time on the map before this finish.
- * @param perfs                     Perfect jump percentage (0.0 to 100.0) or 100.0 when not measured.
- * @param avgvel                    Player's average velocity throughout the run.
- * @param maxvel                    Player's highest reached velocity.
- * @param timestamp                 System time of when player finished.
- * @noreturn
- */
-forward void Shavit_OnFinish_Post(int client, int style, float time, int jumps, int strafes, float sync, int rank, int overwrite, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
-
-
-/**
  * Called when an admin deletes a WR.
  *
  * @param style                     Style the record was done on.
@@ -107,13 +84,6 @@ forward void Shavit_OnWRDeleted(int style, int id, int track, int accountid, con
  * @noreturn
  */
 forward void Shavit_OnWorldRecordsCached();
-
-/**
- * Called after shavit-wr caches the current map's stage WRs.
- *
- * @noreturn
- */
-forward void Shavit_OnStageWorldRecordsCached();
 
 /**
  * Called before the timer finish message is printed to the users.
@@ -299,99 +269,6 @@ native void Shavit_DeleteWR(int style, int track, const char[] map, int accounti
  */
 native void Shavit_WR_DeleteMap(const char[] map);
 
-
-/**
- * Get the stage world record time.
- * 
- * @param style						Style to get the WR for.
- * @param stage						Record stage.
- * @return							Stage world record for the specified settings.
- */
-native float Shavit_GetStageWorldRecord(int style, int stage);
-
-/**
- * Get stage's world record ID in database.
- * 
- * @param style						Style to get the WR for.
- * @param recordid					If record exist, the ID will assign to recordid.
- * @param stage						Record stage.	
- * @noreturn			
- */
-native void Shavit_GetStageWRRecordID(int style, int& recordid, int stage);
-
-/**
- * Get the WR's player name on the map on a variable.
- *
- * @param style                     Style to get the WR for.
- * @param wrname                    Reference to the name variable.
- * @param wrmaxlength               Max length for the string.
- * @param stage                     Record stage.
- * @return                          Returns true if the player's name has been cached. False if it hasn't. `wrname` is filled with the player's name if available, otherwise the steamid if the name isn't cached, and lastly the string "none" if neither the name or steamid is available.
- */
-native void Shavit_GetStageWRName(int style, char[] wrname, int wrmaxlength, int stage);
-
-/**
- * Get the stage world record time.
- * 
- * @param client					Client index.
- * @param style						Style to get the WR for.
- * @param stage						Record stage.
- * @return							Client's stage record for the specified settings.
- */
-native float Shavit_GetClientStagePB(int client, int style, int stage);
-
-/**
- * Get the stage world record time.
- * 
- * @param client					Client index.
- * @param style						Style to get the WR for.
- * @param stage						Record stage.
- * @param time						The time assign to client's pb cache. 
- * @noreturn						
- */
-native void Shavit_SetlientStagePB(int client, int style, int stage, float time);
-
-/**
- * Get the stage world record time.
- * 
- * @param style						Style to get the WR for.
- * @param stage						Record stage.
- * @return							Number of rank for specified settings.	
- */
-native int Shavit_GetStageRecordAmount(int style, int stage);
-
-/**
- * Get the stage world record time.
- * 
- * @param style						Style to get the WR for.
- * @param time						The time for stage rank. 
- * @param stage						Record stage.
- * @return							The rank for time.						
- */
-native int Shavit_GetStageRankForTime(int style, float time, int stage);
-
-/**
- * Get the stage world record time.
- * 
- * @param style						Style to get the WR for.
- * @param rank						Rank to retrieve the time from. 
- * @param stage						Record stage.
- * @return							Time for rank.						
- */
-native float Shavit_GetStageTimeForRank(int style, int rank, int stage);
-
-/**
- * Get the stage world record time.
- * 
- * @param client					Client index.
- * @param style						Style index. 
- * @param stage						Stage number for completions.
- * @return							Numbers of completions.						
- */
-native int Shavit_GetClientStageCompletions(int client, int style, int stage);
-
-
-
 public SharedPlugin __pl_shavit_wr =
 {
 	name = "shavit-wr",
@@ -422,10 +299,5 @@ public void __pl_shavit_wr_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetStageCPPB");
 	MarkNativeAsOptional("Shavit_StageTimeValid");
 	MarkNativeAsOptional("Shavit_SetStageTimeValid");
-	MarkNativeAsOptional("Shavit_GetStageWorldRecord");
-	MarkNativeAsOptional("Shavit_GetStageWRRecordID");
-	MarkNativeAsOptional("Shavit_GetStageWRName");
-	MarkNativeAsOptional("Shavit_GetClientStagePB");
-	MarkNativeAsOptional("Shavit_SetlientStagePB");
 }
 #endif

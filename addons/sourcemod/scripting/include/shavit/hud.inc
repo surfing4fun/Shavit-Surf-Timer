@@ -55,7 +55,7 @@
 #define HUD2_SPLITPB            (1 << 8)
 #define HUD2_MAPTIER            (1 << 9)
 #define HUD2_TIMEDIFFERENCE     (1 << 10)
-#define HUD2_STAGEWRPB          (1 << 11)
+#define HUD2_PERFS              (1 << 11)
 #define HUD2_STAGETIME     		(1 << 12)
 #define HUD2_VELOCITYDIFFERENCE (1 << 13)
 #define HUD2_USPSILENCER        (1 << 14) // spawns usps with a silencer on
@@ -63,7 +63,7 @@
 #define HUD2_CENTERKEYS         (1 << 16) // CSGO option to toggle whether !keys is shown as center-text or in that panel thing.
 
 #define HUD_DEFAULT             (HUD_MASTER|HUD_CENTER|HUD_ZONEHUD|HUD_OBSERVE|HUD_WRPB|HUD_SPEEDTRAP|HUD_TIMELEFT|HUD_2DVEL|HUD_SPECTATORS)
-#define HUD_DEFAULT2            (HUD2_STAGEWRPB)
+#define HUD_DEFAULT2            (HUD2_PERFS)
 
 stock bool HUD1Enabled(int hudbits, int flag)
 {
