@@ -98,15 +98,15 @@
 	}
 	"HudSpeedTrap"
 	{
-		"en"		"Use speed trap message"
+		"en"		"Speed trap message"
 	}
 	"HudStyle"
 	{
 		"en"		"Style"
 	}
-	"HudPerfs"
+	"HudStageWRPB"
 	{
-		"en"		"Perfect jumps"
+		"en"		"Display Stage WR/PB"
 	}
 	"HudDefaultPistol"
 	{

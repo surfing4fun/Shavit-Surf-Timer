@@ -334,7 +334,7 @@ public void OnPluginStart()
 	gH_Forwards_LeaveZone = CreateGlobalForward("Shavit_OnLeaveZone", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_LoadZonesHere = CreateGlobalForward("Shavit_LoadZonesHere", ET_Event);
 	gH_Forwards_StageMessage = CreateGlobalForward("Shavit_OnStageMessage", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell);
-	gH_Forwards_ReachNextStage = CreateGlobalForward("Shavit_OnReachNextStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_ReachNextStage = CreateGlobalForward("Shavit_OnReachNextStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 
 	// cvars and stuff
 	gCV_SQLZones = new Convar("shavit_zones_usesql", "1", "Whether to automatically load zones from the database or not.\n0 - Load nothing. (You'll need a plugin to add zones with `Shavit_AddZone()`)\n1 - Load zones from database.", 0, true, 0.0, true, 1.0);
@@ -2653,7 +2653,7 @@ public int MenuHandler_SelectZoneTrack(Menu menu, MenuAction action, int param1,
 
 		for(int i = 0; i < ZONETYPES_SIZE; i++)
 		{
-			if(i == Zone_CustomSpawn)
+			if(i == Zone_CustomSpawn || (i == Zone_Stage && gA_EditCache[param1].iTrack != Track_Main))
 			{
 				continue;
 			}
@@ -2852,6 +2852,8 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 			{
 				if (++gA_EditCache[param1].iType >= ZONETYPES_SIZE)
 					gA_EditCache[param1].iType = 0;
+				// if (gA_EditCache[param1].iTrack != Track_Main && gA_EditCache[param1].iType == Zone_Stage)
+				// 	++gA_EditCache[param1].iType;
 				if (allowed_types[form] & (1 << gA_EditCache[param1].iType))
 					break;
 			}
@@ -2935,7 +2937,8 @@ void OpenHookMenu_Editor(int client)
 	FormatEx(display, sizeof(display), "%T", "ZoneHook_Confirm", client);
 	menu.AddItem(
 		"hook", display,
-		(zonetype != -1 && hooktype != -1 && track != -1) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED
+		((zonetype == -1 && hooktype == -1 && track == -1) || 
+		(track != Track_Main && zonetype == Zone_Stage)) ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT
 	);
 
 	menu.ExitBackButton = true;
@@ -5410,7 +5413,6 @@ public void StartTouchPost(int entity, int other)
 						Call_PushCell(num);
 						Call_PushCell(gA_StageStartTimer[other][track][gI_LastStage[other]].fCurrentTime);
 						Call_PushCell(Shavit_GetClientStageTime(other, track, gI_LastStage[other]));
-						Call_PushCell(false);
 						Call_Finish();
 
 						if (!Shavit_IsOnlyStageMode(other))
