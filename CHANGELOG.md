@@ -1,6 +1,89 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+
+
+# Change log - 2024-3-24 -
+
+
+## shavit-core
+	
+	- Change table name from "stagetimespb" to "stagecppb"
+	- Change table name from "stagetimeswr" to "stagecpwr"
+	- Create new table "stagetimes"
+
+
+## shavit-wr
+
+### Now the stage times are able to write and load!
+	- Add global float variable gF_PlayerStageRecord
+	- Add global int variable gI_PlayerStageCompletions
+	- Add global float variable gF_StageWRTime
+	- Add global int variable gI_StageWRRecordID
+	- Add global int variable gI_StageWRSteamID
+	- Add global ArrayList variable gA_StageLeaderboards
+	- Add global bool variable gB_StageLoadedCache
+	- Add global StringMap variable gSM_StageWRNames
+	- Add new function "ResetStageLeaderboard"
+	- Add new function "ResetStageWRs"
+	- Add new function "UpdateStageLeaderboards"
+	- Change function name from "SQL_UpdateStagePBCache_Callback" to "SQL_UpdateCPPBCache_Callback"
+	- Add new function "SQL_UpdateStagePBCache_Callback"
+	- Add new function "SQL_OnFinishStage_Callback"
+	- Implement written stage time to database in forward Shavit_OnFinishStage 
+
+### APIs
+	
+	- Add new native Shavit_GetStageWorldRecord
+	- Add new native Shavit_GetStageWRRecordID
+	- Add new native Shavit_GetStageWRName
+	- Add new native Shavit_GetClientStagePB
+	- Add new native Shavit_SetClientStagePB
+	- Add new native Shavit_GetStageRecordAmount
+	- Add new native Shavit_GetStageRankForTime
+	- Add new native Shavit_GetStageTimeForRank
+	- Add new native Shavit_GetClientStageCompletions
+	- Add new forward Shavit_OnFinishStage_Post
+	- Add new forward Shavit_OnStageWorldRecordsCached
+
+	- Add parameter "stage" to forward Shavit_OnFinish
+	- Add parameter "stage" to forward Shavit_OnWorldRecord
+
+
+## shavit-hud
+
+### Add stage PB/WR HUD to KeyHint
+
+	- Now huddata.iRank is assaign correctly when client finishing a stage run.
+	- Remove HUD2 setting "HUD2_PERFS"
+	- Add HUD2 setting "HUD2_STAGEWRPB"
+
+### translation
+	
+	- Add new translation HudStageWRPB
+
+
+## shavit-replay-recorder
+
+	- Grapping replay info in Shavit_OnFinishStage
+	- Add parameter "stage" to function SaveReplay
+	- Add parameter "stage" to function DoReplaySaverCallbacks
+	- Add int variable "stage" to struct finished_run_info
+
+### APIs
+	
+	- Add new parameter "stage" to forward Shavit_ShouldReplaySave
+
+
+## shavit-zones
+
+	- Remove the "stage zone" option when creating a new zone to track bonus.
+
+### APIs
+	- Remove "isStageOnly" parameter from froward Shavit_OnReachNextStage
+
+
+
 # Change logs	- 2024-3-17 - 
 
 ## note
