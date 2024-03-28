@@ -99,7 +99,7 @@ forward void Shavit_OnFinish_Post(int client, int style, float time, int jumps, 
  * @param mapname                   The map name.
  * @noreturn
  */
-forward void Shavit_OnWRDeleted(int style, int id, int track, int accountid, const char[] mapname);
+forward void Shavit_OnWRDeleted(int style, int id, int track, int stage, int accountid, const char[] mapname);
 
 /**
  * Called after shavit-wr caches the current map's WRs.
@@ -289,6 +289,21 @@ native bool Shavit_SetStageTimeValid(int client, int track, int stage, bool vali
  * @noreturn
  */
 native void Shavit_DeleteWR(int style, int track, const char[] map, int accountid, int recordid, bool delete_sql, bool update_cache);
+
+/*
+ * Used to delete a stage WR. Used to ensure Shavit_OnWRDeleted is ran.
+ *
+ * @param style                     Record style.
+ * @param track                     Record track (should be 0). 
+ * @param stage						Record stage.
+ * @param map                       Record map.
+ * @param accountid                 -1 if recordid is -1. Otherwise you need the WR holder's Steam account ID. ([U:1:x])
+ * @param recordid                  -1 to pull ID & accountid from the database.
+ * @param delete_sql                If this function should delete the record from the database. False might be useful if you're deleting things in bulk like sm_wipeplayer does.
+ * @param update_cache              If this function should update the WR cache & record info. False might be useful if you're deleting things in bulk like sm_wipeplayer does.
+ * @noreturn
+ */
+native void Shavit_DeleteStageWR(int style, int track, int stage, const char[] map, int accountid, int recordid, bool delete_sql, bool update_cache);
 
 /**
  * Deletes all map records for the specified map.

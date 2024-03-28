@@ -2486,6 +2486,15 @@ public Action Command_Stages(int client, int args)
 			return Plugin_Handled;
 		}
 
+		int iZoneStage;
+		bool bInsideStageZone = Shavit_InsideZoneStage(client, Shavit_GetClientTrack(client), iZoneStage);
+
+		if (bInsideStageZone && gI_LastStage[client] == iZoneStage)
+		{
+			Shavit_PrintToChat(client, "%T", "StageCommandInsideStageZone", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+			return Plugin_Handled;
+		}
+
 		iStage = gI_LastStage[client];
 		bBack = true;
 	}
@@ -2569,6 +2578,7 @@ public int MenuHandler_SelectStage(Menu menu, MenuAction action, int param1, int
 		gI_LastStage[param1] = gA_ZoneCache[iIndex].iData;
 
 		Shavit_StopTimer(param1);
+		Shavit_SetClientTrack(param1, gA_ZoneCache[iIndex].iTrack);
 		Shavit_SetOnlyStageMode(param1, true);
 
 		if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))

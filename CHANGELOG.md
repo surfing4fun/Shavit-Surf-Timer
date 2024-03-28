@@ -1,6 +1,41 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+# Change log - 2024-3-28 -
+
+	## Main changes
+	
+		- Add new commands: `sm_cpwr` `sm_stagewr` `sm_stageworldrecord` `sm_stageworldrecords` `sm_deletestagerecord` `sm_deletestagerecords`
+		- Implement display Checkpoint times.
+		- Implement display stage records.
+		- Implement stage record deletion.
+
+
+	## shavit-core
+		- Add two view in database: `stagewrs` `stagewrs_min`
+
+	## shavit-wr
+		- Add new integer variable `iLastTrack` to struct `wrcache_t`
+		- Add new function `Command_DeleteStageRecord` `DeleteStageSubMenu` `MenuHandler_DeleteStage_First` to handle stage record deletion.
+		- Add new function `DeleteStageWR` `DeleteStageWRGetID_Callback` `DeleteStageWRInner` `DeleteStageWR_Callback` `DeleteStageWRFinal` to handle stage wr deletion.
+		- Fix ArrayList index out of range error when load checkpoint times in cache.
+		- Now player's timer will stop correctlly if player finish a stage run with excceded prespeed in start zone.
+		- Checkpoint time message will show correctlly when player finishing a stage run.
+		
+		###APIs
+			- Change forward `Shavit_OnWRDeleted` behaviour. Add integer parameter `stage`.
+			- Add new native `Shavit_DeleteStageWR`.
+
+		###translation
+			- Add new translation `DeleteStageSingle` `CheckpointRecord`
+			- Change transaction `ListClientRecords` formatting to show track names.
+
+	## shavit-zones
+		- Stop player using `sm_back` in stage start zone to get advantage.
+
+		###translation
+			- Add new translation `StageCommandInsideStageZone`
+
 
 
 # Change log - 2024-3-24 -

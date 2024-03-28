@@ -248,6 +248,12 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 		AddQueryLog(trans, sQuery);
 		FormatEx(sQuery, sizeof(sQuery), "DROP VIEW IF EXISTS %swrs_min;", gS_SQLPrefix);
 		AddQueryLog(trans, sQuery);
+		
+		//wrcp stuffs
+		FormatEx(sQuery, sizeof(sQuery), "DROP VIEW IF EXISTS %sstagewrs;", gS_SQLPrefix);
+		AddQueryLog(trans, sQuery);
+		FormatEx(sQuery, sizeof(sQuery), "DROP VIEW IF EXISTS %sstagewrs_min;", gS_SQLPrefix);
+		AddQueryLog(trans, sQuery);
 	}
 
 	FormatEx(sQuery, sizeof(sQuery),
@@ -258,6 +264,19 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 
 	FormatEx(sQuery, sizeof(sQuery),
 		"%s %swrs AS SELECT a.* FROM %splayertimes a JOIN %swrs_min b ON a.time = b.time AND a.map = b.map AND a.track = b.track AND a.style = b.style;",
+		driver == Driver_sqlite ? "CREATE VIEW IF NOT EXISTS" : "CREATE OR REPLACE VIEW",
+		gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
+	AddQueryLog(trans, sQuery);
+
+	//wrcp stuffs
+	FormatEx(sQuery, sizeof(sQuery),
+		"%s %sstagewrs_min AS SELECT MIN(time) time, map, track, stage, style FROM %sstagetimes GROUP BY map, stage, style;",
+		driver == Driver_sqlite ? "CREATE VIEW IF NOT EXISTS" : "CREATE OR REPLACE VIEW",
+		gS_SQLPrefix, gS_SQLPrefix);
+	AddQueryLog(trans, sQuery);
+
+	FormatEx(sQuery, sizeof(sQuery),
+		"%s %sstagewrs AS SELECT a.* FROM %sstagetimes a JOIN %sstagewrs_min b ON a.time = b.time AND a.map = b.map AND a.track = b.track AND a.style = b.style AND a.stage = b.stage;",
 		driver == Driver_sqlite ? "CREATE VIEW IF NOT EXISTS" : "CREATE OR REPLACE VIEW",
 		gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
 	AddQueryLog(trans, sQuery);

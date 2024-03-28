@@ -71,6 +71,11 @@
 		"#format"	"{1:s},{2:s},{3:s}"
 		"en"		"Your timer has to be {1}{2}{3} to use this command."
 	}
+	"StageCommandInsideStageZone"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"You {1}cannot{2} use this command in current stage zone."
+	}
 	"ModifierCommandNoArgs"
 	{
 		"en"		"Usage: sm_modifier <decimal number>"

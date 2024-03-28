@@ -22,8 +22,8 @@
 	// ---------- Client Menus ---------- //
 	"ListClientRecords"
 	{
-		"#format"	"{1:s},{2:s}"
-		"en"		"Records for {1}:\n({2})"
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Records for {1}: [{2}]\n({3})"
 	}
 	"ListPersonalBest"
 	{
@@ -119,6 +119,10 @@
 	{
 		"en"		"Choose a track to delete a single record from:"
 	}
+	"DeleteStageSingle"
+	{
+		"en"		"Choose a stage to delete a single record from:"
+	}
 	"DeleteTrackAll"
 	{
 		"en"		"Choose a track to delete a ALL records from:"
@@ -185,6 +189,10 @@
 	"WRPlayerStats"
 	{
 		"en"		"Player stats"
+	}
+	"CheckpointRecord"
+	{
+		"en"		"Checkpoint records"
 	}
 	"WRDeleteRecord"
 	{

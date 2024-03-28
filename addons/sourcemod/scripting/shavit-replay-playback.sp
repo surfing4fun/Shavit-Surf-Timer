@@ -2899,9 +2899,16 @@ void ClearFrameCache(frame_cache_t cache)
 	cache.fTickrate = 0.0;
 }
 
-public void Shavit_OnWRDeleted(int style, int id, int track, int accountid, const char[] mapname)
+public void Shavit_OnWRDeleted(int style, int id, int track, int stage, int accountid, const char[] mapname)
 {
-	DeleteReplay(style, track, accountid, mapname);
+	if(stage == 0)
+	{
+		DeleteReplay(style, track, accountid, mapname);		
+	}
+	else
+	{
+		Shavit_PrintToChatAll("Delete stage record here");
+	}
 }
 
 public Action Command_DeleteReplay(int client, int args)

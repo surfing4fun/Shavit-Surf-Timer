@@ -414,7 +414,7 @@ public void OnMapEnd()
 	gB_WorldRecordsCached = false;
 }
 
-public void Shavit_OnWRDeleted(int style, int id, int track, int accountid, const char[] mapname)
+public void Shavit_OnWRDeleted(int style, int id, int track, int stage, int accountid, const char[] mapname)
 {
 	if (!StrEqual(gS_Map, mapname))
 	{

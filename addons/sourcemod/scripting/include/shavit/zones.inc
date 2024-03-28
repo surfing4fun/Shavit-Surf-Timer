@@ -348,7 +348,7 @@ native void Shavit_Zones_DeleteMap(const char[] map);
  *
  * @param client                    Client index.
  * @param track                     Mapzone track, -1 to ignore track.
- * @param zoneid                    Reference to variable that will hold the zone's stage.
+ * @param stage                     Reference to variable that will hold the zone's stage.
  * @return                          Boolean value.
  */
 native bool Shavit_InsideZoneStage(int client, int track, int &stage);

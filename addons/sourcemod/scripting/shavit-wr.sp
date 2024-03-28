@@ -43,6 +43,7 @@ enum struct wrcache_t
 {
 	int iLastStyle;
 	int iLastTrack;
+	int iLastStage;
 	int iPagePosition;
 	bool bForceStyle;
 	bool bPendingMenu;
@@ -159,6 +160,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_ReloadLeaderboards", Native_ReloadLeaderboards);
 	CreateNative("Shavit_WR_DeleteMap", Native_WR_DeleteMap);
 	CreateNative("Shavit_DeleteWR", Native_DeleteWR);
+	CreateNative("Shavit_DeleteStageWR", Native_DeleteStageWR);
 	CreateNative("Shavit_GetStageCPWR", Native_GetStageCPWR);
 	CreateNative("Shavit_GetStageCPPB", Native_GetStageCPPB);
 	CreateNative("Shavit_StageTimeValid", Native_StageTimeValid);
@@ -200,7 +202,7 @@ public void OnPluginStart()
 	// forwards
 	gH_OnWorldRecord = CreateGlobalForward("Shavit_OnWorldRecord", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_OnFinish_Post = CreateGlobalForward("Shavit_OnFinish_Post", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	gH_OnWRDeleted = CreateGlobalForward("Shavit_OnWRDeleted", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String);
+	gH_OnWRDeleted = CreateGlobalForward("Shavit_OnWRDeleted", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String);
 	gH_OnWorstRecord = CreateGlobalForward("Shavit_OnWorstRecord", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_OnFinishMessage = CreateGlobalForward("Shavit_OnFinishMessage", ET_Event, Param_Cell, Param_CellByRef, Param_Array, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_String, Param_Cell);
 	gH_OnWorldRecordsCached = CreateGlobalForward("Shavit_OnWorldRecordsCached", ET_Event);
@@ -211,6 +213,12 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_wr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_wr [map]");
 	RegConsoleCmd("sm_worldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_worldrecord [map]");
 	RegConsoleCmd("sm_wrtest", Command_WRTest);
+
+	RegConsoleCmd("sm_cpwr", Command_WorldRecord);
+	RegConsoleCmd("sm_swr", Command_WorldRecord);
+	RegConsoleCmd("sm_stagewr", Command_WorldRecord);
+	RegConsoleCmd("sm_stageworldrecord", Command_WorldRecord);
+	RegConsoleCmd("sm_sworldrecord", Command_WorldRecord);
 
 	RegConsoleCmd("sm_bwr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_bwr [map] [bonus number]");
 	RegConsoleCmd("sm_bworldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_bworldrecord [map] [bonus number]");
@@ -229,6 +237,12 @@ public void OnPluginStart()
 	RegAdminCmd("sm_deleterecord", Command_Delete, ADMFLAG_RCON, "Opens a record deletion menu interface.");
 	RegAdminCmd("sm_deleterecords", Command_Delete, ADMFLAG_RCON, "Opens a record deletion menu interface.");
 	RegAdminCmd("sm_deleteall", Command_DeleteAll, ADMFLAG_RCON, "Deletes all the records for this map.");
+
+	// delete stage records
+	RegAdminCmd("sm_deletestage", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
+	RegAdminCmd("sm_deletestagerecord", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
+	RegAdminCmd("sm_deletestagerecords", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
+
 
 	// cvars
 	gCV_RecordsLimit = new Convar("shavit_wr_recordlimit", "50", "Limit of records shown in the WR menu.\nAdvised to not set above 1,000 because scrolling through so many pages is useless.\n(And can also cause the command to take long time to run)", 0, true, 1.0);
@@ -314,18 +328,18 @@ public Action Command_WRTest(int client, int args)
 {
 	PrintToChatAll("Get Stage WR\n");
 	PrintToChatAll("==========================================\n");
-	int stage = Shavit_GetStageCount(0);
-	for(int i = 1; i <= stage; i++)
-	{
-		int steamid = gI_StageWRSteamID[0][i];
-		int wrid = gI_StageWRRecordID[0][i];
-		float time = gF_StageWRTime[0][i];
-		float pbtime = gF_PlayerStageRecord[client][0][i];
-		PrintToChatAll("ID: %d, stage: %d, wr: %.2f, steamid: %d, pb: %.2f", wrid, i, time, steamid, pbtime);
-	}
-	PrintToChatAll("==========================================\n");
+	// int stage = Shavit_GetStageCount(0);
+	// for(int i = 1; i <= stage; i++)
+	// {
+	// 	int steamid = gI_StageWRSteamID[0][i];
+	// 	int wrid = gI_StageWRRecordID[0][i];
+	// 	float time = gF_StageWRTime[0][i];
+	// 	float pbtime = gF_PlayerStageRecord[client][0][i];
+	// 	PrintToChatAll("ID: %d, stage: %d, wr: %.2f, steamid: %d, pb: %.2f", wrid, i, time, steamid, pbtime);
+	// }
+	// PrintToChatAll("==========================================\n");
 
-	//Shavit_PrintToChat(client, "WRTEST Return: %s%s", gS_ChatStrings.sVariable, mode ? "TRUE":"FALSE");
+	Shavit_PrintToChat(client, "my client index: %d", client);
 
 	return Plugin_Handled;
 }
@@ -728,14 +742,11 @@ public void SQL_UpdateStageCPPBCache_Callback(Database db, DBResultSet results, 
 		return;
 	}
 
-	int stagecount = 0;
-
 	for(int i = 0; i < TRACKS_SIZE; i++)
 	{
-		stagecount = Shavit_GetStageCount(i);
 		for(int j = 0; j < gI_Styles; j++)
 		{		
-			gA_StageCP_PB[client][j][i].Resize(stagecount + 1);
+			gA_StageCP_PB[client][j][i].Resize(MAX_STAGES);
 			ResetStagePBCPs(client, j, i);
 		}
 	}
@@ -751,10 +762,10 @@ public void SQL_UpdateStageCPPBCache_Callback(Database db, DBResultSet results, 
 			continue;
 		}
 
-		if(gA_StageCP_PB[client][style][track].Length - 1 < stage)
-		{
-			gA_StageCP_PB[client][style][track].Resize(Shavit_GetStageCount(track) + 1);
-		}
+		// if(gA_StageCP_PB[client][style][track].Length - 1 < stage)
+		// {
+		// 	gA_StageCP_PB[client][style][track].Resize(Shavit_GetStageCount(track) + 1);
+		// }
 		
 		gA_StageCP_PB[client][style][track].Set(stage, results.FetchFloat(0));
 	}
@@ -989,6 +1000,7 @@ void DeleteWRFinal(int style, int track, const char[] map, int steamid, int reco
 	Call_PushCell(style);
 	Call_PushCell(recordid);
 	Call_PushCell(track);
+	Call_PushCell(0);
 	Call_PushCell(steamid);
 	Call_PushString(map);
 	Call_Finish();
@@ -1067,7 +1079,7 @@ void DeleteWR(int style, int track, const char[] map, int steamid, int recordid,
 
 		if (recordid == -1) // missing WR recordid thing...
 		{
-			FormatEx(sQuery, sizeof(sQuery),
+			FormatEx(sQuery, sizeof(sQuery),			// idk what are this suppose to do, maybe some one use it without record id?
 				"SELECT id, auth FROM %swrs WHERE map = '%s' AND style = %d AND track = %d;",
 				gS_MySQLPrefix, map, style, track, gS_MySQLPrefix, map, style, track);
 			QueryLog(gH_SQL, DeleteWRGetID_Callback, sQuery, hPack, DBPrio_High);
@@ -1081,6 +1093,125 @@ void DeleteWR(int style, int track, const char[] map, int steamid, int recordid,
 	{
 		DeleteWRFinal(style, track, map, steamid, recordid, update_cache);
 	}
+}
+
+void DeleteStageWRFinal(int style, int track, int stage, const char[] map, int steamid, int recordid, bool update_cache)
+{
+	Call_StartForward(gH_OnWRDeleted);
+	Call_PushCell(style);
+	Call_PushCell(recordid);
+	Call_PushCell(track);
+	Call_PushCell(stage);
+	Call_PushCell(steamid);
+	Call_PushString(map);
+	Call_Finish();
+
+	if (update_cache)
+	{
+		if (gA_Leaderboard[style][track] && gA_Leaderboard[style][track].Length)
+		{
+			gA_StageLeaderboard[style][stage].Erase(0);
+			gF_StageWRTime[style][stage] = Shavit_GetStageTimeForRank(style, 1, stage);
+		}
+
+		UpdateWRCache();
+	}
+}
+
+public void DeleteStageWR_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
+{
+	hPack.Reset();
+
+	int style = hPack.ReadCell();
+	int track = hPack.ReadCell();
+	int stage = hPack.ReadCell();
+	char map[PLATFORM_MAX_PATH];
+	hPack.ReadString(map, sizeof(map));
+	bool update_cache = view_as<bool>(hPack.ReadCell());
+	int steamid = hPack.ReadCell();
+	int recordid = hPack.ReadCell();
+
+	delete hPack;
+
+	if(results == null)
+	{
+		LogError("Timer (WR DeleteStageWR) SQL query failed. Reason: %s", error);
+		return;
+	}
+
+	DeleteStageWRFinal(style, track, stage, map, steamid, recordid, update_cache);
+}
+
+void DeleteStageWRInner(int recordid, int steamid, DataPack hPack)
+{
+	hPack.WriteCell(steamid);
+	hPack.WriteCell(recordid);
+
+	char sQuery[169];
+	FormatEx(sQuery, sizeof(sQuery),
+		"DELETE FROM %sstagetimes WHERE id = %d;",
+		gS_MySQLPrefix, recordid);
+	QueryLog(gH_SQL, DeleteStageWR_Callback, sQuery, hPack, DBPrio_High);
+}
+
+public void DeleteStageWRGetID_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
+{
+	if(results == null || !results.FetchRow())
+	{
+		delete hPack;
+		LogError("Timer (WR DeleteStageWRGetID) SQL query failed. Reason: %s", error);
+		return;
+	}
+
+	DeleteStageWRInner(results.FetchInt(0), results.FetchInt(1), hPack);
+}
+
+void DeleteStageWR(int style, int track, int stage, const char[] map, int steamid, int recordid, bool delete_sql, bool update_cache)
+{
+	if (delete_sql)
+	{
+		DataPack hPack = new DataPack();
+		hPack.WriteCell(style);
+		hPack.WriteCell(track);
+		hPack.WriteCell(stage);
+		hPack.WriteString(map);
+		hPack.WriteCell(update_cache);
+
+		char sQuery[512];
+
+		if (recordid == -1) // missing WR recordid thing...
+		{
+			FormatEx(sQuery, sizeof(sQuery),			// idk what are this suppose to do, maybe some one use it without record id?
+				"SELECT id, auth FROM %sstagewrs WHERE map = '%s' AND style = %d AND track = %d AND stage = %d;",
+				gS_MySQLPrefix, map, style, track, gS_MySQLPrefix, map, style, track, stage);
+			QueryLog(gH_SQL, DeleteStageWRGetID_Callback, sQuery, hPack, DBPrio_High);
+		}
+		else
+		{
+			DeleteStageWRInner(recordid, steamid, hPack);
+		}
+	}
+	else
+	{
+		DeleteWRFinal(style, track, map, steamid, recordid, update_cache);
+	}
+}
+
+public int Native_DeleteStageWR(Handle handle, int numParams)
+{
+	int style = GetNativeCell(1);
+	int track = GetNativeCell(2);
+	int stage = GetNativeCell(3);
+	char map[PLATFORM_MAX_PATH];
+	GetNativeString(4, map, sizeof(map));
+	LowercaseString(map);
+	int steamid = GetNativeCell(5);
+	int recordid = GetNativeCell(6);
+	bool delete_sql = view_as<bool>(GetNativeCell(7));
+	bool update_cache = view_as<bool>(GetNativeCell(8));
+
+	DeleteStageWR(style, track, stage, map, steamid, recordid, delete_sql, update_cache);
+	return 1;
 }
 
 public int Native_DeleteWR(Handle handle, int numParams)
@@ -1140,8 +1271,6 @@ public int Native_SetStageTimeValid(Handle plugin, int numParams)
 	return 1;
 }
 
-
-////////////////////////////////////////////
 public int Native_GetStageWorldRecord(Handle plugin, int numParams)
 {
 	return view_as<int>(gF_StageWRTime[GetNativeCell(1)][GetNativeCell(2)]);
@@ -1257,6 +1386,108 @@ int GetTrackRecordCount(int track)
 	return count;
 }
 
+int GetStageRecorCount(int stage)
+{
+	int count = 0;
+
+	for(int i = 0; i < gI_Styles; i++)
+	{
+		count += GetStageRecordAmount(i, stage);
+	}
+
+	return count;
+}
+
+public Action Command_DeleteStageRecord(int client, int args)
+{
+	if(!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	Menu menu = new Menu(MenuHandler_DeleteStage_First);
+	menu.SetTitle("%T\n ", "DeleteStageSingle", client);
+
+	for(int i = 1; i < MAX_STAGES; i++)
+	{
+		char sInfo[8];
+		IntToString(i, sInfo, 8);
+
+		int records = GetStageRecorCount(i);
+
+		char sStage[64];
+		FormatEx(sStage, sizeof(sStage), "Stage %d", i);
+
+		if(records > 0)
+		{
+			FormatEx(sStage, sizeof(sStage), "%s (%T: %d)", sStage, "WRRecord", client, records);
+		}
+
+		menu.AddItem(sInfo, sStage, (records > 0) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+	}
+
+	menu.ExitBackButton = true;
+	menu.Display(client, 300);
+
+	return Plugin_Handled;
+}
+
+public int MenuHandler_DeleteStage_First(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char info[16];
+		menu.GetItem(param2, info, 16);
+		gA_WRCache[param1].iLastTrack = Track_Main;
+		gA_WRCache[param1].iLastStage = StringToInt(info);
+
+		DeleteStageSubMenu(param1);
+	}
+	// else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
+	// {
+	// 	gH_AdminMenu.DisplayCategory(gH_TimerCommands, param1);
+	// }
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+void DeleteStageSubMenu(int client)
+{
+	Menu menu = new Menu(MenuHandler_Delete);
+	menu.SetTitle("%T\n ", "DeleteMenuTitle", client);
+
+	int[] styles = new int[gI_Styles];
+	Shavit_GetOrderedStyles(styles, gI_Styles);
+
+	for(int i = 0; i < gI_Styles; i++)
+	{
+		int iStyle = styles[i];
+
+		if(Shavit_GetStyleSettingInt(iStyle, "enabled") == -1)
+		{
+			continue;
+		}
+
+		char sInfo[8];
+		IntToString(iStyle, sInfo, 8);
+
+		int records = GetStageRecordAmount(i, gA_WRCache[client].iLastStage); 
+
+		char sDisplay[64];
+		FormatEx(sDisplay, 64, "%s (%T: %d)", gS_StyleStrings[iStyle].sStyleName, "WRRecord", client, records);
+
+		menu.AddItem(sInfo, (records > 0) ? sDisplay:gS_StyleStrings[iStyle].sStyleName, (records > 0) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+	}
+
+	menu.ExitButton = true;
+	menu.Display(client, 300);
+}
+
+
 public Action Command_Delete(int client, int args)
 {
 	if(!IsValidClient(client))
@@ -1298,6 +1529,7 @@ public int MenuHandler_Delete_First(Menu menu, MenuAction action, int param1, in
 		char info[16];
 		menu.GetItem(param2, info, 16);
 		gA_WRCache[param1].iLastTrack = StringToInt(info);
+		gA_WRCache[param1].iLastStage = 0;
 
 		DeleteSubmenu(param1);
 	}
@@ -1540,8 +1772,19 @@ public int MenuHandler_Delete(Menu menu, MenuAction action, int param1, int para
 void OpenDelete(int client)
 {
 	char sQuery[512];
-	FormatEx(sQuery, 512, "SELECT p.id, u.name, p.time, p.jumps FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC LIMIT 1000;",
-		gS_MySQLPrefix, gS_MySQLPrefix, gS_Map, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
+
+	if(gA_WRCache[client].iLastStage == 0)
+	{
+		FormatEx(sQuery, 512, 
+			"SELECT p.id, u.name, p.time, p.jumps FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC LIMIT 1000;",
+			gS_MySQLPrefix, gS_MySQLPrefix, gS_Map, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
+	}
+	else
+	{
+		FormatEx(sQuery, 512, 
+			"SELECT p.id, u.name, p.time, p.jumps FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND stage = %d ORDER BY time ASC, date ASC LIMIT 1000;", 
+			gS_MySQLPrefix, gS_MySQLPrefix, gS_Map, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastStage);		
+	}
 
 	QueryLog(gH_SQL, SQL_OpenDelete_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 }
@@ -1563,9 +1806,20 @@ public void SQL_OpenDelete_Callback(Database db, DBResultSet results, const char
 	}
 
 	int iStyle = gA_WRCache[client].iLastStyle;
+	char sTrack[32];
+
+	Shavit_PrintToChatAll("4 gA_WRCache[%d].iLastStage = %d", client, gA_WRCache[client].iLastStage);
+	if (gA_WRCache[client].iLastStage == 0)
+	{
+		GetTrackName(client, gA_WRCache[client].iLastTrack, sTrack, sizeof(sTrack));
+	}
+	else
+	{
+		FormatEx(sTrack, sizeof(sTrack), "Stage %d",  gA_WRCache[client].iLastStage);
+	}
 
 	Menu menu = new Menu(OpenDelete_Handler);
-	menu.SetTitle("%t", "ListClientRecords", gS_Map, gS_StyleStrings[iStyle].sStyleName);
+	menu.SetTitle("%t", "ListClientRecords", gS_Map, sTrack, gS_StyleStrings[iStyle].sStyleName);
 
 	int iCount = 0;
 
@@ -1603,6 +1857,8 @@ public void SQL_OpenDelete_Callback(Database db, DBResultSet results, const char
 		menu.AddItem("-1", sNoRecords);
 	}
 
+	Shavit_PrintToChatAll("4.01 gA_WRCache[%d].iLastStage = %d", client, gA_WRCache[client].iLastStage);
+
 	menu.ExitButton = true;
 	menu.Display(client, 300);
 }
@@ -1618,6 +1874,7 @@ public int OpenDelete_Handler(Menu menu, MenuAction action, int param1, int para
 
 		if(id != -1)
 		{
+			Shavit_PrintToChatAll("4.1 gA_WRCache[%d].iLastStage = %d", param1, gA_WRCache[param1].iLastStage);
 			OpenDeleteMenu(param1, id);
 		}
 	}
@@ -1633,6 +1890,7 @@ void OpenDeleteMenu(int client, int id)
 {
 	char sMenuItem[64];
 
+	Shavit_PrintToChatAll("4.2 gA_WRCache[%d].iLastStage = %d", client, gA_WRCache[client].iLastStage);
 	Menu menu = new Menu(DeleteConfirm_Handler);
 	menu.SetTitle("%T\n ", "DeleteConfirm", client);
 
@@ -1662,6 +1920,7 @@ public int DeleteConfirm_Handler(Menu menu, MenuAction action, int param1, int p
 {
 	if(action == MenuAction_Select)
 	{
+		Shavit_PrintToChatAll("4.3 gA_WRCache[%d].iLastStage = %d", param1, gA_WRCache[param1].iLastStage);
 		char sInfo[16];
 		menu.GetItem(param2, sInfo, 16);
 
@@ -1676,13 +1935,24 @@ public int DeleteConfirm_Handler(Menu menu, MenuAction action, int param1, int p
 		}
 
 		char sQuery[512];
-		FormatEx(sQuery, sizeof(sQuery),
-		"SELECT u.auth, u.name, p.map, p.time, p.sync, p.perfs, p.jumps, p.strafes, p.id, p.date, p.style, p.track, "...
-		"(SELECT id FROM %splayertimes WHERE style = %d AND track = %d AND map = p.map ORDER BY time, date ASC LIMIT 1) "...
-		"FROM %susers u LEFT JOIN %splayertimes p ON u.auth = p.auth WHERE p.id = %d;",
-			gS_MySQLPrefix, gA_WRCache[param1].iLastStyle, gA_WRCache[param1].iLastTrack, gS_MySQLPrefix, gS_MySQLPrefix, iRecordID);
+		if(gA_WRCache[param1].iLastStage == 0)
+		{
+			FormatEx(sQuery, sizeof(sQuery),
+				"SELECT u.auth, u.name, p.map, p.time, p.sync, p.perfs, p.jumps, p.strafes, p.id, p.date, p.style, p.track, "...
+				"(SELECT id FROM %splayertimes WHERE style = %d AND track = %d AND map = p.map ORDER BY time, date ASC LIMIT 1) "...
+				"FROM %susers u LEFT JOIN %splayertimes p ON u.auth = p.auth WHERE p.id = %d;",
+				gS_MySQLPrefix, gA_WRCache[param1].iLastStyle, gA_WRCache[param1].iLastTrack, gS_MySQLPrefix, gS_MySQLPrefix, iRecordID);			
+		}
+		else
+		{
+			FormatEx(sQuery, sizeof(sQuery),
+				"SELECT u.auth, u.name, p.map, p.time, p.sync, p.perfs, p.jumps, p.strafes, p.id, p.date, p.style, p.track, p.stage,"...
+				"(SELECT id FROM %sstagetimes WHERE style = %d AND stage = %d AND map = p.map ORDER BY time, date ASC LIMIT 1) "...
+				"FROM %susers u LEFT JOIN %sstagetimes p ON u.auth = p.auth WHERE p.id = %d;",
+				gS_MySQLPrefix, gA_WRCache[param1].iLastStyle, gA_WRCache[param1].iLastStage, gS_MySQLPrefix, gS_MySQLPrefix, iRecordID);
+		}
 
-		QueryLog(gH_SQL, GetRecordDetails_Callback, sQuery, GetSteamAccountID(param1), DBPrio_High);
+		QueryLog(gH_SQL, GetRecordDetails_Callback, sQuery, GetClientSerial(param1), DBPrio_High);
 	}
 	else if(action == MenuAction_End)
 	{
@@ -1694,19 +1964,13 @@ public int DeleteConfirm_Handler(Menu menu, MenuAction action, int param1, int p
 
 public void GetRecordDetails_Callback(Database db, DBResultSet results, const char[] error, any data)
 {
+	int client = GetClientFromSerial(data);
+	
 	if(results == null)
 	{
-		for (int i = 1; i <= MaxClients; i++)
-		{
-			if (IsValidClient(i) && GetSteamAccountID(i) == data)
-			{
-				OpenDelete(i);
-				break;
-			}
-		}
-
+		OpenDelete(client);
 		LogError("Timer (WR GetRecordDetails) SQL query failed. Reason: %s", error);
-
+		
 		return;
 	}
 
@@ -1729,12 +1993,24 @@ public void GetRecordDetails_Callback(Database db, DBResultSet results, const ch
 		int iRecordID = results.FetchInt(8);
 		int iTimestamp = results.FetchInt(9);
 		int iStyle = results.FetchInt(10);
-		int iTrack = results.FetchInt(11);
-		int iWRRecordID = results.FetchInt(12);
+		int iTrack = results.FetchInt(11);	
+		int iStage = 0;
+		int iWRRecordID;
+		
+
+		if(gA_WRCache[client].iLastStage > 0)
+		{
+			iStage = results.FetchInt(12);
+			iWRRecordID = results.FetchInt(13);
+		}
+		else
+		{
+			iWRRecordID = results.FetchInt(12);
+		}
 
 		// that's a big datapack ya yeet
 		DataPack hPack = new DataPack();
-		hPack.WriteCell(data);
+		hPack.WriteCell(GetSteamAccountID(client));
 		hPack.WriteCell(iSteamID);
 		hPack.WriteString(sName);
 		hPack.WriteString(sMap);
@@ -1747,21 +2023,32 @@ public void GetRecordDetails_Callback(Database db, DBResultSet results, const ch
 		hPack.WriteCell(iTimestamp);
 		hPack.WriteCell(iStyle);
 		hPack.WriteCell(iTrack);
+		hPack.WriteCell(iStage);
 
 		bool bWRDeleted = iWRRecordID == iRecordID;
 		hPack.WriteCell(bWRDeleted);
 
 		char sQuery[256];
-		FormatEx(sQuery, 256, "DELETE FROM %splayertimes WHERE id = %d;",
-			gS_MySQLPrefix, iRecordID);
-		QueryLog(gH_SQL, DeleteConfirm_Callback, sQuery, hPack, DBPrio_High);
-		
-		//Delete stage pb as well
-		FormatEx(sQuery, sizeof(sQuery),
-			//"DELETE FROM `%sstagetimespb` WHERE style = %d AND track = %d AND map = '%s';",
-			"DELETE FROM `%sstagecppb` WHERE style = %d AND track = %d AND map = '%s';",
-			gS_MySQLPrefix, iStyle, iTrack, gS_Map);
-		QueryLog(gH_SQL, DeleteConfirm_StagePB_Callback, sQuery, 0, DBPrio_High);
+		if(iStage == 0)
+		{
+			FormatEx(sQuery, 256, "DELETE FROM %splayertimes WHERE id = %d;",
+				gS_MySQLPrefix, iRecordID);
+			QueryLog(gH_SQL, DeleteConfirm_Callback, sQuery, hPack, DBPrio_High);
+			
+			//Delete stage pb as well
+			FormatEx(sQuery, sizeof(sQuery),
+				//"DELETE FROM `%sstagetimespb` WHERE style = %d AND track = %d AND map = '%s';",
+				"DELETE FROM `%sstagecppb` WHERE style = %d AND track = %d AND map = '%s';",
+				gS_MySQLPrefix, iStyle, iTrack, gS_Map);
+			
+			QueryLog(gH_SQL, DeleteConfirm_StagePB_Callback, sQuery, 0, DBPrio_High);
+		}
+		else
+		{
+			FormatEx(sQuery, 256, "DELETE FROM %sstagetimes WHERE id = %d;",
+				gS_MySQLPrefix, iRecordID);
+			QueryLog(gH_SQL, DeleteConfirm_Callback, sQuery, hPack, DBPrio_High);
+		}
 	}
 }
 
@@ -1788,6 +2075,7 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 	int iTimestamp = hPack.ReadCell();
 	int iStyle = hPack.ReadCell();
 	int iTrack = hPack.ReadCell();
+	int iStage = hPack.ReadCell();
 
 	bool bWRDeleted = view_as<bool>(hPack.ReadCell());
 	delete hPack;
@@ -1796,7 +2084,15 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 	{
 		if (IsValidClient(i) && GetSteamAccountID(i) == admin_steamid)
 		{
-			DeleteSubmenu(i);
+			if (iStage == 0)
+			{
+				DeleteSubmenu(i);				
+			}
+			else
+			{
+				Command_DeleteStageRecord(i, 0);
+			}
+
 			break;
 		}
 	}
@@ -1810,7 +2106,15 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 
 	if(bWRDeleted)	//If delete a record is WR (SR)
 	{
-		DeleteWR(iStyle, iTrack, sMap, iSteamID, iRecordID, false, true);
+		if(iStage == 0)
+		{
+			DeleteWR(iStyle, iTrack, sMap, iSteamID, iRecordID, false, true);			
+		}
+		else
+		{
+			DeleteStageWR(iStyle, iTrack, iStage, sMap, iSteamID, iRecordID, false, true);
+			Shavit_PrintToChatAll("Need somthing here.");
+		}
 	}
 	else	//IF Not Run into this
 	{
@@ -1826,13 +2130,16 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 
 	char sTrack[32];
 	GetTrackName(LANG_SERVER, iTrack, sTrack, 32);
+	
+	char sStage[32];
+	FormatEx(sStage, sizeof(sStage), "| Stage: %d ", iStage);
 
 	char sDate[32];
 	FormatTime(sDate, 32, "%Y-%m-%d %H:%M:%S", iTimestamp);
 
 	// above the client == 0 so log doesn't get lost if admin disconnects between deleting record and query execution
-	Shavit_LogMessage("Admin [U:1:%u] - deleted record. Runner: %s ([U:1:%u]) | Map: %s | Style: %s | Track: %s | Time: %.2f (%s) | Strafes: %d (%.1f%%) | Jumps: %d (%.1f%%) | Run date: %s | Record ID: %d",
-		admin_steamid, sName, iSteamID, sMap, gS_StyleStrings[iStyle].sStyleName, sTrack, fTime, (bWRDeleted)? "WR":"not WR", iStrafes, fSync, iJumps, fPerfectJumps, sDate, iRecordID);
+	Shavit_LogMessage("Admin [U:1:%u] - deleted %srecord. Runner: %s ([U:1:%u]) | Map: %s | Style: %s | Track: %s %s| Time: %.2f (%s) | Strafes: %d (%.1f%%) | Jumps: %d (%.1f%%) | Run date: %s | Record ID: %d",
+		admin_steamid, (iStage == 0) ? "":"stage ", sName, iSteamID, sMap, gS_StyleStrings[iStyle].sStyleName, sTrack, (iStage == 0) ? "":sStage, fTime, (bWRDeleted)? "WR":"not WR", iStrafes, fSync, iJumps, fPerfectJumps, sDate, iRecordID);
 
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -1874,6 +2181,7 @@ public void DeleteAll_Callback(Database db, DBResultSet results, const char[] er
 	Shavit_PrintToChat(client, "%T", "DeletedRecordsMap", client, gS_ChatStrings.sVariable, gS_Map, gS_ChatStrings.sText);
 }
 
+
 public Action Command_WorldRecord_Style(int client, int args)
 {
 	char sCommand[128];
@@ -1902,6 +2210,7 @@ public Action Command_WorldRecord(int client, int args)
 	GetCmdArg(0, sCommand, 16);
 
 	int track = Track_Main;
+	int stage = 0;
 	bool havemap = false;
 
 	if(StrContains(sCommand, "sm_b", false) == 0)
@@ -1924,14 +2233,35 @@ public Action Command_WorldRecord(int client, int args)
 			track = Track_Bonus;
 		}
 	}
+	else if(StrContains(sCommand, "sm_cp", false) == 0 || StrContains(sCommand, "sm_s", false) == 0)
+	{
+		if (args >= 1)
+		{
+			char arg[6];
+			GetCmdArg((args > 1) ? 2 : 1, arg, sizeof(arg));	// only 1 args, read that as stage number, else first one is map name second one is stage num.
+			stage = StringToInt(arg);
+
+			// if the track doesn't fit in the max stage range then assume it's a map name
+			if (args > 1 || stage < 1 || stage > MAX_STAGES)
+			{
+				havemap = true;
+			}
+		}
+
+		if (stage == 0)	// if the fucking args is 1 and its not a number, the stage will assign to 0. :(
+		{
+			stage = -1;
+		}
+	}
 	else
 	{
 		havemap = (args >= 1);
 	}
 
+	gA_WRCache[client].iLastStage = stage;
 	gA_WRCache[client].iLastTrack = track;
 
-	if(!havemap)
+	if(!havemap)	// no map argument
 	{
 		gA_WRCache[client].sClientMap = gS_Map;
 	}
@@ -1975,8 +2305,8 @@ public Action Command_WorldRecord(int client, int args)
 			}
 		}
 	}
-
-	RetrieveWRMenu(client, track);
+	
+	RetrieveWRMenu(client, track, stage);
 	return Plugin_Handled;
 }
 
@@ -1987,7 +2317,8 @@ public int WRMatchesMenuHandler(Menu menu, MenuAction action, int param1, int pa
 		char map[PLATFORM_MAX_PATH];
 		menu.GetItem(param2, map, sizeof(map));
 		gA_WRCache[param1].sClientMap = map;
-		RetrieveWRMenu(param1, gA_WRCache[param1].iLastTrack);
+
+		RetrieveWRMenu(param1, gA_WRCache[param1].iLastTrack, gA_WRCache[param1].iLastStage);
 	}
 	else if (action == MenuAction_End)
 	{
@@ -1997,38 +2328,103 @@ public int WRMatchesMenuHandler(Menu menu, MenuAction action, int param1, int pa
 	return 0;
 }
 
-void RetrieveWRMenu(int client, int track)
+void RetrieveWRMenu(int client, int track, int stage = 0)
 {
 	if (gA_WRCache[client].bPendingMenu)
 	{
 		return;
 	}
 
-	if (StrEqual(gA_WRCache[client].sClientMap, gS_Map))
+	if (stage == 0)
 	{
-		for (int i = 0; i < gI_Styles; i++)
+		if (StrEqual(gA_WRCache[client].sClientMap, gS_Map))
 		{
-			gA_WRCache[client].fWRs[i] = gF_WRTime[i][track];
-		}
+			for (int i = 0; i < gI_Styles; i++)
+			{
+				gA_WRCache[client].fWRs[i] = gF_WRTime[i][track];
+			}
 
-		if (gA_WRCache[client].bForceStyle)
-		{
-			StartWRMenu(client);
+			if (gA_WRCache[client].bForceStyle)
+			{
+				StartWRMenu(client);
+			}
+			else
+			{
+				ShowWRStyleMenu(client);
+			}
 		}
 		else
 		{
-			ShowWRStyleMenu(client);
+			gA_WRCache[client].bPendingMenu = true;
+			char sQuery[512];
+			FormatEx(sQuery, sizeof(sQuery),
+				"SELECT style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style;",
+				gS_MySQLPrefix, gA_WRCache[client].sClientMap, track, gI_Styles);
+			QueryLog(gH_SQL, SQL_RetrieveWRMenu_Callback, sQuery, GetClientSerial(client));
 		}
+	}
+	else if (stage < 0)
+	{
+		Menu selectstage = new Menu(MenuHandler_WRSelectStage);
+		selectstage.SetTitle("Choose Stage");
+		char sSelection[4];
+		char sMenu[16];
+		for(int i = 1; i < MAX_STAGES; i++)
+		{
+			IntToString(i, sSelection, sizeof(sSelection));
+			FormatEx(sMenu, sizeof(sMenu), "Stage %d", i);
+			selectstage.AddItem(sSelection, sMenu);
+		}
+
+		selectstage.Display(client, MENU_TIME_FOREVER);
+		return;
 	}
 	else
 	{
-		gA_WRCache[client].bPendingMenu = true;
-		char sQuery[512];
-		FormatEx(sQuery, sizeof(sQuery),
-			"SELECT style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style;",
-			gS_MySQLPrefix, gA_WRCache[client].sClientMap, track, gI_Styles);
-		QueryLog(gH_SQL, SQL_RetrieveWRMenu_Callback, sQuery, GetClientSerial(client));
+		if (StrEqual(gA_WRCache[client].sClientMap, gS_Map))
+		{
+			for (int i = 0; i < gI_Styles; i++)
+			{
+				gA_WRCache[client].fWRs[i] = gF_StageWRTime[i][stage];
+			}
+
+			if (gA_WRCache[client].bForceStyle)
+			{
+				StartWRMenu(client);
+			}
+			else
+			{
+				ShowWRStyleMenu(client);
+			}
+		}
+		else
+		{
+			gA_WRCache[client].bPendingMenu = true;
+			char sQuery[512];
+			FormatEx(sQuery, sizeof(sQuery),
+				"SELECT style, time FROM %sstagewrs WHERE map = '%s' AND stage = %d AND track = %d AND style < %d ORDER BY style;",
+				gS_MySQLPrefix, gA_WRCache[client].sClientMap, stage, track, gI_Styles);
+			QueryLog(gH_SQL, SQL_RetrieveWRMenu_Callback, sQuery, GetClientSerial(client));
+		}
 	}
+}
+
+public int MenuHandler_WRSelectStage(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char sStage[4];
+		menu.GetItem(param2, sStage, sizeof(sStage));
+		gA_WRCache[param1].iLastStage = StringToInt(sStage);
+
+		RetrieveWRMenu(param1, gA_WRCache[param1].iLastTrack, gA_WRCache[param1].iLastStage);
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
 }
 
 public void SQL_RetrieveWRMenu_Callback(Database db, DBResultSet results, const char[] error, any data)
@@ -2067,7 +2463,7 @@ public void SQL_RetrieveWRMenu_Callback(Database db, DBResultSet results, const 
 	else
 	{
 		ShowWRStyleMenu(client);
-	}
+	}	
 }
 
 void ShowWRStyleMenu(int client, int first_item=0)
@@ -2127,7 +2523,6 @@ public int MenuHandler_StyleChooser(Menu menu, MenuAction action, int param1, in
 		{
 			return 0;
 		}
-
 		char sInfo[8];
 		menu.GetItem(param2, sInfo, 8);
 
@@ -2160,6 +2555,7 @@ void StartWRMenu(int client)
 	DataPack dp = new DataPack();
 	dp.WriteCell(GetClientSerial(client));
 	dp.WriteCell(gA_WRCache[client].iLastTrack);
+	dp.WriteCell(gA_WRCache[client].iLastStage);
 	dp.WriteString(gA_WRCache[client].sClientMap);
 
 	int iLength = ((strlen(gA_WRCache[client].sClientMap) * 2) + 1);
@@ -2167,7 +2563,18 @@ void StartWRMenu(int client)
 	gH_SQL.Escape(gA_WRCache[client].sClientMap, sEscapedMap, iLength);
 
 	char sQuery[512];
-	FormatEx(sQuery, 512, "SELECT p.id, u.name, p.time, p.jumps, p.auth FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC;", gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
+	if(gA_WRCache[client].iLastStage == 0)
+	{
+		FormatEx(sQuery, 512, 
+			"SELECT p.id, u.name, p.time, p.jumps, p.auth FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC;", 
+			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
+	}
+	else
+	{
+		FormatEx(sQuery, 512, 
+			"SELECT p.id, u.name, p.time, p.jumps, p.auth FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d AND stage = %d ORDER BY time ASC, date ASC;", 
+			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack, gA_WRCache[client].iLastStage);		
+	}
 	QueryLog(gH_SQL, SQL_WR_Callback, sQuery, dp);
 }
 
@@ -2176,6 +2583,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 	data.Reset();
 	int serial = data.ReadCell();
 	int track = data.ReadCell();
+	int stage = data.ReadCell();
 
 	char sMap[PLATFORM_MAX_PATH];
 	data.ReadString(sMap, sizeof(sMap));
@@ -2190,7 +2598,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 	}
 
 	int client = GetClientFromSerial(serial);
-
+	
 	if(client == 0)
 	{
 		return;
@@ -2266,7 +2674,14 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 		}
 
 		char sTrack[32];
-		GetTrackName(client, track, sTrack, 32);
+		if(stage == 0)
+		{
+			GetTrackName(client, track, sTrack, 32);
+		}
+		else
+		{
+			FormatEx(sTrack, sizeof(sTrack), "Stage %d", stage);
+		}	
 
 		FormatEx(sFormattedTitle, 192, "%T %s: [%s]\n%s", "WRRecordFor", client, sMap, sTrack, sRanks);
 		hMenu.SetTitle(sFormattedTitle);
@@ -2286,7 +2701,7 @@ public int WRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 
 		if(id != -1)
 		{
-			OpenSubMenu(param1, id);
+			OpenSubMenu(param1, id, gA_WRCache[param1].iLastStage);
 		}
 		else
 		{
@@ -2634,16 +3049,17 @@ public int PersonalBestMenu_Handler(Menu menu, MenuAction action, int param1, in
 	return 0;
 }
 
-void OpenSubMenu(int client, int id)
+void OpenSubMenu(int client, int id, int stage = 0)
 {
 	char sQuery[512];
 	FormatEx(sQuery, 512,
-		"SELECT u.name, p.time, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.perfs, p.points, p.track, p.completions FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.id = %d LIMIT 1;",
-		gS_MySQLPrefix, gS_MySQLPrefix, id);
+		"SELECT u.name, p.time, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.perfs, p.points, p.track, %sp.completions FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = %d LIMIT 1;",
+		stage > 0 ? "p.stage, ":"", gS_MySQLPrefix, stage > 0 ? "stagetimes":"playertimes", gS_MySQLPrefix, id);
 
 	DataPack datapack = new DataPack();
 	datapack.WriteCell(GetClientSerial(client));
 	datapack.WriteCell(id);
+	datapack.WriteCell(stage);
 
 	QueryLog(gH_SQL, SQL_SubMenu_Callback, sQuery, datapack, DBPrio_High);
 }
@@ -2653,6 +3069,7 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 	data.Reset();
 	int client = GetClientFromSerial(data.ReadCell());
 	int id = data.ReadCell();
+	int stage = data.ReadCell();
 	delete data;
 
 	if(results == null)
@@ -2744,6 +3161,13 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 		char sMenuItem[64];
 		char sInfo[32];
 
+		if(stage == 0)
+		{
+			FormatEx(sMenuItem, 64, "%T", "CheckpointRecord", client);
+			FormatEx(sInfo, 32, "3;%d", id);
+			hMenu.AddItem(sInfo, sMenuItem);
+		}
+
 		if(gB_Stats)
 		{
 			FormatEx(sMenuItem, 64, "%T", "WRPlayerStats", client);
@@ -2762,7 +3186,14 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 			hMenu.AddItem(sInfo, sMenuItem);
 		}
 
-		GetTrackName(client, results.FetchInt(11), sTrack, 32);
+		if (stage == 0)
+		{
+			GetTrackName(client, results.FetchInt(11), sTrack, 32);
+		}
+		else
+		{
+			FormatEx(sTrack, sizeof(sTrack), "Stage %d", stage);
+		}
 
 		Shavit_PrintSteamIDOnce(client, iSteamID, sName);
 	}
@@ -2817,6 +3248,10 @@ public int SubMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 					FormatEx(url, sizeof(url), "https://steamcommunity.com/profiles/[U:1:%s]", sExploded[1]);
 					ShowMOTDPanel(param1, "you just lost The Game", url, MOTDPANEL_TYPE_URL);
 				}
+				case 3:
+				{
+					OpenCheckpointRecordsMenu(param1, StringToInt(sExploded[1]));
+				}
 			}
 		}
 		else
@@ -2836,6 +3271,83 @@ public int SubMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 			{
 				StartWRMenu(param1);
 			}
+		}
+		else
+		{
+			delete gH_PBMenu[param1];
+		}
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+public void OpenCheckpointRecordsMenu(int client, int id)
+{
+	char sQuery[512];
+	DataPack pack = new DataPack();
+	pack.WriteCell(GetClientSerial(client));
+	pack.WriteCell(id);
+
+	FormatEx(sQuery, sizeof(sQuery), 
+		"SELECT a.time, a.stage FROM %sstagecppb a JOIN %splayertimes b ON a.map = b.map AND a.track = b.track AND a.style = b.style AND a.auth = b.auth AND b.id = %d;",
+		gS_MySQLPrefix, gS_MySQLPrefix, id);
+	QueryLog(gH_SQL, SQL_CheckpointRecordsMenu_Callback, sQuery, pack, DBPrio_High);
+}
+
+public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results, const char[] error, DataPack data)
+{
+	data.Reset();
+	int client = GetClientFromSerial(data.ReadCell());
+	int id = data.ReadCell();
+	delete data;
+
+	float fTime;
+	int num;
+	char sTime[32];
+	char sMenuItem[64];
+	char sInfo[4];
+
+	Menu menu = new Menu(MenuHandler_CheckpointRecords);
+	menu.SetTitle("Checkpoint records.\n ");
+
+	FormatEx(sInfo, sizeof(sInfo), "%d", id);
+	
+	while(results.FetchRow())
+	{
+		fTime = results.FetchFloat(0);
+		num = results.FetchInt(1);
+		FormatSeconds(fTime, sTime, sizeof(sTime));
+		FormatEx(sMenuItem, sizeof(sMenuItem), "CP %02d | Time: %s", num, sTime);
+		menu.AddItem(sInfo, sMenuItem, ITEMDRAW_DISABLED);
+	}
+
+	if(menu.ItemCount == 0)
+	{
+		menu.AddItem(sInfo, "No checkpoint records.", ITEMDRAW_DISABLED);
+	}
+
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+public int MenuHandler_CheckpointRecords(Menu menu, MenuAction action, int param1, int param2)
+{
+	char sInfo[32];
+	menu.GetItem(0, sInfo, 32);
+
+	if (action == MenuAction_Select)
+    {
+		//nothing here
+	}
+	else if(action == MenuAction_Cancel)
+	{
+		if (param2 == MenuCancel_ExitBack)
+		{
+			OpenSubMenu(param1, StringToInt(sInfo), 0);
 		}
 		else
 		{
@@ -3128,14 +3640,27 @@ public Action Shavit_OnFinishStagePre(int client, int track, int style, int stag
 {
 	if (!gA_StageTimeValid[client][track][stage])
 	{
+		char sMessage[255];
+
 		char sTime[32];
 		FormatSeconds(time, sTime, 32);
-		Shavit_PrintToChat(client, "You finished [%sStage %d%s] in %s%s%s. (%s%s%s)", 
-		gS_ChatStrings.sVariable, stage, gS_ChatStrings.sText, 
-		gS_ChatStrings.sWarning, sTime, gS_ChatStrings.sText, 
-		gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+
+		char sStage[16];
+		Format(sStage, 16, "Stage %d", stage);
+
+		FormatEx(sMessage, 255, "%T",
+			"UnrankedTime", client, 
+			gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+			gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+
+		if(Shavit_IsOnlyStageMode(client))
+		{
+			Shavit_StopTimer(client, false);
+		}
 		
-		Shavit_PrintToChat(client, "Your stage time is invalid because your prespeed out of limit.");
+		Shavit_PrintToChat(client, sMessage);
+		Shavit_PrintToChat(client, "Your stage run is invalid because you %sexcceded%s prespeed limit in start zone.", gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 
 		return Plugin_Stop;
 	}
@@ -3565,10 +4090,10 @@ public void UpdateClientStagePBCacheOnFinish(int client, int style, int overwrit
 				break;
 			}
 
-			if(gA_StageCP_PB[client][style][track].Length - 1 < stageCount)
-			{
-				gA_StageCP_PB[client][style][track].Resize(Shavit_GetStageCount(track) + 1);
-			}
+			// if(gA_StageCP_PB[client][style][track].Length - 1 < stageCount)
+			// {
+			// 	gA_StageCP_PB[client][style][track].Resize(Shavit_GetStageCount(track) + 1);
+			// }
 
 			gA_StageCP_PB[client][style][track].Set(i, fTime);
 
@@ -3704,6 +4229,9 @@ public void SQL_UpdateStageLeaderboards_Callback(Database db, DBResultSet result
 			gSM_StageWRNames.SetString(sSteamID, sName, false);
 		}
 	}
+
+	Call_StartForward(gH_OnStageWorldRecordsCached);
+	Call_Finish();
 }
 
 
