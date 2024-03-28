@@ -1808,7 +1808,6 @@ public void SQL_OpenDelete_Callback(Database db, DBResultSet results, const char
 	int iStyle = gA_WRCache[client].iLastStyle;
 	char sTrack[32];
 
-	Shavit_PrintToChatAll("4 gA_WRCache[%d].iLastStage = %d", client, gA_WRCache[client].iLastStage);
 	if (gA_WRCache[client].iLastStage == 0)
 	{
 		GetTrackName(client, gA_WRCache[client].iLastTrack, sTrack, sizeof(sTrack));
@@ -1857,8 +1856,6 @@ public void SQL_OpenDelete_Callback(Database db, DBResultSet results, const char
 		menu.AddItem("-1", sNoRecords);
 	}
 
-	Shavit_PrintToChatAll("4.01 gA_WRCache[%d].iLastStage = %d", client, gA_WRCache[client].iLastStage);
-
 	menu.ExitButton = true;
 	menu.Display(client, 300);
 }
@@ -1874,7 +1871,6 @@ public int OpenDelete_Handler(Menu menu, MenuAction action, int param1, int para
 
 		if(id != -1)
 		{
-			Shavit_PrintToChatAll("4.1 gA_WRCache[%d].iLastStage = %d", param1, gA_WRCache[param1].iLastStage);
 			OpenDeleteMenu(param1, id);
 		}
 	}
@@ -1890,7 +1886,6 @@ void OpenDeleteMenu(int client, int id)
 {
 	char sMenuItem[64];
 
-	Shavit_PrintToChatAll("4.2 gA_WRCache[%d].iLastStage = %d", client, gA_WRCache[client].iLastStage);
 	Menu menu = new Menu(DeleteConfirm_Handler);
 	menu.SetTitle("%T\n ", "DeleteConfirm", client);
 
@@ -1920,7 +1915,6 @@ public int DeleteConfirm_Handler(Menu menu, MenuAction action, int param1, int p
 {
 	if(action == MenuAction_Select)
 	{
-		Shavit_PrintToChatAll("4.3 gA_WRCache[%d].iLastStage = %d", param1, gA_WRCache[param1].iLastStage);
 		char sInfo[16];
 		menu.GetItem(param2, sInfo, 16);
 
