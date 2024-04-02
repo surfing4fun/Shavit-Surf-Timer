@@ -71,10 +71,14 @@
 	{
 		"en"		"Delete ALL map records"
 	}
+	"DeleteAllStageRecords"
+	{
+		"en"		"Delete ALL stage records"
+	}
 	"DeleteAllRecordsMenuTitle"
 	{
-		"#format"	"{1:s},{2:s},{3:s}"
-		"en"		"Delete ALL the records for '{1}'? (Track: {2} | Style: {3})"
+		"#format"	"{1:s},{2:s},{3:s},{4:3}"
+		"en"		"Delete ALL the records for '{1}'? ({2}: {3} | Style: {4})"
 	}
 	"DeleteConfirm"
 	{
@@ -87,6 +91,10 @@
 	"DeleteSingleRecord"
 	{
 		"en"		"Delete a single record"
+	}
+	"DeleteSingleStageRecord"
+	{
+		"en"		"Delete a single stage record"
 	}
 	"MenuResponseNo"
 	{
@@ -123,9 +131,13 @@
 	{
 		"en"		"Choose a stage to delete a single record from:"
 	}
+	"DeleteStageAll"
+	{
+		"en"		"Choose a stage to delete ALL record from:"
+	}	
 	"DeleteTrackAll"
 	{
-		"en"		"Choose a track to delete a ALL records from:"
+		"en"		"Choose a track to delete ALL records from:"
 	}
 	"DeleteTrackAllStyle"
 	{

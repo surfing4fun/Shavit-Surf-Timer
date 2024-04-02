@@ -83,39 +83,6 @@ enum ZoneHUD
 	ZoneHUD_StageStart
 };
 
-// enum struct huddata_t
-// {
-// 	int iTarget;
-// 	float fTime;
-// 	int iSpeed;
-// 	int iStyle;
-// 	int iTrack;
-// 	int iJumps;
-// 	int iStrafes;
-// 	int iRank;
-// 	float fSync;
-// 	float fPB;
-// 	float fWR;
-// 	bool bReplay;
-// 	bool bPractice;
-// 	TimerStatus iTimerStatus;
-// 	ZoneHUD iZoneHUD;
-
-// 	int iHUDSettings;
-// 	int iHUD2Settings;
-
-// 	int iPreviousSpeed;
-// 	float fClosestReplayTime;
-// 	float fClosestVelocityDifference;
-// 	int iMapTier;
-// 	float fClosestReplayLength;
-
-// 	int iButtons;
-// 	int iScrolls;
-// 	int iScrollsPrev;
-// 	float fAngleDiff;
-// }
-
 enum struct huddata_t
 {
 	int iTarget;
@@ -167,6 +134,34 @@ enum struct huddata_t
  * @return                          Plugin_Handled or Plugin_Stop to block the HUD message from appearing. Anything else to pass along new values.
  */
 forward Action Shavit_OnTopLeftHUD(int client, int target, char[] topleft, int topleftlength, int track, int style);
+
+/**
+ * Called when key hint (bottom left) HUD updates (Source 2013 only).
+ *
+ * @param client                    Client index that recieves the hud.
+ * @param target                    Target entity that is either the client or what the client is spectating.
+ * @param keyhint                   Reference to the HUD buffer.
+ * @param keyhintlength             Max length of the keyhint buffer.
+ * @param track                     Target's track.
+ * @param style                     Target's style.
+ *
+ * @return                          Plugin_Handled or Plugin_Stop to block the HUD message from appearing. Anything else to pass along new values.
+ */
+forward Action Shavit_OnKeyHintHUD(int client, int target, char[] keyhint, int keyhintlength, int track, int style);
+
+/**
+ * Called before the key hint HUD (bottom left) updates and used to build the string for shavit-hud (Source 2013 only).
+ *
+ * @param client                    Client index that recieves the hud.
+ * @param target                    Target entity that is either the client or what the client is spectating.
+ * @param keyhint                   Reference to the HUD buffer.
+ * @param keyhintlength             Max length of the keyhint buffer.
+ * @param track                     Target's track.
+ * @param style                     Target's style.
+ *
+ * @return                          Plugin_Handled or Plugin_Stop to block the HUD message from appearing. Plugin_Changed to use own keyhint string instead of shavit-hud building it.
+ */
+forward Action Shavit_PreOnKeyHintHUD(int client, int target, char[] keyhint, int keyhintlength, int track, int style);
 
 /**
  * Called before the top left HUD updates and used to build the string for shavit-hud.

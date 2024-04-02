@@ -89,6 +89,8 @@ Handle gH_Forwards_OnTimescaleChanged = null;
 Handle gH_Forwards_OnTimeOffsetCalculated = null;
 Handle gH_Forwards_OnProcessMovement = null;
 Handle gH_Forwards_OnProcessMovementPost = null;
+Handle gH_Forwards_OnTimerMenuCreate = null;
+Handle gH_Forwards_OnTimerMenuSelected = null;
 
 // player timer variables
 timer_snapshot_t gA_Timers[MAXPLAYERS+1];
@@ -279,6 +281,8 @@ public void OnPluginStart()
 	gH_Forwards_OnTimeOffsetCalculated = CreateGlobalForward("Shavit_OnTimeOffsetCalculated", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnProcessMovement = CreateGlobalForward("Shavit_OnProcessMovement", ET_Event, Param_Cell);
 	gH_Forwards_OnProcessMovementPost = CreateGlobalForward("Shavit_OnProcessMovementPost", ET_Event, Param_Cell);
+	gH_Forwards_OnTimerMenuCreate = CreateGlobalForward("Shavit_OnTimerMenuMade", ET_Event, Param_Cell, Param_Cell);
+	gH_Forwards_OnTimerMenuSelected = CreateGlobalForward("Shavit_OnTimerMenuSelect", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell);
 
 	Bhopstats_CreateForwards();
 	Shavit_Style_Settings_Forwards();
@@ -309,6 +313,8 @@ public void OnPluginStart()
 	HookEvent("player_spawn", Player_Death);
 
 	// commands START
+	RegConsoleCmd("sm_timer", Command_Timer, "Show timer menu");
+
 	// style
 	RegConsoleCmd("sm_style", Command_Style, "Choose your bhop style.");
 	RegConsoleCmd("sm_styles", Command_Style, "Choose your bhop style.");
@@ -646,6 +652,52 @@ public void OnMapEnd()
 {
 	bool empty[TRACKS_SIZE];
 	gB_KZMap = empty;
+}
+
+public Action Command_Timer(int client, int args)
+{
+	Menu menu = new Menu(MenuHandler_Timer);
+	menu.SetTitle("%T", "TimerMenuTitle", client);
+
+	Call_StartForward(gH_Forwards_OnTimerMenuCreate);
+	Call_PushCell(client);
+	Call_PushCell(menu);
+	Call_Finish();
+
+	menu.ExitButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+
+	return Plugin_Handled;
+}
+
+public int MenuHandler_Timer(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char sInfo[16];
+		menu.GetItem(param2, sInfo, sizeof(sInfo));
+
+		Action aResult = Plugin_Continue;
+		Call_StartForward(gH_Forwards_OnTimerMenuSelected);
+		Call_PushCell(param1);
+		Call_PushCell(param2);
+		Call_PushStringEx(sInfo, 16, SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
+		Call_PushCell(16);
+		Call_Finish(aResult);
+
+		if(aResult == Plugin_Stop)
+		{
+			return 0;
+		}
+
+		Command_Timer(param1, 0);			
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
 }
 
 public Action Command_StartTimer(int client, int args)

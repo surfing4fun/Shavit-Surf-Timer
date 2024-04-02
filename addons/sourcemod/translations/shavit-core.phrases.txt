@@ -41,6 +41,26 @@
 		"en"        "Your time ({2}) was faster than the style's {3} setting ({1}) and did not count."
 	}
 	// ---------- Menus ---------- //
+	"TimerMenuTitle"
+	{
+		"en"		"Timer Option Menu\n "
+	}
+	"RestartTimer"
+	{
+		"en"		"Restart Timer"
+	}
+	"PauseTimer"
+	{
+		"en"		"Pause Timer"
+	}
+	"ResumeTimer"
+	{
+		"en"		"Resume Timer"
+	}
+	"StopTimer"
+	{
+		"en"		"Stop Timer"
+	}
 	"StyleMenuTitle"
 	{
 		"en"		"Choose a style:"

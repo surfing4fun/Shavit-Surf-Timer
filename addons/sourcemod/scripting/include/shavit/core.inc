@@ -864,6 +864,26 @@ forward void Shavit_OnProcessMovementPost(int client);
 forward void Shavit_OnCountdownStart();
 
 /**
+ * Called after the checkpoint menu has been made and before it's sent to the client.
+ *
+ * @param client                    Client index.
+ * @param menu                      Handle to the menu so you can .AddItem().
+ * @return                          Plugin_Handled or Plugin_Stop to stop the menu.
+ */
+forward void Shavit_OnTimerMenuMade(int client, Menu menu);
+
+/**
+ * Called before a selection is processed in the main checkpoint menu.
+ *
+ * @param client                    Client index who selects in the menu
+ * @param position                  Second parameter in the callback, usually the item selected.
+ * @param info                      reference copy of the info string used in the callback
+ * @param maxlength                 length of the info buffer
+ * @return                          Plugin_Continue to continue the callback. Return Plugin_Stop to prevent the checkpoints menu from reopening.
+ */
+forward Action Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
+
+/**
  * Returns bhoptimer's database handle.
  * Call within Shavit_OnDatabaseLoaded. Safety is not guaranteed anywhere else!
  *
@@ -887,6 +907,7 @@ native void Shavit_StartTimer(int client, int track);
  *
  * @param client					Client index.
  * @param track						Timer track.
+ * @param tostartzone				True to force teleport player to track start zone.
  * @param force                     True to force the player to restart. False to call into Shavit_OnRestartPre and Shavit_OnStopPre first.
  * @return                          True on restart and False if a callback blocked the restart.
  */

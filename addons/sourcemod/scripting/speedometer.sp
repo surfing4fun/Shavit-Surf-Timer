@@ -317,6 +317,21 @@ public Action Command_Debug(int client, int args)
 	return Plugin_Handled;
 }
 
+public void Shavit_OnTimerMenuMade(int client, Menu menu)
+{
+	menu.AddItem("speed", "Center Speed HUD Options");
+}
+
+public Action Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
+{
+	if(StrEqual(info, "speed"))
+	{
+		ShowSpeedometerMenu(client, 0);
+		return Plugin_Stop;
+	}
+
+	return Plugin_Continue;
+}
 
 Action ShowSpeedometerMenu(int client, int item = 0)
 {

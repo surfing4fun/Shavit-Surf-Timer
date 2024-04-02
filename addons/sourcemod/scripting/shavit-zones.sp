@@ -2234,6 +2234,22 @@ public Action Command_DelSpawn(int client, int args)
 	return DisplayCustomSpawnDeleteMenu(client);
 }
 
+public void Shavit_OnTimerMenuMade(int client, Menu menu)
+{
+	menu.AddItem("zone", "Custom Zones Options");
+}
+
+public Action Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
+{
+	if(StrEqual(info, "zone"))
+	{
+		Command_CustomZones(client, 0);
+		return Plugin_Stop;
+	}
+
+	return Plugin_Continue;
+}
+
 Action DisplayCustomSpawnDeleteMenu(int client)
 {
 	Menu menu = new Menu(MenuHandler_DeleteCustomSpawn);

@@ -242,6 +242,7 @@ public void OnPluginStart()
 	RegAdminCmd("sm_deletestage", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
 	RegAdminCmd("sm_deletestagerecord", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
 	RegAdminCmd("sm_deletestagerecords", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
+	RegAdminCmd("sm_deleteallstage", Command_DeleteAll_Stage, ADMFLAG_RCON, "Deletes all the records for this stage.");
 
 
 	// cvars
@@ -280,7 +281,33 @@ public void OnAdminMenuReady(Handle topmenu)
 	if ((gH_TimerCommands = gH_AdminMenu.FindCategory("Timer Commands")) != INVALID_TOPMENUOBJECT)
 	{
 		gH_AdminMenu.AddItem("sm_deleteall", AdminMenu_DeleteAll, gH_TimerCommands, "sm_deleteall", ADMFLAG_RCON);
+		gH_AdminMenu.AddItem("sm_deleteallstage", AdminMenu_DeleteAllStage, gH_TimerCommands, "sm_deleteallstage", ADMFLAG_RCON);
 		gH_AdminMenu.AddItem("sm_delete", AdminMenu_Delete, gH_TimerCommands, "sm_delete", ADMFLAG_RCON);
+		gH_AdminMenu.AddItem("sm_deletestage", AdminMenu_DeleteStage, gH_TimerCommands, "sm_deletestage", ADMFLAG_RCON);
+	}
+}
+
+public void AdminMenu_DeleteStage(Handle topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength)
+{
+	if(action == TopMenuAction_DisplayOption)
+	{
+		FormatEx(buffer, maxlength, "%t", "DeleteSingleStageRecord");
+	}
+	else if(action == TopMenuAction_SelectOption)
+	{
+		Command_DeleteStageRecord(param, 0);
+	}
+}
+
+public void AdminMenu_DeleteAllStage(Handle topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength)
+{
+	if(action == TopMenuAction_DisplayOption)
+	{
+		FormatEx(buffer, maxlength, "%t", "DeleteAllStageRecords");
+	}
+	else if(action == TopMenuAction_SelectOption)
+	{
+		Command_DeleteAll_Stage(param, 0);
 	}
 }
 
@@ -1319,7 +1346,6 @@ public int Native_SetClientStagePB(Handle plugin, int numParams)
 	gF_PlayerStageRecord[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)] = GetNativeCell(4);
 	return 0;
 }
-////////////////////////////////////////////
 
 public void SQL_DeleteMap_Callback(Database db, DBResultSet results, const char[] error, any data)
 {
@@ -1443,10 +1469,10 @@ public int MenuHandler_DeleteStage_First(Menu menu, MenuAction action, int param
 
 		DeleteStageSubMenu(param1);
 	}
-	// else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
-	// {
-	// 	gH_AdminMenu.DisplayCategory(gH_TimerCommands, param1);
-	// }
+	else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
+	{
+		gH_AdminMenu.DisplayCategory(gH_TimerCommands, param1);
+	}
 	else if(action == MenuAction_End)
 	{
 		delete menu;
@@ -1575,6 +1601,174 @@ void DeleteSubmenu(int client)
 	menu.Display(client, 300);
 }
 
+public Action Command_DeleteAll_Stage(int client, int args)
+{
+	if(!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	Menu menu = new Menu(MenuHandler_DeleteAll_Stage_First);
+	menu.SetTitle("%T\n ", "DeleteStageAll", client);
+
+	for(int i = 1; i < MAX_STAGES; i++)
+	{
+		char sInfo[8];
+		IntToString(i, sInfo, 8);
+
+		int records = GetStageRecorCount(i);
+
+		char sStage[64];
+		FormatEx(sStage, sizeof(sStage), "Stage %d", i);
+
+		if(records > 0)
+		{
+			FormatEx(sStage, sizeof(sStage), "%s (%T: %d)", sStage, "WRRecord", client, records);
+		}
+
+		menu.AddItem(sInfo, sStage, (records > 0) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+	}
+
+	menu.ExitBackButton = true;
+	menu.Display(client, 300);
+
+	return Plugin_Handled;
+}
+
+public int MenuHandler_DeleteAll_Stage_First(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char info[16];
+		menu.GetItem(param2, info, 16);
+		gA_WRCache[param1].iLastTrack = Track_Main;
+		gA_WRCache[param1].iLastStage = StringToInt(info);
+
+		Menu subMenu = new Menu(MenuHandler_DeleteAll_Stage_Second);
+		subMenu.SetTitle("%T\n ", "DeleteMenuTitle", param1);
+
+		int[] styles = new int[gI_Styles];
+		Shavit_GetOrderedStyles(styles, gI_Styles);
+
+		for(int i = 0; i < gI_Styles; i++)
+		{
+			int iStyle = styles[i];
+
+			if(Shavit_GetStyleSettingInt(iStyle, "enabled") == -1)
+			{
+				continue;
+			}
+
+			char sInfo[8];
+			IntToString(iStyle, sInfo, 8);
+
+			int records = GetStageRecordAmount(i, gA_WRCache[param1].iLastStage); 
+
+			char sDisplay[64];
+			FormatEx(sDisplay, 64, "%s (%T: %d)", gS_StyleStrings[iStyle].sStyleName, "WRRecord", param1, records);
+
+			subMenu.AddItem(sInfo, (records > 0) ? sDisplay:gS_StyleStrings[iStyle].sStyleName, (records > 0) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+		}
+
+		subMenu.ExitButton = true;
+		subMenu.Display(param1, 300);
+	}
+	else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
+	{
+		gH_AdminMenu.DisplayCategory(gH_TimerCommands, param1);
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+public int MenuHandler_DeleteAll_Stage_Second(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char info[16];
+		menu.GetItem(param2, info, 16);
+		gA_WRCache[param1].iLastStyle = StringToInt(info);
+
+		DeleteAllStageSubmenu(param1);
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+void DeleteAllStageSubmenu(int client)
+{
+	char sTrack[32];
+	GetTrackName(client, gA_WRCache[client].iLastTrack, sTrack, 32);
+
+	Menu menu = new Menu(MenuHandler_DeleteAllStage);
+	menu.SetTitle("%T\n ", "DeleteAllRecordsMenuTitle", client, gS_Map, "Stage", sTrack, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
+
+	char sMenuItem[64];
+
+	for(int i = 1; i <= GetRandomInt(1, 4); i++)
+	{
+		FormatEx(sMenuItem, 64, "%T", "MenuResponseNo", client);
+		menu.AddItem("-1", sMenuItem);
+	}
+
+	FormatEx(sMenuItem, 64, "%T", "MenuResponseYes", client);
+	menu.AddItem("yes", sMenuItem);
+
+	for(int i = 1; i <= GetRandomInt(1, 3); i++)
+	{
+		FormatEx(sMenuItem, 64, "%T", "MenuResponseNo", client);
+		menu.AddItem("-1", sMenuItem);
+	}
+
+	menu.ExitButton = true;
+	menu.Display(client, 300);
+}
+
+public int MenuHandler_DeleteAllStage(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char info[16];
+		menu.GetItem(param2, info, 16);
+
+		if(StringToInt(info) == -1)
+		{
+			Shavit_PrintToChat(param1, "%T", "DeletionAborted", param1);
+
+			return 0;
+		}
+
+		Shavit_LogMessage("%L - deleted all stage %d and %s style records from map `%s`.",
+			param1, gA_WRCache[param1].iLastStage, gS_StyleStrings[gA_WRCache[param1].iLastStyle].sStyleName, gS_Map);
+
+		char sQuery[512];
+		FormatEx(sQuery, sizeof(sQuery), "DELETE FROM %sstagetimes WHERE map = '%s' AND style = %d AND stage = %d;",
+			gS_MySQLPrefix, gS_Map, gA_WRCache[param1].iLastStyle, gA_WRCache[param1].iLastStage);
+
+		DataPack hPack = new DataPack();
+		hPack.WriteCell(GetClientSerial(param1));
+		hPack.WriteCell(gA_WRCache[param1].iLastStyle);
+		hPack.WriteCell(gA_WRCache[param1].iLastTrack);
+		hPack.WriteCell(gA_WRCache[param1].iLastStage);
+
+		QueryLog(gH_SQL, DeleteAll_Callback, sQuery, hPack, DBPrio_High);
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
 public Action Command_DeleteAll(int client, int args)
 {
 	if(!IsValidClient(client))
@@ -1616,6 +1810,7 @@ public int MenuHandler_DeleteAll_First(Menu menu, MenuAction action, int param1,
 		char sInfo[8];
 		menu.GetItem(param2, sInfo, 8);
 		int iTrack = gA_WRCache[param1].iLastTrack = StringToInt(sInfo);
+		gA_WRCache[param1].iLastStage = 0;
 
 		char sTrack[64];
 		GetTrackName(param1, iTrack, sTrack, 64);
@@ -1689,7 +1884,7 @@ void DeleteAllSubmenu(int client)
 	GetTrackName(client, gA_WRCache[client].iLastTrack, sTrack, 32);
 
 	Menu menu = new Menu(MenuHandler_DeleteAll);
-	menu.SetTitle("%T\n ", "DeleteAllRecordsMenuTitle", client, gS_Map, sTrack, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
+	menu.SetTitle("%T\n ", "DeleteAllRecordsMenuTitle", client, gS_Map, "Track", sTrack, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
 
 	char sMenuItem[64];
 
@@ -1740,6 +1935,7 @@ public int MenuHandler_DeleteAll(Menu menu, MenuAction action, int param1, int p
 		hPack.WriteCell(GetClientSerial(param1));
 		hPack.WriteCell(gA_WRCache[param1].iLastStyle);
 		hPack.WriteCell(gA_WRCache[param1].iLastTrack);
+		hPack.WriteCell(gA_WRCache[param1].iLastStage);
 
 		QueryLog(gH_SQL, DeleteAll_Callback, sQuery, hPack, DBPrio_High);
 	}
@@ -2107,7 +2303,6 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 		else
 		{
 			DeleteStageWR(iStyle, iTrack, iStage, sMap, iSteamID, iRecordID, false, true);
-			Shavit_PrintToChatAll("Need somthing here.");
 		}
 	}
 	else	//IF Not Run into this
@@ -2161,18 +2356,26 @@ public void DeleteAll_Callback(Database db, DBResultSet results, const char[] er
 	int client = GetClientFromSerial(hPack.ReadCell());
 	int style = hPack.ReadCell();
 	int track = hPack.ReadCell();
+	int stage = hPack.ReadCell();
 	delete hPack;
 
 	if(results == null)
 	{
-		LogError("Timer (WR DeleteAll) SQL query failed. Reason: %s", error);
+		LogError("Timer (WR DeleteAll%s) SQL query failed. Reason: %s", stage == 0 ? "":"Stage", error);
 
 		return;
 	}
 
-	DeleteWR(style, track, gS_Map, 0, -1, false, true);
-
-	Shavit_PrintToChat(client, "%T", "DeletedRecordsMap", client, gS_ChatStrings.sVariable, gS_Map, gS_ChatStrings.sText);
+	if(stage == 0)
+	{
+		DeleteWR(style, track, gS_Map, 0, -1, false, true);		
+		Shavit_PrintToChat(client, "%T", "DeletedRecordsMap", client, gS_ChatStrings.sVariable, gS_Map, gS_ChatStrings.sText);
+	}
+	else if(stage > 0)
+	{
+		DeleteStageWR(style, track, stage, gS_Map, 0, -1, false, true);
+		Shavit_PrintToChat(client, "%T", "DeletedRecordsMap", client, gS_ChatStrings.sVariable, gS_Map, gS_ChatStrings.sText);
+	}
 }
 
 
