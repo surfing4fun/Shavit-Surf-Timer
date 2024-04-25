@@ -1404,8 +1404,8 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				{
 					if(Shavit_IsOnlyStageMode(client))
 					{
-						FormatEx(sLine, 128, "%s%s%T %d", "HudStageText", client, 
-						data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", data.iCurrentStage);
+						FormatEx(sLine, 128, "%s%s%T %d", data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
+						"HudStageText", client, data.iCurrentStage);
 						AddHUDLine(buffer, maxlen, sLine, iLines);
 					}
 					else

@@ -1796,51 +1796,7 @@ public void Shavit_OnReplaySaved(int client, int style, float time, int jumps, i
 		return;
 	}
 
-	delete gA_FrameCache[style][track][stage].aFrames;
-	gA_FrameCache[style][track][stage].aFrames = view_as<ArrayList>(CloneHandle(frames));
-	gA_FrameCache[style][track][stage].iFrameCount = frames.Length - preframes - postframes;
-	gA_FrameCache[style][track][stage].fTime = time;
-	gA_FrameCache[style][track][stage].iReplayVersion = REPLAY_FORMAT_SUBVERSION;
-	gA_FrameCache[style][track][stage].bNewFormat = true;
-	strcopy(gA_FrameCache[style][track][stage].sReplayName, MAX_NAME_LENGTH, name);
-	gA_FrameCache[style][track][stage].iPreFrames = preframes;
-	gA_FrameCache[style][track][stage].iPostFrames = postframes;
-	gA_FrameCache[style][track][stage].fTickrate = gF_Tickrate;
-
-	StopOrRestartBots(style, track, stage, false);
-
-#if USE_CLOSESTPOS
-	if (gB_ClosestPos)
-	{
-#if DEBUG
-		Profiler p = new Profiler();
-		p.Start();
-#endif
-		delete gH_ClosestPos[style][track][stage];
-		gH_ClosestPos[style][track][stage] = new ClosestPos(gA_FrameCache[style][track][stage].aFrames, 0, gA_FrameCache[style][track][stage].iPreFrames, gA_FrameCache[style][track][stage].iFrameCount);
-#if DEBUG
-		p.Stop();
-		PrintToServer(">>> ClosestPos @ Shavit_OnReplaySaved(style=%d, track=%d) = %f", style, track, p.Time);
-		delete p;
-#endif
-	}
-#endif
-
-#if USE_BHOPTIMER_HELPER
-	if (gB_BhoptimerHelper)
-	{
-#if DEBUG
-		Profiler p = new Profiler();
-		p.Start();
-#endif
-		BH_ClosestPos_Register((track << 8) | style, time, gA_FrameCache[style][track].aFrames, 0, gA_FrameCache[style][track].iPreFrames, gA_FrameCache[style][track].iFrameCount);
-#if DEBUG
-		p.Stop();
-		PrintToServer(">>> bhoptimer_helper @ Shavit_OnReplaySaved(style=%d, track=%d) = %f", style, track, p.Time);
-		delete p;
-#endif
-	}
-#endif
+	UnloadReplay(style, track, stage, true, false);
 }
 
 int InternalCreateReplayBot()
