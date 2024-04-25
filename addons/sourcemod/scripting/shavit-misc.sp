@@ -1092,7 +1092,7 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 	ReplaceString(buf, buflen, "{serverip}", sIPAddress);
 	ReplaceString(buf, buflen, "{map}", gS_Map);
 	ReplaceString(buf, buflen, "{stage}", sStageInfo);
-	ReplaceString(buf, buflen, "{bounus}", sTrackInfo);
+	ReplaceString(buf, buflen, "{bonus}", sTrackInfo);
 	ReplaceString(buf, buflen, "{tier}", sTier);
 }
 
