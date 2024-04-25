@@ -1657,10 +1657,16 @@ void SaveCheckpointCache(int saver, int target, cp_cache_t cpcache, int index, H
 		snapshot.iTimerTrack = Shavit_GetReplayBotTrack(target);
 		snapshot.fTimescale = 1.0;
 		snapshot.fplayer_speedmod = 1.0;
-		snapshot.iLastStage = 1;
-		snapshot.fStageStartTime = 0.0;
+		snapshot.iLastStage = Shavit_GetReplayBotCurrentStage(target);
+
+		snapshot.aStageStartInfo.fStageStartTime = 0.0;
+		snapshot.aStageStartInfo.iFullTicks = 0;
+		snapshot.aStageStartInfo.iFractionalTicks = 0;
+		snapshot.aStageStartInfo.iJumps = 0;
+		snapshot.aStageStartInfo.iStrafes = 0;
+
 		snapshot.bStageTimeValid = false;
-		snapshot.bOnlyStageMode = false;
+		snapshot.bOnlyStageMode = Shavit_GetReplayBotStage(target) > 0 ? true : false;
 
 		float ticks = float(Shavit_GetReplayBotCurrentFrame(target) - Shavit_GetReplayCachePreFrames(target));
 		float fraction = FloatFraction(ticks);

@@ -97,6 +97,7 @@ enum struct huddata_t
 	int iJumps;
 	int iStrafes;
 	int iRank;
+	int iReplayStage;
 	float fSync;
 	float fPB;
 	float fWR;

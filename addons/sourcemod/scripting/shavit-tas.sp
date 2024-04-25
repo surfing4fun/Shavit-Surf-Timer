@@ -268,7 +268,7 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 		return;
 	}
 
-	if (type == Zone_Start)
+	if (type == Zone_Start || type == Zone_Stage)
 	{
 		if (GetEntityFlags(client) & FL_ONGROUND)
 		{

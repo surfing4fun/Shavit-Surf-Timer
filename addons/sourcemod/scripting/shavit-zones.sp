@@ -235,10 +235,11 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetZone", Native_GetZone);
 	CreateNative("Shavit_AddZone", Native_AddZone);
 	CreateNative("Shavit_RemoveZone", Native_RemoveZone);
+	CreateNative("Shavit_GetMapTrackCount", Native_GetMapTrackCount);
 	// CreateNative("Shavit_GetHighestStage", Native_GetHighestStage);
 	CreateNative("Shavit_GetClientStageTime", Native_GetClientStageTime);
-	CreateNative("Shavit_GetStageStartInfo", Native_GetStageStartInfo);
-	CreateNative("Shavit_SetStageStartTime", Native_SetStageStartTime);
+	CreateNative("Shavit_GetStageStartSnapshot", Native_GetStageStartSnapshot);
+	CreateNative("Shavit_SetStageStartInfo", Native_SetStageStartInfo);
 	CreateNative("Shavit_GetStageStartTime", Native_GetStageStartTime);
 	CreateNative("Shavit_InsideZoneStage", Native_InsideZoneStage);
 
@@ -787,6 +788,12 @@ public int Native_InsideZoneGetID(Handle handler, int numParams)
 public int Native_GetStageCount(Handle handler, int numParas)
 {
 	int iTrack = GetNativeCell(1);
+	
+	if(iTrack < 0 || iTrack > TRACKS_SIZE)
+	{
+		return 0;
+	}
+
 	return gI_HighestStage[iTrack];
 }
 
@@ -804,7 +811,7 @@ public int Native_GetClientStageTime(Handle handler, int numParas)
 	return view_as<int>(Shavit_GetClientTime(client) - gA_StageStartTimer[client][track][stage].fCurrentTime);
 }
 
-public int Native_GetStageStartInfo(Handle handler, int numParas)
+public int Native_GetStageStartSnapshot(Handle handler, int numParas)
 {
 	if(GetNativeCell(5) != sizeof(timer_snapshot_t))
 	{
@@ -824,9 +831,26 @@ public int Native_GetStageStartTime(Handle handler, int numParas)
 	return view_as<int>(gA_StageStartTimer[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)].fCurrentTime);
 }
 
-public int Native_SetStageStartTime(Handle handler, int numParas)
+public int Native_SetStageStartInfo(Handle handler, int numParas)
 {
-	gA_StageStartTimer[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)].fCurrentTime = GetNativeCell(4);
+	int client = GetNativeCell(1);
+	int track = GetNativeCell(2);
+	int stage = GetNativeCell(3);
+
+	if(GetNativeCell(5) != sizeof(stagestart_info_t))
+	{
+		return ThrowNativeError(200, "stagestart_info_t does not match latest(got %i expected %i). Please update your includes and recompile your plugins",
+			GetNativeCell(5), sizeof(stagestart_info_t));
+	}
+
+	stagestart_info_t info;
+	GetNativeArray(4, info, sizeof(stagestart_info_t));
+
+	gA_StageStartTimer[client][track][stage].fCurrentTime = info.fStageStartTime;
+	gA_StageStartTimer[client][track][stage].iFullTicks = info.iFullTicks;
+	gA_StageStartTimer[client][track][stage].iFractionalTicks = info.iFractionalTicks;
+	gA_StageStartTimer[client][track][stage].iJumps = info.iJumps;
+	gA_StageStartTimer[client][track][stage].iStrafes = info.iStrafes;
 
 	return 1;
 }
@@ -949,6 +973,38 @@ public any Native_GetZone(Handle plugin, int numParams)
 
 	SetNativeArray(2, gA_ZoneCache[GetNativeCell(1)], sizeof(zone_cache_t));
 	return 0;
+}
+
+public any Native_GetMapTrackCount(Handle plugin, int numParams)
+{
+	bool bCountBonusOnly = GetNativeCell(1);
+	int iTrackMask = 0;
+	int iTrackCount = 0;
+
+	for(int i = 0; i < gI_MapZones; i++)
+	{
+		if(gA_ZoneCache[i].iType == Zone_Start) 
+		{
+			if (gA_ZoneCache[i].iTrack < 1 && bCountBonusOnly)
+			{
+				continue;
+			}
+
+			iTrackMask |= 1 << gA_ZoneCache[i].iTrack;
+		}
+	}
+
+	while (iTrackMask > 0)
+	{
+		if ((iTrackMask & 1) == 1)
+		{
+			iTrackCount++;
+		}
+
+		iTrackMask >>= 1;
+	}
+
+	return iTrackCount;
 }
 
 public any Native_AddZone(Handle plugin, int numParams)
@@ -5045,11 +5101,6 @@ void ResetClientTargetNameAndClassName(int client, int track)
 	SetEntPropString(client, Prop_Data, "m_iClassname", classname);
 }
 
-public void Shavit_OnReplayStart(int ent, int type, bool delay_elapsed)
-{
-	gI_LastStage[ent] = 1;
-}
-
 public Action Shavit_OnStart(int client, int track)
 {
 	if(gCV_ForceTargetnameReset.BoolValue)
@@ -5607,7 +5658,9 @@ public void TouchPost(int entity, int other)
 
 			if(Shavit_GetStageCount(track) > 1)
 			{
-				gA_StageStartTimer[other][track][1].fCurrentTime = 0.0;
+				timer_snapshot_t snapshot;
+				Shavit_SaveSnapshot(other, snapshot, sizeof(snapshot));
+				gA_StageStartTimer[other][track][1] = snapshot;
 			}
 
 			if(Shavit_IsOnlyStageMode(other))
@@ -5618,6 +5671,11 @@ public void TouchPost(int entity, int other)
 		case Zone_Stage:
 		{
 			int num = gA_ZoneCache[zone].iData;
+
+			if (GetEntPropEnt(other, Prop_Send, "m_hGroundEntity") == -1 && !Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(other), "startinair"))
+			{
+				return;
+			}
 			
 			if(Shavit_GetTimerStatus(other) == Timer_Stopped && Shavit_IsOnlyStageMode(other))
 			{

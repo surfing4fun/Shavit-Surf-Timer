@@ -56,6 +56,7 @@ forward void Shavit_OnFinishStage_Post(int client, int style, float time, int ju
  * @param strafes                   Amount of strafes.
  * @param sync                      Sync percentage (0.0 to 100.0) or -1.0 when not measured.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @param oldwr                     Time of the old WR. 0.0 if there's none.
  * @param oldtime                   The player's best time on the map before this finish.
  * @param perfs                     Perfect jump percentage (0.0 to 100.0) or 100.0 when not measured.

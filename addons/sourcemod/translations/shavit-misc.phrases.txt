@@ -317,6 +317,22 @@
 		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s},{6:s},{7:s}"
 		"en"		"{1}{2}{3} is the first one completes the {4} by {5}{6}{7}. Well done!"
 	}
+	"StageText"
+	{
+		"en"		"Stage"
+	}
+	"StageTextLowerCase"
+	{
+		"en"		"stage"
+	}
+	"BonusText"
+	{
+		"en"		"bonus"
+	}
+	"MapText"
+	{
+		"en"		"map"
+	}
 	"AdvertisementsEnabled"
 	{
 		"en"		"Advertisements enabled"

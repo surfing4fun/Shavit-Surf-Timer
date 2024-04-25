@@ -37,7 +37,7 @@
 
 #define REPLAY_FORMAT_V2 "{SHAVITREPLAYFORMAT}{V2}"
 #define REPLAY_FORMAT_FINAL "{SHAVITREPLAYFORMAT}{FINAL}"
-#define REPLAY_FORMAT_SUBVERSION 0x09
+#define REPLAY_FORMAT_SUBVERSION 0x0A
 
 #define REPLAY_FRAMES_PER_WRITE 100 // amounts of frames to write per read/write call
 
@@ -55,9 +55,10 @@ enum struct replay_header_t
 	int iPostFrames;
 	float fTickrate;
 	float fZoneOffset[2];
+	int iStage;
 }
 
-enum struct frame_t
+enum struct frame_t // size = 10
 {
 	float pos[3];
 	float ang[2];
@@ -69,6 +70,7 @@ enum struct frame_t
 	// iReplayVersion >= 0x06
 	int mousexy; // `mousex | (mousey << 16)` // unpack with UnpackSignedShorts
 	int vel; // basically `forwardmove | (sidemove << 16)` // unpack with UnpackSignedShorts
+	int stage;
 }
 
 enum struct frame_cache_t
@@ -94,11 +96,11 @@ stock void UnpackSignedShorts(int x, int[] out)
 	out[1] = (((x >> 16) & 0xFFFF) ^ 0x8000) - 0x8000;
 }
 
-stock bool LoadReplayCache(frame_cache_t cache, int style, int track, const char[] path, const char[] mapname)
+stock bool LoadReplayCache(frame_cache_t cache, int style, int track, int stage, const char[] path, const char[] mapname)
 {
 	bool success = false;
 	replay_header_t header;
-	File fFile = ReadReplayHeader(path, header, style, track);
+	File fFile = ReadReplayHeader(path, header, style, track, stage);
 
 	if (fFile != null)
 	{
@@ -134,6 +136,12 @@ stock bool ReadReplayFrames(File file, replay_header_t header, frame_cache_t cac
 	{
 		total_cells = 10;
 		used_cells = 8;
+	}
+
+	if (header.iReplayVersion >= 0x0A)
+	{
+		total_cells = 11;
+		used_cells = 11;
 	}
 
 	any aReplayData[sizeof(frame_t)];
@@ -220,7 +228,7 @@ stock bool ReadReplayFrames(File file, replay_header_t header, frame_cache_t cac
 	return true;
 }
 
-stock File ReadReplayHeader(const char[] path, replay_header_t header, int style = 0, int track = 0)
+stock File ReadReplayHeader(const char[] path, replay_header_t header, int style = 0, int track = 0, int stage = 0)
 {
 	replay_header_t empty_header;
 	header = empty_header;
@@ -305,6 +313,13 @@ stock File ReadReplayHeader(const char[] path, replay_header_t header, int style
 			file.ReadInt32(view_as<int>(header.fZoneOffset[0]));
 			file.ReadInt32(view_as<int>(header.fZoneOffset[1]));
 		}
+
+		header.iStage = 0; // there are no stage replays before 0x10 version
+
+		if (version >= 0x0a)
+		{
+			file.ReadUint8(view_as<int>(header.iStage));
+		}
 	}
 	else if(StrEqual(header.sReplayFormat, REPLAY_FORMAT_V2))
 	{
@@ -345,7 +360,7 @@ stock File ReadReplayHeader(const char[] path, replay_header_t header, int style
 	return file;
 }
 
-stock void WriteReplayHeader(File fFile, int style, int track, float time, int steamid, int preframes, int postframes, float fZoneOffset[2], int iSize, float tickrate, const char[] sMap)
+stock void WriteReplayHeader(File fFile, int style, int track, int stage, float time, int steamid, int preframes, int postframes, float fZoneOffset[2], int iSize, float tickrate, const char[] sMap)
 {
 	fFile.WriteLine("%d:" ... REPLAY_FORMAT_FINAL, REPLAY_FORMAT_SUBVERSION);
 
@@ -363,6 +378,8 @@ stock void WriteReplayHeader(File fFile, int style, int track, float time, int s
 
 	fFile.WriteInt32(view_as<int>(fZoneOffset[0]));
 	fFile.WriteInt32(view_as<int>(fZoneOffset[1]));
+
+	fFile.WriteInt8(view_as<int>(stage))
 }
 
 // file_a is usually used as the wr replay file.

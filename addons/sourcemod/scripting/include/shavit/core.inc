@@ -25,7 +25,7 @@
 #define _shavit_core_included
 
 #define SHAVIT_VERSION "3.4.2"
-#define STYLE_LIMIT 256
+#define STYLE_LIMIT 128 // 256 is too much for style.
 
 // god i fucking hate sourcemod. NULL_VECTOR isn't const so it's not guaranteed to be 0,0,0
 #define ZERO_VECTOR view_as<float>({0,0,0})
@@ -58,7 +58,7 @@ enum
 {
 	Track_Main,
 	Track_Bonus,
-	Track_Bonus_Last = 8,
+	Track_Bonus_Last = 12, //8 is not enough for surf bounus
 	TRACKS_SIZE
 };
 
@@ -106,6 +106,15 @@ enum struct chatstrings_t
 	char sStyle[16];
 }
 
+enum struct stagestart_info_t
+{
+	float fStageStartTime;
+	int iFullTicks;
+	int iFractionalTicks;
+	int iJumps;
+	int iStrafes;
+}
+
 enum struct timer_snapshot_t
 {
 	bool bTimerEnabled;
@@ -120,6 +129,7 @@ enum struct timer_snapshot_t
 	float fServerTime;
 	int iKeyCombo;
 	int iTimerTrack;
+	int iLastStage;
 	int iMeasuredJumps;
 	int iPerfectJumps;
 	// used as a "tick fraction" basically
@@ -134,6 +144,8 @@ enum struct timer_snapshot_t
 	int iFractionalTicks; // divide this by 10000.0 to get a fraction of a tick. whole ticks are moved to iFullTicks
 
 	bool bPracticeMode;
+	bool bOnlyStageMode;
+	bool bStageTimeValid;
 
 	bool bJumped;
 	bool bCanUseAllKeys;
@@ -146,10 +158,9 @@ enum struct timer_snapshot_t
 	float fStrafeWarning;
 	float fLastInputVel[2];
 
-	int iLastStage;
-	float fStageStartTime;
-	bool bStageTimeValid;
-	bool bOnlyStageMode;
+	stagestart_info_t aStageStartInfo;
+
+	// float fStageStartTime;
 
 	float fplayer_speedmod;
 	float fNextFrameTime;
@@ -703,12 +714,48 @@ forward Action Shavit_OnFinishPre(int client, timer_snapshot_t snapshot);
  * @param avgvel					Player's average velocity throughout the run.
  * @param maxvel					Player's highest reached velocity.
  * @param timestamp					System time of when player finished.
- * @noreturn
+ * @return							Plugin_Continue to do nothing, Plugin_Changed to change the variables or anything else to stop the timer from finishing.
  */
 forward void Shavit_OnFinish(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
 
+/**
+ * Called before a player finishes a stage.
+ *
+ * @param client					Client index.
+ * @param track						Timer track.
+ * @param style						Style the record was done on.
+ * @param stage						Stage number.
+ * @param time						Record time.
+ * @param oldtime					The player's best time on the stage before this finish.
+ * @param jumps						Jumps amount.
+ * @param strafes					Amount of strafes.
+ * @param sync						Sync percentage (0.0 to 100.0) or -1.0 when not measured.
+ * @param oldtime					The player's best time on the map before this finish.
+ * @param avgvel					Player's average velocity throughout the run.
+ * @param maxvel					Player's highest reached velocity.
+ * @param timestamp					System time of when player finished.
+ * @noreturn
+ */
 forward Action Shavit_OnFinishStagePre(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp);
 
+/**
+ * Called when a player finishes a stage. (touches the next stage zone)
+ *
+ * @param client					Client index.
+ * @param track						Timer track.
+ * @param style						Style the record was done on.
+ * @param stage						Stage number.
+ * @param time						Record time.
+ * @param oldtime					The player's best time on the stage before this finish.
+ * @param jumps						Jumps amount.
+ * @param strafes					Amount of strafes.
+ * @param sync						Sync percentage (0.0 to 100.0) or -1.0 when not measured.
+ * @param oldtime					The player's best time on the map before this finish.
+ * @param avgvel					Player's average velocity throughout the run.
+ * @param maxvel					Player's highest reached velocity.
+ * @param timestamp					System time of when player finished.
+ * @noreturn
+ */
 forward void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp);
 
 /**

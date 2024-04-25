@@ -49,11 +49,6 @@
 	{
 		"en"		"Time"
 	}
-	"HudStageTimeText"
-	{
-		"#format"	"{1:d}"
-		"en"		"Stage {1} Time"
-	}
 	"HudTimerStoppedText"
 	{
 		"#format"	"{1:s}"
@@ -78,6 +73,10 @@
 	"HudSpeedText"
 	{
 		"en"		"Speed"
+	}
+	"HudStageText"
+	{
+		"en"		"Stage"
 	}
 	"HudStage"
 	{
@@ -140,7 +139,7 @@
 	// ---------- Menus ---------- //
 	"HUDMenuTitle"
 	{
-		"en"		"HUD settings:"
+		"en"		"Center HUD settings:"
 	}
 	"HudMaster"
 	{

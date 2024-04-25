@@ -134,6 +134,7 @@ public void OnPluginStart()
 
 	Convar.AutoExecConfig();
 
+	RegAdminCmd("sm_ext", Command_Extend, ADMFLAG_CHANGEMAP, "Admin command for extending map");
 	RegAdminCmd("sm_extend", Command_Extend, ADMFLAG_CHANGEMAP, "Admin command for extending map");
 	RegAdminCmd("sm_extendmap", Command_Extend, ADMFLAG_CHANGEMAP, "Admin command for extending map");
 

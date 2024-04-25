@@ -415,6 +415,14 @@ native int Shavit_GetZoneID(int entity);
 native int Shavit_GetZoneTrack(int zoneid);
 
 /**
+ * Returns how many tracks in current map.
+ * 
+ * @param bonus						Whether to count bonus only.
+ * @return 							Track counts.
+ */
+native int Shavit_GetMapTrackCount(bool bonus);
+
+/**
  * Returns the zone type.
  *
  * @param zoneid                    Zone index.
@@ -507,6 +515,7 @@ native float Shavit_GetClientStageTime(int client, int track, int stage);
  * Get Client's current start time of stage
  *
  * @param client		Client index
+ * @param track			Track number, should be 0.
  * @param stage			The stage number
  *
  * @return				Client's current stage start time.
@@ -516,24 +525,27 @@ native float Shavit_GetStageStartTime(int client, int track, int stage);
 /**
  * Get Client's current time of stage
  *
- * @param client		Client index
- * @param stage			The stage number
- * @param time			The time need to set
+ * @param client			Client index.
+ * @param track				Track number, should be 0.
+ * @param stage				The stage number.
+ * @param stagestartinfo	Struct stagestart_info_t to set.
+ * @param size				Size of stagestart_info_t.
  *
  * @noreturn				
  */
-native void Shavit_SetStageStartTime(int client, int track, int stage, float time);
+native void Shavit_SetStageStartInfo(int client, int track, int stage, any[] stagestartinfo, int size);
 
 /**
- * Get Client's current timer info of stage start
+ * Get Client's timer snapshot of stage start
  *
  * @param client		Client index
  * @param stage			The stage number
- * @param time			The time need to set
+ * @param snapshot		The time need to set
+ * @param size			Size of struct timer_snapshot_t
  *
  * @noreturn				
  */
-native void Shavit_GetStageStartInfo(int client, int track, int stage, any[] snapshot, int size);
+native void Shavit_GetStageStartSnapshot(int client, int track, int stage, any[] snapshot, int size);
 
 public SharedPlugin __pl_shavit_zones =
 {
@@ -556,6 +568,7 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_InsideZoneGetID");
 	MarkNativeAsOptional("Shavit_IsClientCreatingZone");
 	MarkNativeAsOptional("Shavit_ZoneExists");
+	MarkNativeAsOptional("Shavit_GetMapTrackCount");
 	MarkNativeAsOptional("Shavit_Zones_DeleteMap");
 	MarkNativeAsOptional("Shavit_SetStart");
 	MarkNativeAsOptional("Shavit_DeleteSetStart");
@@ -574,7 +587,7 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_InsideZoneStage");
 	MarkNativeAsOptional("Shavit_GetClientStageTime");
 	MarkNativeAsOptional("Shavit_SetClientStageTime");
-	MarkNativeAsOptional("Shavit_GetStageStartInfo");
+	MarkNativeAsOptional("Shavit_GetStageStartSnapshot");
 	// MarkNativeAsOptional("Shavit_GetHighestStage");
 }
 #endif

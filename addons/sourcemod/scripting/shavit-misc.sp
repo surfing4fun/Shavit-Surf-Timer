@@ -165,7 +165,6 @@ public Plugin myinfo =
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	CreateNative("Shavit_IsClientUsingHide", Native_IsClientUsingHide);
-	CreateNative("Shavit_GetPrestrafeLimit", Native_GetPrestrafeLimit);
 
 	RegPluginLibrary("shavit-misc");
 
@@ -1063,6 +1062,27 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 
 		FormatEx(sIPAddress, 64, "%d.%d.%d.%d:%d", iAddress[0], iAddress[1], iAddress[2], iAddress[3], hostport.IntValue);
 	}
+	
+	int iStageCount = Shavit_GetStageCount(Track_Main);
+	char sStageInfo[16];
+
+	if(iStageCount > 1)
+	{
+		FormatEx(sStageInfo, 16, "%d Stages", iStageCount);
+	}
+	else
+	{
+		FormatEx(sStageInfo, 16, "Linear");
+	}
+
+	int iBonusCount = Shavit_GetMapTrackCount(true);
+	char sTrackInfo[32];
+
+	FormatEx(sTrackInfo, 32, "%d Bonus%s", iBonusCount, iBonusCount > 1 ? "es":"");
+
+	int iTier = gB_Rankings ? Shavit_GetMapTier(gS_Map):0;
+	char sTier[8];
+	FormatEx(sTier, 8, "Tier %d", iTier);
 
 	gA_Advertisements.GetString(index, buf, buflen);
 
@@ -1071,6 +1091,9 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 	ReplaceString(buf, buflen, "{hostname}", sHostname);
 	ReplaceString(buf, buflen, "{serverip}", sIPAddress);
 	ReplaceString(buf, buflen, "{map}", gS_Map);
+	ReplaceString(buf, buflen, "{stage}", sStageInfo);
+	ReplaceString(buf, buflen, "{bounus}", sTrackInfo);
+	ReplaceString(buf, buflen, "{tier}", sTier);
 }
 
 public Action Timer_Advertisement(Handle timer)
@@ -1240,6 +1263,16 @@ void TF2_KillDroppedWeapons()
 		AcceptEntityInput(ent, "Kill");
 	}
 }
+
+// public void Shavit_OnTimerMenuMade(int client, Menu menu)
+// {
+
+// }
+
+// public void Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
+// {
+
+// }
 
 public void Shavit_OnPause(int client, int track)
 {
@@ -2455,19 +2488,29 @@ public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, i
 	}
 	else
 	{
-		Format(sTrack, 32, "[%sStage %d%s]", gS_ChatStrings.sVariable, stage, gS_ChatStrings.sText);
+		Format(sTrack, 32, "[%s%T %d%s]", gS_ChatStrings.sVariable, "StageText", LANG_SERVER, stage, gS_ChatStrings.sText);
 	}
 
+	char sMessage[16];
 
 	for(int i = 1; i <= gCV_WRMessages.IntValue; i++)
 	{
 		if(stage == 0)
 		{
-			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, track == 0 ? "map":"bonus ", track == 0 ? "":sTrack);
+			if(track == 0)
+			{
+				FormatEx(sMessage, 16, "%T", "MapText", LANG_SERVER);
+			}
+			else
+			{
+				FormatEx(sMessage, 16, "%T ", "BonusText", LANG_SERVER);
+			}
+			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, sMessage, track == 0 ? "":sTrack);
 		}
 		else
 		{
-			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, "stage ", sTrack);
+			FormatEx(sMessage, 16, "%T ", "StageTextLowerCase", LANG_SERVER);
+			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, sMessage, sTrack);
 		}
 	}
 
@@ -2936,9 +2979,4 @@ public Action Command_AutoRestart(int client, int args)
 public int Native_IsClientUsingHide(Handle plugin, int numParams)
 {
 	return gB_Hide[GetNativeCell(1)];
-}
-
-public int Native_GetPrestrafeLimit(Handle plugin, int numParams)
-{
-	return view_as<int>((Shavit_GetStyleSettingFloat(gI_Style[GetNativeCell(1)], "runspeed") + gCV_PrestrafeLimit.FloatValue));
 }

@@ -87,10 +87,11 @@ native void Shavit_Replay_DeleteMap(const char[] map);
  * @param map                       Map display name.
  * @param style                     Bhop style.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @param accountid                 Account ID to validate against, 0 to skip validation.
  * @return                          true if replay existed, false if the steam id didn't match or the file didn't exist.
  */
-native bool Shavit_DeleteReplay(const char[] map, int style, int track, int accountid = 0);
+native bool Shavit_DeleteReplay(const char[] map, int style, int track, int stage, int accountid = 0);
 
 /**
  * Retrieves the engine time of the replay bot's first frame.
@@ -124,6 +125,22 @@ native int Shavit_GetReplayBotStyle(int entity);
  * @return                          Timer track replayed by the bot. -1 if the replay bot is idle.
  */
 native int Shavit_GetReplayBotTrack(int entity);
+
+/**
+ * Retrieve the stage run number being played by the replay bot.
+ *
+ * @param entity                    entity index.
+ * @return                          Timer stage replayed by the bot. -1 if the replay bot is idle.
+ */
+native int Shavit_GetReplayBotStage(int entity);
+
+/**
+ * Retrieve the current stage number of the playing replay bot.
+ * 
+ * @param entity                    entity index.
+ * @return                          The current stage number of the bot. -1 if the replay bot is idle.
+ */
+native int Shavit_GetReplayBotCurrentStage(int entity);
 
 /**
  * Gets the replay bot type setting of the server.
@@ -171,27 +188,30 @@ native int Shavit_GetReplayEntityFlags(int ent);
  *
  * @param style                     Style.
  * @param track                     Track.
+ * @param stage						Stage.
  * @return                          Frame count.
  */
-native int Shavit_GetReplayFrameCount(int style, int track);
+native int Shavit_GetReplayFrameCount(int style, int track, int stage);
 
 /**
  * Retrieves a replay's pre-run frame count.
  *
  * @param style                     Style.
  * @param track                     Track.
+ * @param stage
  * @return                          Frame count.
  */
-native int Shavit_GetReplayPreFrames(int style, int track);
+native int Shavit_GetReplayPreFrames(int style, int track, int stage);
 
 /**
  * Retrieves a replay's post-run frame count.
  *
  * @param style                     Style.
  * @param track                     Track.
+ * @param stage						Stage.
  * @return                          Frame count.
  */
-native int Shavit_GetReplayPostFrames(int style, int track);
+native int Shavit_GetReplayPostFrames(int style, int track, int stage);
 
 /**
  * Retrieves the frame count from the currently running replay bot's frame_cache_t.
@@ -218,24 +238,34 @@ native int Shavit_GetReplayCachePreFrames(int bot);
 native int Shavit_GetReplayCachePostFrames(int bot);
 
 /**
+ * Retrieves the replay bot index.
+ *
+ * @param bot                       Replay bot entity.
+ * @return                          Bot index.
+ */
+native int Shavit_GetReplayBotInfoIndex(int bot);
+
+/**
  * Retrieves the replay data for the given style and track.
  *
  * @param style                     Style.
  * @param track                     Track.
+ * @param stage						Stage.
  * @param cheapCloneHandle          False means we duplicate the frames (ArrayList.Clone). True means we clone the handle to the frames (CloneHandle).
  *
  * @return                          ArrayList with proper replay data, or null if there is no recorded data. Delete this handle when you're done with it.
  */
-native ArrayList Shavit_GetReplayFrames(int style, int track, bool cheapCloneHandle=false);
+native ArrayList Shavit_GetReplayFrames(int style, int track, int stage, bool cheapCloneHandle=false);
 
 /**
  * Retrieves a replay's total length in seconds.
  *
  * @param style                     Style.
  * @param track                     Track.
+ * @param stage						Stage.
  * @return                          Replay length.
  */
-native float Shavit_GetReplayLength(int style, int track);
+native float Shavit_GetReplayLength(int style, int track, int stage);
 
 /**
  * Retrieves the replay's total length in seconds from the currently running replay bot's frame_cache_t.
@@ -262,7 +292,7 @@ native float Shavit_GetReplayTime(int entity);
  * @param length                    String length.
  * @noreturn
  */
-native void Shavit_GetReplayName(int style, int track, char[] buffer, int length);
+native void Shavit_GetReplayName(int style, int track, int stage, char[] buffer, int length);
 
 /**
  * Retrieves a replay holder's name from an active replay bot.
@@ -288,9 +318,10 @@ native void Shavit_GetReplayFolderPath(char[] buffer, int length);
  *
  * @param style                     Style.
  * @param track                     Track.
+ * @param stage						Stage number.
  * @return                          Boolean value of if there's loaded replay data.
  */
-native bool Shavit_IsReplayDataLoaded(int style, int track);
+native bool Shavit_IsReplayDataLoaded(int style, int track, int stage);
 
 /**
  * Checks if the given entity is a replay bot (fakeclient) or replay prop.
@@ -313,6 +344,7 @@ native void Shavit_SetReplayCacheName(int bot, char[] name);
  *
  * @param style                     Bhop style.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @param delay                     Delay until starting. If -1.0, then uses shavit_replay_delay
  * @param client                    Client index.
  * @param bot                       Bot to play on. Should be of type Replay_Central or Replay_Dynamic. -1 to create new replay bot.
@@ -320,7 +352,7 @@ native void Shavit_SetReplayCacheName(int bot, char[] name);
  * @param ignorelimit               Ignore cvar limit for dynamic bots.
  * @return                          Replay entity. 0 is returned if couldn't be created.
  */
-native int Shavit_StartReplay(int style, int track, float delay, int client, int bot, int type, bool ignorelimit);
+native int Shavit_StartReplay(int style, int track, int stage, float delay, int client, int bot, int type, bool ignorelimit);
 
 /**
  * Starts a replay with a given set of frames.
@@ -328,6 +360,7 @@ native int Shavit_StartReplay(int style, int track, float delay, int client, int
  *
  * @param style                     Bhop style.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @param delay                     Delay until starting. If -1.0, then uses shavit_replay_delay
  * @param client                    Client index.
  * @param bot                       Bot to play on. Should be of type Replay_Central or Replay_Dynamic. -1 to create new replay bot.
@@ -337,7 +370,7 @@ native int Shavit_StartReplay(int style, int track, float delay, int client, int
  * @param size                      sizeof(frame_cache_t). Used to throw errors at you if you don't recompile plugins.
  * @return                          Replay entity. 0 is returned if couldn't be created.
  */
-native int Shavit_StartReplayFromFrameCache(int style, int track, float delay, int client, int bot, int type, bool ignorelimit, any[] cache, int size = sizeof(frame_cache_t));
+native int Shavit_StartReplayFromFrameCache(int style, int track, int stage, float delay, int client, int bot, int type, bool ignorelimit, any[] cache, int size = sizeof(frame_cache_t));
 
 /**
  * Starts a replay from a replay file.
@@ -345,6 +378,7 @@ native int Shavit_StartReplayFromFrameCache(int style, int track, float delay, i
  *
  * @param style                     Bhop style.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @param delay                     Delay until starting. If -1.0, then uses shavit_replay_delay
  * @param client                    Client index.
  * @param bot                       Bot to play on. Should be of type Replay_Central or Replay_Dynamic. -1 to create new replay bot.
@@ -353,7 +387,7 @@ native int Shavit_StartReplayFromFrameCache(int style, int track, float delay, i
  * @param path                      File path to replay
  * @return                          Replay entity. 0 is returned if couldn't be created.
  */
-native int Shavit_StartReplayFromFile(int style, int track, float delay, int client, int bot, int type, bool ignorelimit, const char[] path);
+native int Shavit_StartReplayFromFile(int style, int track, int stage, float delay, int client, int bot, int type, bool ignorelimit, const char[] path);
 
 /**
  * Reloads a specific replay into the replay bot cache.
@@ -361,11 +395,12 @@ native int Shavit_StartReplayFromFile(int style, int track, float delay, int cli
  *
  * @param style                     Replay style.
  * @param track                     Replay track.
+ * @param stage						Replay stage.
  * @param restart                   Restart the playback of the replay bot if it's playing?
  * @param path                      Path to the replay file. Use `BuildPath(Path_SM, ...)` to generate one. Leave as empty to use default.
  * @return                          Was the replay loaded?
  */
-native bool Shavit_ReloadReplay(int style, int track, bool restart, char[] path = "");
+native bool Shavit_ReloadReplay(int style, int track, int stage, bool restart, char[] path = "");
 
 /**
  * Reloads all of the replays for the map.
@@ -462,8 +497,11 @@ public void __pl_shavit_replay_playback_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetReplayBotCurrentFrame");
 	MarkNativeAsOptional("Shavit_GetReplayBotFirstFrameTime");
 	MarkNativeAsOptional("Shavit_GetReplayBotIndex");
+	MarkNativeAsOptional("Shavit_GetReplayBotInfoIndex");
 	MarkNativeAsOptional("Shavit_GetReplayBotStyle");
 	MarkNativeAsOptional("Shavit_GetReplayBotTrack");
+	MarkNativeAsOptional("Shavit_GetReplayBotStage");	
+	MarkNativeAsOptional("Shavit_GetReplayBotCurrentStage");	
 	MarkNativeAsOptional("Shavit_GetReplayBotType");
 	MarkNativeAsOptional("Shavit_GetReplayStarter");
 	MarkNativeAsOptional("Shavit_GetReplayFrameCount");

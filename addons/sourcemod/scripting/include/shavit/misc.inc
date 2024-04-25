@@ -33,14 +33,6 @@
 native bool Shavit_IsClientUsingHide(int client);
 
 /**
- * Checks if a player is hiding players
- *
- * @param style                    Style index.
- * @return                         Max velocity of prestrafe.
- */
-native float Shavit_GetPrestrafeLimit(int style);
-
-/**
  * Called before clan tag variables are processed.
  *
  * @param client					Client index.

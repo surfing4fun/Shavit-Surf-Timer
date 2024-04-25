@@ -25,7 +25,6 @@
 
 #include <shavit/core>
 #include <shavit/wr>
-#include <shavit/misc>
 #include <shavit/steamid-stocks>
 
 #undef REQUIRE_PLUGIN
@@ -114,6 +113,7 @@ char gS_MySQLPrefix[32];
 // cvars
 Convar gCV_RecordsLimit = null;
 Convar gCV_RecentLimit = null;
+ConVar gCV_PrestrafeLimit = null;
 
 // timer settings
 int gI_Styles = 0;
@@ -212,7 +212,7 @@ public void OnPluginStart()
 	// player commands
 	RegConsoleCmd("sm_wr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_wr [map]");
 	RegConsoleCmd("sm_worldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_worldrecord [map]");
-	RegConsoleCmd("sm_wrtest", Command_WRTest);
+	// RegConsoleCmd("sm_wrtest", Command_WRTest);
 
 	RegConsoleCmd("sm_cpwr", Command_WorldRecord);
 	RegConsoleCmd("sm_swr", Command_WorldRecord);
@@ -351,24 +351,21 @@ public void OnLibraryAdded(const char[] name)
 	}
 }
 
-public Action Command_WRTest(int client, int args)
+// public Action Command_WRTest(int client, int args)
+// {
+// 	timer_snapshot_t info;
+// 	for(int i = 1; i < Shavit_GetStageCount(0); i++)
+// 	{
+// 		Shavit_GetStageStartSnapshot(client, 0, i, info, sizeof(info));
+// 		PrintToChatAll("Stage %d Start Info. Time: %.2f iFullTick: %d", info.iLastStage, info.fCurrentTime, info.iFullTicks);
+// 	}
+
+// 	return Plugin_Handled;
+// }
+
+public void OnAllPluginsLoaded()
 {
-	PrintToChatAll("Get Stage WR\n");
-	PrintToChatAll("==========================================\n");
-	// int stage = Shavit_GetStageCount(0);
-	// for(int i = 1; i <= stage; i++)
-	// {
-	// 	int steamid = gI_StageWRSteamID[0][i];
-	// 	int wrid = gI_StageWRRecordID[0][i];
-	// 	float time = gF_StageWRTime[0][i];
-	// 	float pbtime = gF_PlayerStageRecord[client][0][i];
-	// 	PrintToChatAll("ID: %d, stage: %d, wr: %.2f, steamid: %d, pb: %.2f", wrid, i, time, steamid, pbtime);
-	// }
-	// PrintToChatAll("==========================================\n");
-
-	Shavit_PrintToChat(client, "my client index: %d", client);
-
-	return Plugin_Handled;
+	gCV_PrestrafeLimit = FindConVar("shavit_misc_prestrafelimit");
 }
 
 public void OnLibraryRemoved(const char[] name)
@@ -1220,7 +1217,7 @@ void DeleteStageWR(int style, int track, int stage, const char[] map, int steami
 	}
 	else
 	{
-		DeleteWRFinal(style, track, map, steamid, recordid, update_cache);
+		DeleteStageWRFinal(style, track, stage, map, steamid, recordid, update_cache);
 	}
 }
 
@@ -1442,7 +1439,7 @@ public Action Command_DeleteStageRecord(int client, int args)
 		int records = GetStageRecorCount(i);
 
 		char sStage[64];
-		FormatEx(sStage, sizeof(sStage), "Stage %d", i);
+		FormatEx(sStage, sizeof(sStage), "%T %d", "WRStage", client, i);
 
 		if(records > 0)
 		{
@@ -1619,7 +1616,7 @@ public Action Command_DeleteAll_Stage(int client, int args)
 		int records = GetStageRecorCount(i);
 
 		char sStage[64];
-		FormatEx(sStage, sizeof(sStage), "Stage %d", i);
+		FormatEx(sStage, sizeof(sStage), "%T %d", "WRStage", client, i);
 
 		if(records > 0)
 		{
@@ -2010,7 +2007,7 @@ public void SQL_OpenDelete_Callback(Database db, DBResultSet results, const char
 	}
 	else
 	{
-		FormatEx(sTrack, sizeof(sTrack), "Stage %d",  gA_WRCache[client].iLastStage);
+		FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client,  gA_WRCache[client].iLastStage);
 	}
 
 	Menu menu = new Menu(OpenDelete_Handler);
@@ -2569,7 +2566,7 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 		for(int i = 1; i < MAX_STAGES; i++)
 		{
 			IntToString(i, sSelection, sizeof(sSelection));
-			FormatEx(sMenu, sizeof(sMenu), "Stage %d", i);
+			FormatEx(sMenu, sizeof(sMenu), "%T %d", "WRStage", client, i);
 			selectstage.AddItem(sSelection, sMenu);
 		}
 
@@ -2877,7 +2874,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 		}
 		else
 		{
-			FormatEx(sTrack, sizeof(sTrack), "Stage %d", stage);
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
 		}	
 
 		FormatEx(sFormattedTitle, 192, "%T %s: [%s]\n%s", "WRRecordFor", client, sMap, sTrack, sRanks);
@@ -3389,7 +3386,7 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 		}
 		else
 		{
-			FormatEx(sTrack, sizeof(sTrack), "Stage %d", stage);
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
 		}
 
 		Shavit_PrintSteamIDOnce(client, iSteamID, sName);
@@ -3642,7 +3639,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	FormatSeconds(time, sTime, 32);
 
 	char sStage[16];
-	Format(sStage, 16, "Stage %d", stage);
+	Format(sStage, 16, "%T %d", "WRStage", client, stage);
 
 	char sDifferenceWR[32];
 	FormatSeconds(fDifferenceWR, sDifferenceWR, 32, true);
@@ -3843,7 +3840,7 @@ public Action Shavit_OnFinishStagePre(int client, int track, int style, int stag
 		FormatSeconds(time, sTime, 32);
 
 		char sStage[16];
-		Format(sStage, 16, "Stage %d", stage);
+		Format(sStage, 16, "%T %d", "WRStage", client, stage);
 
 		FormatEx(sMessage, 255, "%T",
 			"UnrankedTime", client, 
@@ -4550,7 +4547,8 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 	{
 		int num = Shavit_GetZoneData(Shavit_GetZoneID(entity));
 		int stage = Shavit_GetClientLastStage(client);
-		float limit = Shavit_GetPrestrafeLimit(style);
+		float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+
 		gA_StageTimeValid[client][track][num] = (curVel <= limit);
 
 		if(stage == num && curVel >= 15.0)

@@ -593,7 +593,7 @@ public int ColorSettingMenu_Handler(Menu menu, MenuAction action, int client, in
 
 public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3], float angles[3], int& weapon, int& subtype, int& cmdnum, int& tickcount, int& seed, int mouse[2])
 {
-	if (!IsValidClient2(client))
+	if (!IsValidClient2(client) || IsFakeClient(client))
 	{
 		return Plugin_Continue;
 	}
@@ -609,9 +609,16 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	}
 
 	int target = GetClientObserverTarget(client);
+	
+	if(!IsValidClient2(target) || IsFakeClient(target))
+	{
+		return Plugin_Continue;
+	}
+
 	int speed = RoundToFloor(GetClientSpeed(target));
 	bool bReplay = false;
 	int iTrack;
+	int iStage;
 	TimerStatus iTimerStatus;
 	float fClosestReplayTime = -1.0;
 	float fClosestVelocityDifference = 0.0;
@@ -620,65 +627,72 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	if(gB_AllLibraryExists)
 	{
 		bReplay = (gB_ReplayPlayback && Shavit_IsReplayEntity(target));
+		target = bReplay ? Shavit_GetReplayBotInfoIndex(target) : target;
 		iTrack = (bReplay) ? Shavit_GetReplayBotTrack(target) : Shavit_GetClientTrack(target);
-		iTimerStatus = (bReplay)? Timer_Running:Shavit_GetTimerStatus(target);
+		iStage = Shavit_GetClientLastStage(target);
+		iTimerStatus = (bReplay)  ? Timer_Running : Shavit_GetTimerStatus(target);
 	}
 	else
 	{
 		bReplay = IsClientObserver(client);
 	}
 
+	int iZoneStage;
+	
+	bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
+						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 
 	if (!bReplay)
 	{
-		if(GetEntityFlags(client) & FL_ONGROUND)
+		if(GetEntityFlags(target) & FL_ONGROUND)
 		{
-			if(g_iTicksOnGround[client] > BHOP_TIME)
+			if(g_iTicksOnGround[target] > BHOP_TIME)
 			{
-				g_strafeTick[client] = 0;
-				g_flRawGain[client] = 0.0;
+				g_strafeTick[target] = 0;
+				g_flRawGain[target] = 0.0;
 			}
 			
-			g_iTicksOnGround[client]++;
+			g_iTicksOnGround[target]++;
 			
-			if(!bReplay && buttons & IN_JUMP && g_iTicksOnGround[client] == 1)
+			if(!bReplay && buttons & IN_JUMP && g_iTicksOnGround[target] == 1)
 			{
-				GetClientGains(client, vel, angles);
-				g_iTicksOnGround[client] = 0;
+				GetClientGains(target, vel, angles);
+				g_iTicksOnGround[target] = 0;
 			}
 
 		}
 		else
 		{
-			if(!bReplay && GetEntityMoveType(client) != MOVETYPE_NONE && GetEntityMoveType(client) != MOVETYPE_NOCLIP && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2)
+			if(!bReplay && GetEntityMoveType(target) != MOVETYPE_NONE && GetEntityMoveType(target) != MOVETYPE_NOCLIP && GetEntityMoveType(target) != MOVETYPE_LADDER && GetEntProp(target, Prop_Data, "m_nWaterLevel") < 2)
 			{
-				GetClientGains(client, vel, angles);
+				GetClientGains(target, vel, angles);
 			}
 
-			if(g_bTouchesWall[client])
+			if(g_bTouchesWall[target])
 			{
-				g_iTouchTicks[client]++;
-				g_bTouchesWall[client] = false;
+				g_iTouchTicks[target]++;
+				g_bTouchesWall[target] = false;
 			}
 			else
 			{
-				g_iTouchTicks[client] = 0;
+				g_iTouchTicks[target] = 0;
 			}
 
-			g_iTicksOnGround[client] = 0;
+			g_iTicksOnGround[target] = 0;
 		}
 
-		if(g_bTouchesWall[client])
+		if(g_bTouchesWall[target])
 		{
-			g_iTouchTicks[client]++;
-			g_bTouchesWall[client] = false;
+			g_iTouchTicks[target]++;
+			g_bTouchesWall[target] = false;
 		}
 		else
 		{
-			g_iTouchTicks[client] = 0;
+			g_iTouchTicks[target] = 0;
 		}
 
-		if (gB_AllLibraryExists && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), iTrack) != 0)
+		if (gB_AllLibraryExists && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), iTrack, iStage) != 0)
 		{
 			fClosestReplayTime = Shavit_GetClosestReplayTime(target, fClosestReplayLength);
 
@@ -695,13 +709,13 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 
 	if(gI_SpeedometerHud_SpeedDynamicColor[client] == dynamicColor_mode_1)
 	{
-		GetColorBySpeed(client, speed, rgb);
+		GetColorBySpeed(client, target, speed, rgb);
 	}
 	else if(!bReplay && gI_SpeedometerHud_SpeedDynamicColor[client] == dynamicColor_mode_2)
 	{
 		if (GetEntityMoveType(client) != MOVETYPE_NONE && GetEntityMoveType(client) != MOVETYPE_NOCLIP && GetEntityMoveType(client) != MOVETYPE_LADDER)
 		{
-			GetColorByGain(client, coeffsum, rgb);
+			GetColorByGain(client, target, coeffsum, rgb);
 		}
 		else
 		{
@@ -712,7 +726,6 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	{
 		rgb = Colors[gI_SpeedometerColor_Default[client]];
 	}
-
 
 	if (gB_SpeedometerDebug[client])
 	{
@@ -733,7 +746,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		ShowSyncHudText(client, hudSync_Spd, "%d\n", speed);
 		if (gB_AllLibraryExists && gB_SpeedometerHud_SpeedDiff[client])
 		{
-			if(fClosestReplayTime != -1.0 && !bReplay && iTimerStatus == Timer_Running && !Shavit_InsideZone(target, Zone_Start, iTrack))
+			if(fClosestReplayTime != -1.0 && !bReplay && iTimerStatus == Timer_Running && !bInStart)
 			{
 				if(!gB_SpeedometerHud_SpeedDiffDynamicColor[client])
 				{
@@ -759,9 +772,8 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	return Plugin_Continue;
 }
 
-void GetColorBySpeed(int client, int speed, int rgb[3])
+void GetColorBySpeed(int client, int target, int speed, int rgb[3])
 {
-	int target = GetClientObserverTarget(client);
 	static int lastSpeed[MAXPLAYERS + 1];
 
 	if (speed > lastSpeed[target])
@@ -781,9 +793,8 @@ void GetColorBySpeed(int client, int speed, int rgb[3])
 }
 
 
-void GetColorByGain(int client, float gain, int rgb[3])
+void GetColorByGain(int client, int target, float gain, int rgb[3])
 {
-	int target = GetClientObserverTarget(client);
 	if(g_iTicksOnGround[target] > BHOP_TIME)
 	{
 		rgb = Colors[gI_SpeedometerColor_Default[client]];
@@ -879,7 +890,7 @@ void SetSpeedometerPos(int client, bool param1)
 
 stock bool IsValidClient2(int client)
 {
-	return (0 < client <= MaxClients && IsClientInGame(client) && !IsFakeClient(client));
+	return (client >= 1 && client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
 }
 
 stock void SetClientCookieBool(int client, Handle cookie, bool value)
@@ -1023,21 +1034,15 @@ void GetColorName(int flag, char[] output, int size)
 		case Yellow:	Format(output, size, "Yellow");
 		case Orange:	Format(output, size, "Orange");
 		case Purple:	Format(output, size, "Purple");
-		case LightRed:		Format(output, size, "Light Red");
+		case LightRed:	Format(output, size, "Light Red");
 	}
 }
 
 
 stock float GetClientSpeed(int client)
 {
-	if(!IsValidClient2(client))
-	{
-		return 0;
-	}
-
     float vel[3];
     GetEntPropVector(client, Prop_Data, "m_vecVelocity", vel);
 
-	// return GetVectorLength(vel);
-    return SquareRoot(vel[0] * vel[0] + vel[1] * vel[1]);
+    return SquareRoot(Pow(vel[0], 2.0) + Pow(vel[1], 2.0));
 }

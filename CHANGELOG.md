@@ -1,6 +1,115 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+
+# Shavit SurfTimer v1.0.0 release - Change log - 2024-4-25 -
+
+## Implement save/play stage replays. And finish other stuff which related to stage replays. also bug fixes.##
+
+## details
+
+### shavit-core.sp & core.inc
+- Add new struct `stagestart_info_t`
+- Replace `float fStageStartTime` with `stagestart_info_t aStageStartInfo` in `timer_snapshot_t`
+- Decrease `STYLE_LIMIT` from 256 to 128
+- Increased `Track_Bonus_Last` frome 8 to 12
+- Change `Shavit_FinishStage` `StartTimer` `BuildSnapshot` and `Shavit_LoadSnapshot` adapted the change of `timer_snapshot_t`
+
+### replay-file.inc & replay-stocks.sp
+- Change `REPLAY_FORMAT_SUBVERSION` from `0x09` to `0x0A`
+- Add new variable `int iStage` to struct `replay_header_t`
+- Add new variable `int stage` to struct `frame_t`
+- Add new parameter `int stage` to function `LoadReplayCache`
+- Add new parameter `int stage` to function `ReadReplayHeader`
+- Add new parameter `int stage` to function `WriteReplayHeader`
+- Add new parameter `int stage` to function `Shavit_GetReplayFilePath`
+- Add stage message to header to `0x0A` replay version.
+
+### shavit-replay-recorder.sp & replay-recorder.inc
+- Add new Convar `gCV_ClearFrameDelay`
+- Add new global `gH_ClearFrameDelay`
+- Change global list `gB_GrabbingPostFrames` `gA_FinishedRunInfo` `gH_PostFramesTimer` to two-dimensional array
+- Change `shavit_replay_postruntime` default from 1.5 to 0.1
+- Add new function `Timer_StagePostFrames` to grab frame after player finished a stage
+- Add new function `EditReplay`
+- Add new function `CaculateStageStartPreFrames` 
+- Add new parameter `int stage` to `ExistingWrReplayLength`
+- When client finished a stage during a full run, `DoReplaySaverCallbacks` will Edit the stage replay from `gA_PlayerFrames`
+- Record client's current stage number to replay frame.
+- Add new native `Shavit_EditReplay`
+
+### shavit-replay-playback.sp & replay-playback.inc
+- Add new variable `bool bStageLoop` to struct `loopingbot_config_t`
+- Add two new variable `int iStage` `int iCurrentStage` to struct `bot_info_t`
+- Add new global `int gI_MenuStage`
+- Change `gA_FrameCache` to third-dimensional array (from `[STYLE_LIMIT][TRACKS_SIZE]` to `[STYLE_LIMIT][TRACKS_SIZE][MAX_STAGES]`)
+- Change `gH_ClosestPos` to third-dimensional array (from `[TRACKS_SIZE][STYLE_LIMIT]` to `[STYLE_LIMIT][TRACKS_SIZE][MAX_STAGES]`)
+- Add new function `OpenTrackTypeMenu` to allow client choose `Main` `Stage` or `Bonus` replay
+- Add new keyword `stageloop` to `shavit-replay` config
+- Add new parameter `int stage` to function `FindNextLoop`
+- Add new parameter `int &stage` to function `StartReplay`
+- Add new parameter `int stage` to function `StopOrRestartBots`
+- Add new parameter `int stage` to function `LoadReplay`
+- Add new parameter `int stage` to function `LoadReplayCache`
+- Add new parameter `int stage` to function `UnloadReplay`
+- Add new parameter `int stage` to function `DefaultLoadReplay`
+- Add new parameter `int stage` to function `CreateReplayEntity`
+- Add new parameter `int stage` to function `DeleteReplay`
+- Add new parameter `int stage` to function `FormatStyle`
+- Add new parameter `int stage` to function `GetReplayLength`
+- Add new parameter `int stage` to function `GetReplayName`
+- A lot of stuff to adapt to the above changes
+- Add new parameter `int stage` to native `Shavit_DeleteReplay`
+- Add new parameter `int stage` to native `Shavit_GetReplayFrameCount`
+- Add new parameter `int stage` to native `Shavit_GetReplayPreFrames`
+- Add new parameter `int stage` to native `Shavit_GetReplayPostFrames`
+- Add new parameter `int stage` to native `Shavit_GetReplayFrames`
+- Add new parameter `int stage` to native `Shavit_GetReplayLength`
+- Add new parameter `int stage` to native `Shavit_GetReplayName`
+- Add new parameter `int stage` to native `Shavit_IsReplayDataLoaded`
+- Add new parameter `int stage` to native `Shavit_StartReplay`
+- Add new parameter `int stage` to native `Shavit_StartReplayFromFrameCache`
+- Add new parameter `int stage` to native `Shavit_StartReplayFromFile`
+- Add new native `Shavit_GetReplayBotCurrentStage`
+- Add new native `Shavit_GetReplayBotStage`
+- Add new native `Shavit_GetReplayBotInfoIndex`
+
+### shavit-hud.sp & hud.inc
+- Add new variable `iReplayStage` to struct `huddata_t`
+- Make center text and keyhint text show correctly when client spectating a stage replay bot
+- Show `L` or `R` while client using `+left` `+right`
+- Add stage transaction
+
+### shavit-misc.sp & misc.inc
+- Delete native `Shavit_GetPreStrafeLimit`
+- Add new keywords `stage` `bonus` `tier` to `shavit-advertisements` config
+- Add stage translation
+
+### shavit-checkpoints.sp
+- Generate a snapshot correctly when player save snapshot to a stage replay bot
+
+### shavit-tas.sp
+- Fixed a bug where client wouldn't auto jump when leaving the stage start zone
+
+### shavit-zones.sp & zones.inc
+- Change native name from `Shavit_GetStageStartInfo` to `Shavit_GetStageStartSnapshot`
+- Fix the bug where `Shavit_StartTimer` not called when player leave the ground in stage start zone and style config `startinair` is `true`
+- Delete native `Shavit_SetStageStartTime`
+- Add new native `Shavit_SetStageStartInfo`
+- Add new native `Shavit_GetMapTrackCount`
+
+### shavit-wr.sp
+- Get prestrafe limit by `FindConVar("shavit_misc_prestrafelimit")` instead `Shavit_GetPreStrafeLimit`
+- Fix the error that called `DeleteWRFinal` instead `DeleteStageWRFinal` when player delete a stage world record.
+- Add stage translation
+
+### shavit-timelimit.sp
+- Add command `sm_ext`
+
+### speedometer.sp
+- Some bug fixes
+
+
 # Change log - 2024-4-3 -
 
 ## Main changes
@@ -24,6 +133,11 @@ Note: Dates are UTC+0.
 
 	- Add new native Shavit_DeleteStageWR
 
+## shavit-hud
+
+### API
+
+	- Merge 2 new forwards `Shavit_PreOnKeyHintHUD` and `Shavit_OnKeyHintHUD`
 
 # Change log - 2024-3-28 -
 

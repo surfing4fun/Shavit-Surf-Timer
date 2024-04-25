@@ -2095,7 +2095,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 	if(!gA_Timers[client].bOnlyStageMode)
 	{
 		timer_snapshot_t start;
-		Shavit_GetStageStartInfo(client, track, stage, start, sizeof(start));
+		Shavit_GetStageStartSnapshot(client, track, stage, start, sizeof(start));
 
 		end.fCurrentTime = Shavit_GetClientStageTime(client, track, stage);
 		end.iJumps -= start.iJumps;
@@ -2146,6 +2146,8 @@ public int Native_FinishStage(Handle handler, int numParams)
 		Shavit_StopTimer(client);
 		//Shavit_SetOnlyStageMode(client, false);
 	}
+
+	return -1;
 }
 
 public int Native_PauseTimer(Handle handler, int numParams)
@@ -2492,7 +2494,7 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 		Shavit_SetClientLastStage(client, snapshot.iLastStage);
 	}
 
-	Shavit_SetStageStartTime(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.fStageStartTime);
+	Shavit_SetStageStartInfo(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.aStageStartInfo, sizeof(stagestart_info_t));
 	Shavit_SetStageTimeValid(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.bStageTimeValid);
 	Shavit_SetOnlyStageMode(client, snapshot.bOnlyStageMode);
 
@@ -2689,9 +2691,14 @@ void StartTimer(int client, int track)
 			gA_Timers[client].iTotalMeasures = 0;
 			gA_Timers[client].iGoodGains = 0;
 			
-			gA_Timers[client].fStageStartTime = 0.0;
-			gA_Timers[client].bStageTimeValid = true;
+			//reset stage start stuffs
+			gA_Timers[client].aStageStartInfo.fStageStartTime = 0.0;
+			gA_Timers[client].aStageStartInfo.iFullTicks = 0;
+			gA_Timers[client].aStageStartInfo.iFractionalTicks = 0;
+			gA_Timers[client].aStageStartInfo.iJumps = 0;
+			gA_Timers[client].aStageStartInfo.iStrafes = 0;
 
+			gA_Timers[client].bStageTimeValid = true;
 
 			if (gA_Timers[client].iTimerTrack != track)
 			{
@@ -3392,7 +3399,19 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	snapshot.fTimescale = (gA_Timers[client].fTimescale > 0.0) ? gA_Timers[client].fTimescale : 1.0;
 	
 	snapshot.iLastStage = Shavit_GetClientLastStage(client);
-	snapshot.fStageStartTime = Shavit_GetStageStartTime(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
+
+	timer_snapshot_t stagestartsnapshot;
+	Shavit_GetStageStartSnapshot(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage, stagestartsnapshot, sizeof(timer_snapshot_t));
+
+	stagestart_info_t info;
+	info.fStageStartTime = stagestartsnapshot.fCurrentTime;
+	info.iFullTicks = stagestartsnapshot.iFullTicks;
+	info.iFractionalTicks = stagestartsnapshot.iFractionalTicks;
+	info.iJumps = stagestartsnapshot.iJumps;
+	info.iStrafes = stagestartsnapshot.iStrafes;
+
+	snapshot.aStageStartInfo = info;
+
 	snapshot.bStageTimeValid = Shavit_StageTimeValid(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
 	snapshot.bOnlyStageMode = Shavit_IsOnlyStageMode(client);
 	//snapshot.iLandingTick = ?????; // TODO: Think about handling segmented scroll? /shrug
@@ -3455,7 +3474,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 
 	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, gA_Timers[client].iTimerTrack);
+	int iZoneStage;
+	
+	bool bInsideStageZone = Shavit_InsideZoneStage(client, gA_Timers[client].iTimerTrack, iZoneStage);
+	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, gA_Timers[client].iTimerTrack) || 
+						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 
 	if (gA_Timers[client].bTimerEnabled && !gA_Timers[client].bClientPaused)
 	{

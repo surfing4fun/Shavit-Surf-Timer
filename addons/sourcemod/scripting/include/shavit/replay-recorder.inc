@@ -142,6 +142,20 @@ native ArrayList Shavit_GetReplayData(int client, bool cheapCloneHandle=false);
  */
 native void Shavit_HijackAngles(int client, float pitch, float yaw, int ticks = -1, bool keeponstart = false);
 
+/**
+ * Edit replay frame by specific parameters
+ * Use to save stage replay.
+ * 
+ * @param start						Index to start edit.
+ * @param end						Index to stop edit.
+ * @param frames					ArrayList with proper replay data.
+ * @param preserve					Whether to keep the original replay data.
+ * 
+ * @return							ArrayList with edited replay data.
+ */
+native ArrayList Shavit_EditReplay(int start, int end, ArrayList frames, bool preserve = true);
+
+
 public SharedPlugin __pl_shavit_replay_recorder =
 {
 	name = "shavit-replay-recorder",
@@ -162,5 +176,6 @@ public void __pl_shavit_replay_recorder_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetReplayData");
 	MarkNativeAsOptional("Shavit_HijackAngles");
 	MarkNativeAsOptional("Shavit_SetReplayData");
+	MarkNativeAsOptional("Shavit_EditReplay");
 }
 #endif
