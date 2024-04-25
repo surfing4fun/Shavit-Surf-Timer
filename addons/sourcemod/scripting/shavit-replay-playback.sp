@@ -1994,11 +1994,13 @@ void AddReplayBots()
 		if(gA_LoopingBotConfig[i].bStageLoop)
 		{
 			track = 0;
+			// Shavit_PrintToChatAll("[DEBUG] stageloop params: %d %d %d", track, style, stage);
 			hasFrames = FindNextLoop(track, style, stage, i);
 		}
 		else
 		{
 			stage = 0;
+			// Shavit_PrintToChatAll("[DEBUG] normal params: %d %d %d", track, style, stage);
 			hasFrames = FindNextLoop(track, style, stage, i);
 		}
 
@@ -3865,6 +3867,7 @@ int GetNextBit(int start, int[] mask, int max)
 // Need to find the next style/track/track in the loop that have frames.
 bool FindNextLoop(int &track, int &style, int &stage, int config)
 {
+	// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 	int originalTrack = track;
 	int originalStyle = style;
 	// int originalStage = stage;
@@ -3897,6 +3900,7 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 				stage = 1;
 			}
 
+			// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 			hasFrames = gA_FrameCache[style][track][stage].iFrameCount > 0;
 
 			if(hasFrames)
@@ -3924,6 +3928,7 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 		}
 
 		style = nextstyle;
+		// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 		hasFrames = (gA_FrameCache[style][track][stage].iFrameCount > 0);
 
 		if (track == originalTrack && style == originalStyle)
