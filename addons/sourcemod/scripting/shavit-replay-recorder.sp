@@ -252,7 +252,6 @@ public Action Shavit_OnStart(int client)
 
 	if(gB_DelayClearFrame[client])
 	{
-		PrintToChatAll("[DEBUG] Clear frame.");
 		EndClearFrameDelay(client);
 	}
 
@@ -497,11 +496,11 @@ void DoReplaySaverCallbacks(int iSteamID, int client, int style, float time, int
 	{
 		gB_DelayClearFrame[client] = true;
 		
-		if (gH_ClearFramesDelay[client] != null)
+		if (IsValidHandle(gH_ClearFramesDelay[client]))
 		{
 			delete gH_ClearFramesDelay[client];			
 		}
-		
+
 		gH_ClearFramesDelay[client] = CreateTimer(gCV_ClearFrameDelay.FloatValue, Timer_ClearFrames, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
