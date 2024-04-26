@@ -83,6 +83,7 @@ bool gB_RecordingEnabled[MAXPLAYERS+1]; // just a simple thing to prevent plugin
 // stuff related to postframes
 finished_run_info gA_FinishedRunInfo[MAXPLAYERS+1][2];
 bool gB_GrabbingPostFrames[MAXPLAYERS+1][2];
+bool gB_DelayClearFrame[MAXPLAYERS+1];
 Handle gH_PostFramesTimer[MAXPLAYERS+1][2];
 Handle gH_ClearFramesDelay[MAXPLAYERS+1]; // We have 2 replay to save if player finish the last stage and the map at the same time, so we need to wait for 0.1s to avoid resize array to -1.
 int gI_PlayerFinishFrame[MAXPLAYERS+1];
@@ -249,6 +250,12 @@ public Action Shavit_OnStart(int client)
 		gI_HijackFrames[client] = 0;
 	}
 
+	if(gB_DelayClearFrame[client])
+	{
+		PrintToChatAll("[DEBUG] Clear frame.");
+		EndClearFrameDelay(client);
+	}
+
 	if (gB_GrabbingPostFrames[client][0])
 	{
 		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][0], 0);
@@ -306,7 +313,7 @@ public void Shavit_OnStop(int client)
 	if (gB_GrabbingPostFrames[client][0])
 	{
 		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][0], 0);
-	}		
+	}
 
 	ClearFrames(client);
 }
@@ -330,11 +337,17 @@ public Action Timer_StagePostFrames(Handle timer, int client)
 public Action Timer_ClearFrames(Handle timer, int client)
 {
 	gH_ClearFramesDelay[client] = null;
-	ClearFrames(client);
+	EndClearFrameDelay(client);
 
 	return Plugin_Stop;
 }
 
+void EndClearFrameDelay(int client)
+{
+	gB_DelayClearFrame[client] = false;
+
+	ClearFrames(client);
+}
 
 void FinishGrabbingPostFrames(int client, finished_run_info info, int index = 0)
 {
@@ -482,7 +495,13 @@ void DoReplaySaverCallbacks(int iSteamID, int client, int style, float time, int
 	}
 	else if(stage == 0)
 	{
-		delete gH_ClearFramesDelay[client];
+		gB_DelayClearFrame[client] = true;
+		
+		if (gH_ClearFramesDelay[client] != null)
+		{
+			delete gH_ClearFramesDelay[client];			
+		}
+		
 		gH_ClearFramesDelay[client] = CreateTimer(gCV_ClearFrameDelay.FloatValue, Timer_ClearFrames, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
@@ -547,11 +566,9 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		return;
 	}
 
-	int iInfoIndex = Shavit_IsOnlyStageMode(client) ? 0 : 1;
-
-	if (gB_GrabbingPostFrames[client][iInfoIndex])
+	if (gB_GrabbingPostFrames[client][1])
 	{
-		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][iInfoIndex]);
+		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][1], 1);
 	}
 
 	gI_PlayerFinishFrame[client] = gI_PlayerFrames[client];
@@ -560,7 +577,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	fZoneOffset[0] = Shavit_GetZoneOffset(client, 0);
 	fZoneOffset[1] = Shavit_GetZoneOffset(client, 1);
 
-	if (gCV_PlaybackPostRunTime.FloatValue > 0.0 && iInfoIndex == 1)
+	if (gCV_PlaybackPostRunTime.FloatValue > 0.0 && !Shavit_IsOnlyStageMode(client))
 	{
 		finished_run_info info;
 		info.iSteamID = GetSteamAccountID(client);
@@ -578,8 +595,8 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		info.timestamp = timestamp;
 		info.fZoneOffset = fZoneOffset;
 
-		gA_FinishedRunInfo[client][iInfoIndex] = info;
-		gB_GrabbingPostFrames[client][iInfoIndex] = true;
+		gA_FinishedRunInfo[client][1] = info;
+		gB_GrabbingPostFrames[client][1] = true;
 
 		if(gH_PostFramesTimer[client][1] != null)
 		{
