@@ -112,6 +112,9 @@ float gF_SmallestDist[MAXPLAYERS + 1];
 float gF_Origin[MAXPLAYERS + 1][2][3];
 float gF_Fraction[MAXPLAYERS + 1];
 
+// client noclip speed
+float gF_NoclipSpeed[MAXPLAYERS + 1];
+
 // cookies
 Handle gH_StyleCookie = null;
 Handle gH_AutoBhopCookie = null;
@@ -159,6 +162,7 @@ ConVar sv_airaccelerate = null;
 ConVar sv_autobunnyhopping = null;
 ConVar sv_enablebunnyhopping = null;
 ConVar sv_friction = null;
+ConVar sv_noclipspeed = null;
 
 // chat settings
 chatstrings_t gS_ChatStrings;
@@ -331,6 +335,10 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_ihate!main", Command_IHateMain, "If you really hate !main :(((");
 	gH_IHateMain = new Cookie("shavit_mainhater", "If you really hate !main :(((", CookieAccess_Protected);
 
+	//change noclip speed
+	RegConsoleCmd("sm_noclipspeed", Command_NoclipSpeed, "Change client's sv_noclipspeed to specific value");
+	RegConsoleCmd("sm_ns", Command_NoclipSpeed, "Change client's sv_noclipspeed to specific value");	
+
 	RegConsoleCmd("sm_b", Command_StartTimer, "Start your timer on the bonus track.");
 	RegConsoleCmd("sm_bonus", Command_StartTimer, "Start your timer on the bonus track.");
 
@@ -409,6 +417,10 @@ public void OnPluginStart()
 	sv_accelerate = FindConVar("sv_accelerate");
 	sv_airaccelerate = FindConVar("sv_airaccelerate");
 	sv_airaccelerate.Flags &= ~(FCVAR_NOTIFY | FCVAR_REPLICATED);
+
+	sv_noclipspeed = FindConVar("sv_noclipspeed");
+	sv_noclipspeed.Flags &= ~(FCVAR_NOTIFY | FCVAR_REPLICATED);
+
 
 	sv_enablebunnyhopping = FindConVar("sv_enablebunnyhopping");
 
@@ -1136,6 +1148,41 @@ public Action Command_DeleteMap(int client, int args)
 		gS_DeleteMap[client] = sArgs;
 		ReplyToCommand(client, "Map to delete is now %s.\nRun \"sm_deletemap confirm\" to delete all data regarding the map %s.", gS_DeleteMap[client], gS_DeleteMap[client]);
 	}
+
+	return Plugin_Handled;
+}
+
+public Action Command_NoclipSpeed(int client, int args)
+{
+	if(!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	if(args == 0)
+	{
+		Shavit_PrintToChat(client, "%T", "ArgumentsMissing", client, "sm_noclipspeed <value> (2-30)");
+		return Plugin_Handled;
+	}
+
+	char sCommand[8];
+	GetCmdArg(1, sCommand, 8);
+	float fNewNoclipSpeed = StringToFloat(sCommand);
+	float fOldNoclipSpeed = sv_noclipspeed.FloatValue;
+
+	if (fNewNoclipSpeed <= 2.0 || fNewNoclipSpeed >= 30.0 || fNewNoclipSpeed == fOldNoclipSpeed)
+	{
+		Shavit_PrintToChat(client, "%T", "ArgumentsMissing", client, "sm_noclipspeed <value> (2-30)");
+		return Plugin_Handled;
+	}
+
+	sv_noclipspeed.ReplicateToClient(client, sCommand);
+	gF_NoclipSpeed[client] = fNewNoclipSpeed;
+
+	Shavit_PrintToChat(client, "%T", "NoclipSpeedChanged", client, 
+	gS_ChatStrings.sVariable, gS_ChatStrings.sText, 
+	gS_ChatStrings.sVariable2, fOldNoclipSpeed, gS_ChatStrings.sText,
+	gS_ChatStrings.sVariable2, fNewNoclipSpeed, gS_ChatStrings.sText);
 
 	return Plugin_Handled;
 }
@@ -2875,6 +2922,8 @@ public void OnClientPutInServer(int client)
 	gI_HijackFrames[client] = 0;
 	gI_LastPrintedSteamID[client] = 0;
 
+	gF_NoclipSpeed[client] = sv_noclipspeed.FloatValue;
+
 	gB_CookiesRetrieved[client] = false;
 
 	if(AreClientCookiesCached(client))
@@ -3081,6 +3130,8 @@ public void PreThinkPost(int client)
 		{
 			sv_enablebunnyhopping.BoolValue = GetStyleSettingBool(gA_Timers[client].bsStyle, "bunnyhopping");
 		}
+
+		sv_noclipspeed.FloatValue = gF_NoclipSpeed[client];
 
 		MoveType mtMoveType = GetEntityMoveType(client);
 		MoveType mtLast = gA_Timers[client].iLastMoveType;

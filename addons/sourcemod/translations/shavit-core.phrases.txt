@@ -108,6 +108,11 @@
 		"#format"	"{1:d},{2:s},{3:d},{4:s}"
 		"en"		"Your airacceleration has been changed from {1} to {2}{3}{4}."
 	}
+	"NoclipSpeedChanged"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:.1f},{5:s},{6:s},{7:.1f},{8:s}"
+		"en"		"Your {1}sv_noclipspeed{2} changed from {3}{4}{5} to {6}{7}{8}."
+	}
 	// ---------- Pauses ---------- //
 	"MessagePause"
 	{

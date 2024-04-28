@@ -610,7 +610,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 
 	int target = GetClientObserverTarget(client);
 	
-	if(!IsValidClient2(target) || IsFakeClient(target))
+	if(!IsValidClient2(target))
 	{
 		return Plugin_Continue;
 	}
@@ -643,43 +643,28 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
 						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 
-	if (!bReplay)
+	if(GetEntityFlags(target) & FL_ONGROUND)
 	{
-		if(GetEntityFlags(target) & FL_ONGROUND)
+		if(g_iTicksOnGround[target] > BHOP_TIME)
 		{
-			if(g_iTicksOnGround[target] > BHOP_TIME)
-			{
-				g_strafeTick[target] = 0;
-				g_flRawGain[target] = 0.0;
-			}
-			
-			g_iTicksOnGround[target]++;
-			
-			if(!bReplay && buttons & IN_JUMP && g_iTicksOnGround[target] == 1)
-			{
-				GetClientGains(target, vel, angles);
-				g_iTicksOnGround[target] = 0;
-			}
-
+			g_strafeTick[target] = 0;
+			g_flRawGain[target] = 0.0;
 		}
-		else
+		
+		g_iTicksOnGround[target]++;
+		
+		if(!bReplay && buttons & IN_JUMP && g_iTicksOnGround[target] == 1)
 		{
-			if(!bReplay && GetEntityMoveType(target) != MOVETYPE_NONE && GetEntityMoveType(target) != MOVETYPE_NOCLIP && GetEntityMoveType(target) != MOVETYPE_LADDER && GetEntProp(target, Prop_Data, "m_nWaterLevel") < 2)
-			{
-				GetClientGains(target, vel, angles);
-			}
-
-			if(g_bTouchesWall[target])
-			{
-				g_iTouchTicks[target]++;
-				g_bTouchesWall[target] = false;
-			}
-			else
-			{
-				g_iTouchTicks[target] = 0;
-			}
-
+			GetClientGains(target, vel, angles);
 			g_iTicksOnGround[target] = 0;
+		}
+
+	}
+	else
+	{
+		if(/*!bReplay &&*/ GetEntityMoveType(target) != MOVETYPE_NONE && GetEntityMoveType(target) != MOVETYPE_NOCLIP && GetEntityMoveType(target) != MOVETYPE_LADDER && GetEntProp(target, Prop_Data, "m_nWaterLevel") < 2)
+		{
+			GetClientGains(target, vel, angles);
 		}
 
 		if(g_bTouchesWall[target])
@@ -692,6 +677,21 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 			g_iTouchTicks[target] = 0;
 		}
 
+		g_iTicksOnGround[target] = 0;
+	}
+
+	if(g_bTouchesWall[target])
+	{
+		g_iTouchTicks[target]++;
+		g_bTouchesWall[target] = false;
+	}
+	else
+	{
+		g_iTouchTicks[target] = 0;
+	}
+
+	if (!bReplay)
+	{
 		if (gB_AllLibraryExists && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), iTrack, iStage) != 0)
 		{
 			fClosestReplayTime = Shavit_GetClosestReplayTime(target, fClosestReplayLength);

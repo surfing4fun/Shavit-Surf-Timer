@@ -214,7 +214,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_practice", Command_Noclip, "Toggles noclip. (sm_nc alias)");
 	RegConsoleCmd("sm_nc", Command_Noclip, "Toggles noclip.");
 	RegConsoleCmd("sm_noclipme", Command_Noclip, "Toggles noclip. (sm_nc alias)");
-	
+
 	// qol
 	RegConsoleCmd("sm_autorestart", Command_AutoRestart, "Toggles auto-restart.");
 	RegConsoleCmd("sm_autoreset", Command_AutoRestart, "Toggles auto-restart.");
@@ -1264,16 +1264,6 @@ void TF2_KillDroppedWeapons()
 	}
 }
 
-// public void Shavit_OnTimerMenuMade(int client, Menu menu)
-// {
-
-// }
-
-// public void Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
-// {
-
-// }
-
 public void Shavit_OnPause(int client, int track)
 {
 	if (gB_Eventqueuefix)
@@ -1699,6 +1689,7 @@ public void OnClientSayCommand_Post(int client, const char[] command, const char
 		FakeClientCommandEx(client, "sm_%c", sArgs[1]);
 	}
 }
+
 
 public Action Command_Hide(int client, int args)
 {
