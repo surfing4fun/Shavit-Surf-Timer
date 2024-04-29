@@ -26,8 +26,8 @@ stock bool Shavit_ReplayEnabledStyle(int style)
 
 stock void Shavit_GetReplayFilePath(int style, int track, int stage, const char[] mapname, const char[] replayfolder, char sPath[PLATFORM_MAX_PATH])
 {
-	char sTrack[4];
-	FormatEx(sTrack, 4, "_%d", track);
+	char sTrack[8];
+	FormatEx(sTrack, 8, "_%d", track);
 
 	char sStage[8];
 	FormatEx(sStage, 8, "_s%d", stage);

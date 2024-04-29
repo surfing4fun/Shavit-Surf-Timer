@@ -614,11 +614,11 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 
 bool SaveReplay(int style, int track, int stage, float time, int steamid, int preframes, ArrayList playerrecording, int iSize, int postframes, int timestamp, float fZoneOffset[2], bool saveCopy, bool saveWR, char[] sPath, int sPathLen)
 {
-	char sTrack[4];
-	FormatEx(sTrack, 4, "_%d", track);
+	char sTrack[8];
+	FormatEx(sTrack, 8, "_%d", track);
 
-	char sStage[4];
-	FormatEx(sStage, 4, "_s%d", stage);
+	char sStage[8];
+	FormatEx(sStage, 8, "_s%d", stage);
 
 	File fWR = null;
 	File fCopy = null;
