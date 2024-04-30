@@ -1794,6 +1794,7 @@ void UpdateMainHUD(int client)
 {
 	int target = GetSpectatorTarget(client, client);
 	bool bReplay = (gB_ReplayPlayback && Shavit_IsReplayEntity(target));
+	bool bRepeat = Shavit_IsClientRepeat(client);
 
 	if((gI_HUDSettings[client] & HUD_CENTER) == 0 ||
 		((gI_HUDSettings[client] & HUD_OBSERVE) == 0 && client != target) ||
@@ -1842,7 +1843,7 @@ void UpdateMainHUD(int client)
 		{
 			if (Shavit_InsideZone(target, Zone_Start, huddata.iTrack))
 			{
-				iZoneHUD = ZoneHUD_Start;
+				iZoneHUD = (bRepeat && huddata.iTrack == Track_Main) ? ZoneHUD_StageStart : ZoneHUD_Start;
 			}
 			else if (Shavit_IsOnlyStageMode(target) && huddata.bInsideStageZone && huddata.iZoneStage == huddata.iCurrentStage)
 			{
@@ -2356,7 +2357,7 @@ void UpdateKeyHint(int client)
 		fTargetPB = Shavit_GetClientPB(target, style, track);
 		fTargetStagePB = Shavit_GetClientStagePB(target, style, stage);
 		stage = Shavit_GetClientLastStage(target);
-		bOnlyStageMode = Shavit_IsOnlyStageMode(target);
+		bOnlyStageMode = Shavit_IsOnlyStageMode(target) && track == Track_Main;
 	}
 	else
 	{

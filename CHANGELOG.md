@@ -1,6 +1,35 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+# Shavit SurfTimer v1.0.0 - Change log - 2024-4-30 -
+
+-Add new command `sm_repeat`.
+-Add new translations for repeat feature.
+-Change segement style setting.
+
+## shavit-core
+- Add new command `sm_repeat`
+- Add new function `CallOnRepeatChanged`
+- Add mew global `gB_PlayerRepeat`
+- Add new native `Shavit_IsClientRepeat`
+- Add new native `Shavit_SetClientRepeat`
+
+## shavit-zones
+- Add new function `ChangeClientLastStage`
+- Rework `Shavit_SetClientLastStage`, call function `ChangeClientLastStage` instead assign a value to `gI_LastStage` directly
+- Add new function `TeleportToStartZone` to teleport a client to start zone, not through any custom spawn zone or custom settings
+- Add new function `CallOnZoneDeleted` to do stuffs when delete zone
+- Add `Stage 1` option to stage menu if `Main Start Zone` exist
+- Process stage command when argument is `1` (like `sm_s 1`)  
+- Allow start timer when enter a stage zone which has lower stage number than the player's last stage number. 
+- Add new native `Shavit_TeleportToStartZone`
+- Add new forward `Shavit_OnStageChanged`
+
+## shavit-hud
+- Bug fix and show ZoneHUD `In Stage 1 Start` instead `In Main Start` when player repeating on stage 1 
+
+
+
 
 # Shavit SurfTimer v1.0.0 release - Change log - 2024-4-25 -
 

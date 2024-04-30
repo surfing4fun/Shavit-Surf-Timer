@@ -30,6 +30,11 @@
 	{
 		"en"        "This style doesn't allow you to change timescale."
 	}
+	"RepeatCommandAlive"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"You have to be {1}alive{2} to use this command."
+	}
 	// ---------- Errors ---------- //
 	"VerificationFailed"
 	{
@@ -112,6 +117,24 @@
 	{
 		"#format"	"{1:s},{2:s},{3:s},{4:.1f},{5:s},{6:s},{7:.1f},{8:s}"
 		"en"		"Your {1}sv_noclipspeed{2} changed from {3}{4}{5} to {6}{7}{8}."
+	}
+	"EnabledTimerRepeat"
+	{
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Your timer is now repeat on {1}{2}{3}."
+	}
+	"DisableTimerRepeat"
+	{
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Your timer is no longer repeat on {1}{2}{3}."
+	}
+	"RepeatOnLinearMap"
+	{
+		"en"		"You cannot repeat timer on a linear map."
+	}
+	"StageText"
+	{
+		"en"		"Stage"
 	}
 	// ---------- Pauses ---------- //
 	"MessagePause"

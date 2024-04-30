@@ -1997,7 +1997,7 @@ void DoEnd(int client)
 
 void DoRestart(int client)
 {
-	Shavit_RestartTimer(client, gI_LastStopInfo[client], true);
+	Shavit_RestartTimer(client, gI_LastStopInfo[client], false, true);
 }
 
 void DoStyleChange(int client)
@@ -2595,7 +2595,7 @@ public Action Respawn(Handle timer, any data)
 
 		if(gCV_RespawnOnRestart.BoolValue)
 		{
-			Shavit_RestartTimer(client, Shavit_GetClientTrack(client), true);
+			Shavit_RestartTimer(client, Shavit_GetClientTrack(client), true, true);
 		}
 	}
 
@@ -2617,7 +2617,7 @@ public void Player_Spawn(Event event, const char[] name, bool dontBroadcast)
 
 		if (gCV_StartOnSpawn.BoolValue && !(gB_Checkpoints && Shavit_HasSavestate(client)))
 		{
-			Shavit_RestartTimer(client, Shavit_GetClientTrack(client), true);
+			Shavit_RestartTimer(client, Shavit_GetClientTrack(client), true, true);
 		}
 
 		if(gCV_Scoreboard.BoolValue)

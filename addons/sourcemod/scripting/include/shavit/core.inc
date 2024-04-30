@@ -1484,8 +1484,8 @@ native bool Shavit_ShouldProcessFrame(int client);
 /**
  * Stops the player's timer and teleports them to the end zone.
  *
- * @param client
- * @param track
+ * @param client					Client index.
+ * @param track						Timer track.
  *
  * @noreturn
  */
@@ -1494,8 +1494,8 @@ native void Shavit_GotoEnd(int client, int track);
 /**
  * Set the player's timer Only run on stage mode.
  *
- * @param client
- * @param value
+ * @param client					Client index.
+ * @param value						The value needed to set.
  *
  * @noreturn
  */
@@ -1504,11 +1504,31 @@ native void Shavit_SetOnlyStageMode(int client, bool value);
 /**
  * If the player's timer is Only run on stage mode.
  *
- * @param client
+ * @param client					Client index.
  *
- * @return bool value
+ * @return 							bool value, true if client is on onlystagemode.
  */
 native bool Shavit_IsOnlyStageMode(int client);
+
+/**
+ * Check if the player repeating.
+ *
+ * @param client					Client index.
+ *
+ * @return 							bool value, true if client is repeating.
+ */
+native bool Shavit_IsClientRepeat(int client);
+
+/**
+ * Set client repeat or not.
+ *
+ * @param client					Client index.
+ * @param repeat					The value needed to set.
+ *
+ * @noreturn
+ */
+native void Shavit_SetClientRepeat(int client, bool repeat);
+
 
 public SharedPlugin __pl_shavit_core =
 {
@@ -1524,6 +1544,8 @@ public SharedPlugin __pl_shavit_core =
 #if !defined REQUIRE_PLUGIN
 public void __pl_shavit_core_SetNTVOptional()
 {
+	MarkNativeAsOptional("Shavit_IsClientRepeat");
+	MarkNativeAsOptional("Shavit_SetClientRepeat");
 	MarkNativeAsOptional("Shavit_CanPause");
 	MarkNativeAsOptional("Shavit_ChangeClientStyle");
 	MarkNativeAsOptional("Shavit_FinishMap");

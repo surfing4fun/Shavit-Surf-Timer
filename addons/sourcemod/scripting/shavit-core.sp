@@ -170,6 +170,7 @@ chatstrings_t gS_ChatStrings;
 // misc cache
 bool gB_StopChatSound = false;
 bool gB_HookedJump = false;
+bool gB_PlayerRepeat[MAXPLAYERS+1];
 char gS_LogPath[PLATFORM_MAX_PATH];
 char gS_DeleteMap[MAXPLAYERS+1][PLATFORM_MAX_PATH];
 int gI_WipePlayerID[MAXPLAYERS+1];
@@ -248,6 +249,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_PrintSteamIDOnce", Native_PrintSteamIDOnce);
 	CreateNative("Shavit_IsOnlyStageMode", Native_IsOnlyStageMode);
 	CreateNative("Shavit_SetOnlyStageMode", Native_SetOnlyStageMode);
+	CreateNative("Shavit_IsClientRepeat", Native_IsClientRepeat);
+	CreateNative("Shavit_SetClientRepeat", Native_SetClientRepeat);
 
 	// registers library, check "bool LibraryExists(const char[] name)" in order to use with other plugins
 	RegPluginLibrary("shavit");
@@ -335,12 +338,16 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_ihate!main", Command_IHateMain, "If you really hate !main :(((");
 	gH_IHateMain = new Cookie("shavit_mainhater", "If you really hate !main :(((", CookieAccess_Protected);
 
+	RegConsoleCmd("sm_b", Command_StartTimer, "Start your timer on the bonus track.");
+	RegConsoleCmd("sm_bonus", Command_StartTimer, "Start your timer on the bonus track.");
+
 	//change noclip speed
 	RegConsoleCmd("sm_noclipspeed", Command_NoclipSpeed, "Change client's sv_noclipspeed to specific value");
 	RegConsoleCmd("sm_ns", Command_NoclipSpeed, "Change client's sv_noclipspeed to specific value");	
 
-	RegConsoleCmd("sm_b", Command_StartTimer, "Start your timer on the bonus track.");
-	RegConsoleCmd("sm_bonus", Command_StartTimer, "Start your timer on the bonus track.");
+	//repeat command
+	RegConsoleCmd("sm_repeat", Command_ToggleRepeat, "Repeat client's timer to a stage or a bonus.");
+
 
 	for (int i = Track_Bonus; i <= Track_Bonus_Last; i++)
 	{
@@ -733,11 +740,11 @@ public Action Command_StartTimer(int client, int args)
 	}
 
 	int track = Track_Main;
-	bool ForceTeleToStartZone = StrContains(sCommand, "sm_m", false) == 0;
+	bool bForceTeleToStartZone = StrContains(sCommand, "sm_m", false) == 0;
 
 	if(StrContains(sCommand, "sm_b", false) == 0)
 	{
-		ForceTeleToStartZone = true;
+		bForceTeleToStartZone = true;
 		// Pull out bonus number for commands like sm_b1 and sm_b2.
 		if ('1' <= sCommand[4] <= ('0' + Track_Bonus_Last))
 		{
@@ -774,7 +781,7 @@ public Action Command_StartTimer(int client, int args)
 		return Plugin_Handled;
 	}
 
-	Shavit_RestartTimer(client, track, ForceTeleToStartZone, false);
+	Shavit_RestartTimer(client, track, bForceTeleToStartZone, false);
 
 	return Plugin_Handled;
 }
@@ -960,6 +967,75 @@ public Action Command_TogglePause(int client, int args)
 	}
 
 	return Plugin_Handled;
+}
+
+public Action Command_ToggleRepeat(int client, int args)
+{
+	if (!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	if (!IsPlayerAlive(client))
+	{
+		Shavit_PrintToChat(client, "%T", "RepeatCommandAlive", gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		return Plugin_Handled;
+	}
+
+	ChangeClientRepeat(client, !gB_PlayerRepeat[client]);
+
+	return Plugin_Handled;
+}
+
+public void ChangeClientRepeat(int client, bool repeat)
+{
+	if(gB_PlayerRepeat[client] == repeat)
+	{
+		return;
+	}
+
+	CallOnRepeatChanged(client, gB_PlayerRepeat[client], repeat);
+}
+
+public void CallOnRepeatChanged(int client, bool old_value, bool new_value)
+{
+	gB_PlayerRepeat[client] = new_value;
+
+	char sTrack[32];
+	if(gA_Timers[client].iTimerTrack != Track_Main)
+	{
+		GetTrackName(client, gA_Timers[client].iTimerTrack, sTrack, 32);		
+	}
+	else
+	{
+		if(Shavit_GetStageCount(Track_Main) > 1)
+		{
+			FormatEx(sTrack, 32, "%T %d", "StageText", client, Shavit_GetClientLastStage(client));			
+		}
+		else
+		{
+			gB_PlayerRepeat[client] = false;
+			Shavit_PrintToChat(client, "%T", "RepeatOnLinearMap", client);
+			return;
+		}
+	}
+
+	if(gB_PlayerRepeat[client])
+	{
+		if(Shavit_RestartTimer(client, gA_Timers[client].iTimerTrack, false, false))
+		{
+			gA_Timers[client].bOnlyStageMode = true;
+			Shavit_PrintToChat(client, "%T",  "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
+		}
+		else
+		{
+			gB_PlayerRepeat[client] = false;
+		}
+	}
+	else
+	{
+		Shavit_PrintToChat(client, "%T",  "DisableTimerRepeat", client, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
+	}
 }
 
 public Action Command_Timescale(int client, int args)
@@ -1520,7 +1596,6 @@ public int StyleMenu_Handler(Menu menu, MenuAction action, int param1, int param
 void CallOnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	gA_Timers[client].iTimerTrack = newtrack;
-	// gA_Timers[client].bOnlyStageMode = false;
 
 	Call_StartForward(gH_Forwards_OnTrackChanged);
 	Call_PushCell(client);
@@ -1528,10 +1603,33 @@ void CallOnTrackChanged(int client, int oldtrack, int newtrack)
 	Call_PushCell(newtrack);
 	Call_Finish();
 
-	if (oldtrack == Track_Main && oldtrack != newtrack && !DoIHateMain(client))
+	if(oldtrack != newtrack)
 	{
-		Shavit_StopChatSound();
-		Shavit_PrintToChat(client, "%T", "TrackChangeFromMain", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		if(gB_PlayerRepeat[client])
+		{
+			char sTrack[32];
+			if(newtrack != Track_Main)
+			{
+				GetTrackName(client, newtrack, sTrack, 32);
+				Shavit_PrintToChat(client, "%T", "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);				
+			}
+			else if(Shavit_GetStageCount(newtrack) < 2)
+			{
+				GetTrackName(client, oldtrack, sTrack, 32);
+				ChangeClientRepeat(client, false);
+				Shavit_PrintToChat(client, "%T", "DisableTimerRepeat", client, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);	
+			}
+			else
+			{
+				FormatEx(sTrack, 32, "%T 1", "StageText", client);
+				Shavit_PrintToChat(client, "%T", "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);	
+			}
+		}
+		else if (oldtrack == Track_Main && !DoIHateMain(client))
+		{
+			Shavit_StopChatSound();
+			Shavit_PrintToChat(client, "%T", "TrackChangeFromMain", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		}		
 	}
 }
 
@@ -1682,13 +1780,23 @@ void ChangeClientStyle(int client, int style, bool manual)
 
 	if (gB_Zones && (Shavit_ZoneExists(Zone_Start, gA_Timers[client].iTimerTrack) || gB_KZMap[gA_Timers[client].iTimerTrack]))
 	{
-		Shavit_RestartTimer(client, gA_Timers[client].iTimerTrack, true);
+		Shavit_RestartTimer(client, gA_Timers[client].iTimerTrack, false, true);
 	}
 
 	char sStyle[4];
 	IntToString(style, sStyle, 4);
 
 	SetClientCookie(client, gH_StyleCookie, sStyle);
+}
+
+public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
+{
+	if(gB_PlayerRepeat[client] && gA_Timers[client].iTimerTrack == Track_Main)
+	{
+		char sStage[32];
+		FormatEx(sStage, 32, "%T %d", "StageText", client, newstage);
+		Shavit_PrintToChat(client, "%T",  "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
+	}
 }
 
 // used as an alternative for games where player_jump isn't a thing, such as TF2
@@ -2107,6 +2215,12 @@ public int Native_FinishMap(Handle handler, int numParams)
 	Call_Finish();
 
 	StopTimer(client);
+
+	if(gB_PlayerRepeat[client])
+	{
+		Shavit_TeleportToStartZone(client, snapshot.iTimerTrack, 1);
+	}
+
 	return 1;
 }
 
@@ -2116,7 +2230,6 @@ public int Native_FinishStage(Handle handler, int numParams)
 	int track = GetNativeCell(2);
 	int stage = GetNativeCell(3);
 	int timestamp = GetTime();
-
 
 	if(gCV_UseOffsets.BoolValue)
 	{
@@ -2148,7 +2261,6 @@ public int Native_FinishStage(Handle handler, int numParams)
 		end.iJumps -= start.iJumps;
 		end.iStrafes -= start.iStrafes;
 	}
-
 
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_FinishStagePre);
@@ -2188,13 +2300,18 @@ public int Native_FinishStage(Handle handler, int numParams)
 	Call_PushCell(timestamp);	//13 total
 	Call_Finish();
 
-	if(Shavit_IsOnlyStageMode(client))
+	if(gB_PlayerRepeat[client])
+	{
+		Shavit_TeleportToStartZone(client, track, stage);
+		return 0;
+	}
+	
+	if(gA_Timers[client].bOnlyStageMode)
 	{
 		Shavit_StopTimer(client);
-		//Shavit_SetOnlyStageMode(client, false);
 	}
 
-	return -1;
+	return 1;
 }
 
 public int Native_PauseTimer(Handle handler, int numParams)
@@ -2474,6 +2591,13 @@ public int Native_SetOnlyStageMode(Handle handler, int numParams)
 	return 1;
 }
 
+public int Native_SetClientRepeat(Handle handler, int numParams)
+{
+	ChangeClientRepeat(GetNativeCell(1), GetNativeCell(2));
+
+	return 0;
+}
+
 public int Native_IsPaused(Handle handler, int numParams)
 {
 	return view_as<int>(gA_Timers[GetNativeCell(1)].bClientPaused);
@@ -2487,6 +2611,11 @@ public int Native_IsPracticeMode(Handle handler, int numParams)
 public int Native_IsOnlyStageMode(Handle handler, int numParams)
 {
 	return view_as<int>(gA_Timers[GetNativeCell(1)].bOnlyStageMode);
+}
+
+public int Native_IsClientRepeat(Handle handler, int numParams)
+{
+	return view_as<int>(gB_PlayerRepeat[GetNativeCell(1)]);
 }
 
 public int Native_SaveSnapshot(Handle handler, int numParams)
@@ -2528,6 +2657,11 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 	if (gA_Timers[client].iTimerTrack != snapshot.iTimerTrack)
 	{
 		CallOnTrackChanged(client, gA_Timers[client].iTimerTrack, snapshot.iTimerTrack);
+	}
+
+	if (snapshot.iTimerTrack == Track_Main && !snapshot.bOnlyStageMode)
+	{
+		ChangeClientRepeat(client, false);
 	}
 
 	if (gA_Timers[client].bsStyle != snapshot.bsStyle)
@@ -2645,7 +2779,7 @@ public Action Shavit_OnStartPre(int client, int track)
 		return Plugin_Stop;
 	}
 
-	if(gB_Zones && !Shavit_ZoneExists(Zone_End, track))
+	if(gB_Zones && (!Shavit_ZoneExists(Zone_End, track) || !Shavit_ZoneExists(Zone_Start, track)))
 	{
 		return Plugin_Stop;
 	}
@@ -2761,7 +2895,7 @@ void StartTimer(int client, int track)
 			{
 				gA_Timers[client].iLastStage = 1;
 				Shavit_SetClientLastStage(client, gA_Timers[client].iLastStage);
-			}
+			}				
 
 			gA_Timers[client].iTimerTrack = track;
 			gA_Timers[client].bTimerEnabled = true;
@@ -2923,6 +3057,7 @@ public void OnClientPutInServer(int client)
 	gI_LastPrintedSteamID[client] = 0;
 
 	gF_NoclipSpeed[client] = sv_noclipspeed.FloatValue;
+	gB_PlayerRepeat[client] = false;
 
 	gB_CookiesRetrieved[client] = false;
 
@@ -2930,9 +3065,7 @@ public void OnClientPutInServer(int client)
 	{
 		OnClientCookiesCached(client);
 	}
-
-	// not adding style permission check here for obvious reasons
-	else
+	else  // not adding style permission check here for obvious reasons
 	{
 		CallOnStyleChanged(client, 0, gI_DefaultStyle, false);
 	}
@@ -3414,8 +3547,8 @@ void CalculateTickIntervalOffset(int client, int zonetype)
 	gF_SmallestDist[client] = 0.0;
 }
 
-bool TREnumTrigger(int entity, int client) {
-
+bool TREnumTrigger(int entity, int client) 
+{
 	if (entity <= MaxClients) {
 		return true;
 	}

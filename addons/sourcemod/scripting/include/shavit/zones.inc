@@ -275,15 +275,14 @@ forward void Shavit_OnLeaveZone(int client, int type, int track, int id, int ent
 forward void Shavit_LoadZonesHere();
 
 /**
- * Called when a player leaves a zone.
+ * Called when a player's last stage changed.
  *
  * @param client                    Client index.
- * @param stageNumber               Stage number.
- * @param message                   The stage time message that will be printed.
- * @param maxlen                    The buffer size of message.
- * @return                          Plugin_Handled to block the timer from printing msg to the client. Plugin_Continue to let the timer print msg.
+ * @param oldstage					Stage number before change.
+ * @param newstage               	New stage number.
+ * @noreturn                        
  */
-forward Action Shavit_OnStageMessage(int client, int stageNumber, char[] message, int maxlen);
+forward void Shavit_OnStageChanged(int client, int oldstage, int newstage);
 
 /**
  * Called when a player leaves a zone.
@@ -364,6 +363,15 @@ native bool Shavit_InsideZoneStage(int client, int track, int &stage);
  */
 native bool Shavit_InsideZoneGetID(int client, int type, int track, int &zoneid);
 
+/**
+ * Teleport a player to specific start zone in standard way.
+ *
+ * @param client                    Client index.
+ * @param track                     Mapzone track.
+ * @param stage                     Mapzone stage.
+ * @noreturn
+ */
+native void Shavit_TeleportToStartZone(int client, int track, int stage)
 
 /**
  * Checks if a player is in the process of creating a mapzone.
@@ -588,6 +596,6 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetClientStageTime");
 	MarkNativeAsOptional("Shavit_SetClientStageTime");
 	MarkNativeAsOptional("Shavit_GetStageStartSnapshot");
-	// MarkNativeAsOptional("Shavit_GetHighestStage");
+	MarkNativeAsOptional("Shavit_TeleportToStartZone");
 }
 #endif

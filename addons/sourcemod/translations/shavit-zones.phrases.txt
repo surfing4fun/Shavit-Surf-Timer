@@ -124,6 +124,20 @@
 	{
 		"en"		"You can't place zones when you're dead."
 	}
+	"ZoneDeletedStopTimer"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:s}"
+		"en"		"Your timer was forced to stop because {1}{2}{3} {4} has been deleted."
+	}
+	"AllZoneDeletedStopTimer"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"Your timer was forced to stop because {1}All Zones{2} have been deleted."
+	}
+	"StageText"
+	{
+		"en"		"Stage"
+	}
 	// ---------- Panel Text ---------- //
 	"AbortZoneCreation"
 	{

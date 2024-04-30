@@ -4444,7 +4444,6 @@ public void Shavit_OnReachNextStage(int client, int track, int startStage, int e
 	char sStageTime[16];
 	FormatSeconds(stageTime, sStageTime, 16);
 
-
 	if(endStage == startStage + 1)
 	{
 		Shavit_FinishStage(client, track, startStage);
