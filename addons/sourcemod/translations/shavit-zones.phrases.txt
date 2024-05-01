@@ -256,9 +256,18 @@
 		"#format"	"{1:d},{2:c}"
 		"en"		"Point {1} | {2} axis"
 	}
+	"ZoneLowHeight"
+	{
+		"#format"	"{1:s}, {2:s}, {3:.1f}, {4:s}"
+		"en"		"The height of {1} must be greater than {2}{3}{4}."
+	}
 	"ZoneSecond"
 	{
 		"en"		"SECOND"
+	}
+	"ZoneThird"
+	{
+		"en"		"THIRD"
 	}
 	"ZoneSetAdjust"
 	{

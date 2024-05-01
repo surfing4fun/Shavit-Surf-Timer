@@ -137,7 +137,7 @@ Convar gCV_TeleportToStart = null;
 Convar gCV_TeleportToEnd = null;
 Convar gCV_AllowDrawAllZones = null;
 Convar gCV_UseCustomSprite = null;
-Convar gCV_Height = null;
+Convar gCV_MinHeight = null;
 Convar gCV_Offset = null;
 Convar gCV_EnforceTracks = null;
 Convar gCV_BoxOffset = null;
@@ -346,7 +346,7 @@ public void OnPluginStart()
 	gCV_TeleportToEnd = new Convar("shavit_zones_teleporttoend", "1", "Teleport players to the end zone on sm_end?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_AllowDrawAllZones = new Convar("shavit_zones_allowdrawallzones", "1", "Allow players to use !drawallzones to see all zones regardless of zone visibility settings.\n0 - nobody can use !drawallzones\n1 - admins (sm_zones access) can use !drawallzones\n2 - anyone can use !drawallzones", 0, true, 0.0, true, 2.0);
 	gCV_UseCustomSprite = new Convar("shavit_zones_usecustomsprite", "1", "Use custom sprite for zone drawing?\nSee `configs/shavit-zones.cfg`.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
-	gCV_Height = new Convar("shavit_zones_height", "128.0", "Height to use for the start zone.", 0, true, 0.0, false);
+	gCV_MinHeight = new Convar("shavit_zones_minheight", "32.0", "The minimum height to use for the creation of start zone / end zone / stage zone.", 0, true, 0.0, true, 180.0);
 	gCV_Offset = new Convar("shavit_zones_offset", "1.0", "When calculating a zone's *VISUAL* box, by how many units, should we scale it to the center?\n0.0 - no downscaling. Values above 0 will scale it inward and negative numbers will scale it outwards.\nAdjust this value if the zones clip into walls.");
 	gCV_EnforceTracks = new Convar("shavit_zones_enforcetracks", "1", "Enforce zone tracks upon entry?\n0 - allow every zone except for start/end to affect users on every zone.\n1 - require the user's track to match the zone's track.", 0, true, 0.0, true, 1.0);
 	gCV_BoxOffset = new Convar("shavit_zones_box_offset", "16", "Offset zone trigger boxes by this many unit\n0 - matches players bounding box\n16 - matches players center");
@@ -1063,7 +1063,7 @@ public any Native_RemoveZone(Handle plugin, int numParams)
 
 	int top = --gI_MapZones;
 
-	if (index < top)
+	if (index < top)	// if deleted zone isnt the last one
 	{
 		gI_EntityZone[gA_ZoneCache[top].iEntity] = index;
 		gA_ZoneCache[index] = gA_ZoneCache[top];
@@ -1705,6 +1705,7 @@ void UnloadZones()
 
 		zone_cache_t empty_cache;
 		gA_ZoneCache[i] = empty_cache;
+		gA_ZoneCache[i].iEntity = -1;
 	}
 
 	gI_MapZones = 0;
@@ -1758,7 +1759,8 @@ void RecalcHighestStage()
 	for (int i = 0; i < gI_MapZones; i++)
 	{
 		int type = gA_ZoneCache[i].iType;
-		if (type == Zone_Stage) continue;
+		if (type != Zone_Stage) 
+			continue;
 
 		int track = gA_ZoneCache[i].iTrack;
 		int stagenum = gA_ZoneCache[i].iData;
@@ -3069,7 +3071,7 @@ void HookZone_SetupEditor(int client, int ent)
 	AddVectors(origin, gA_EditCache[client].fCorner1, gA_EditCache[client].fCorner1);
 	AddVectors(origin, gA_EditCache[client].fCorner2, gA_EditCache[client].fCorner2);
 
-	gI_MapStep[client] = 3;
+	gI_MapStep[client] = 4;
 	gA_EditCache[client].iEntity = ent;
 	gA_EditCache[client].iType = -1;
 	gA_EditCache[client].iTrack = -1;
@@ -3398,7 +3400,7 @@ public int MenuHandler_ZoneEdit(Menu menu, MenuAction action, int param1, int pa
 			default:
 			{
 				// a hack to place the player in the last step of zone editing
-				gI_MapStep[param1] = 3;
+				gI_MapStep[param1] = 4;
 				gA_EditCache[param1] = gA_ZoneCache[id];
 				gI_ZoneID[param1] = id;
 				gI_LastMenuPos[param1] = GetMenuSelectionPosition();
@@ -3995,7 +3997,7 @@ void ShowPanel(int client, int step)
 {
 	gI_MapStep[client] = step;
 
-	if(step == 1)
+	if(step == 1 || step == 2)
 	{
 		CreateTimer(0.1, Timer_Draw, GetClientSerial(client), TIMER_REPEAT);
 	}
@@ -4003,18 +4005,28 @@ void ShowPanel(int client, int step)
 	Panel pPanel = new Panel();
 
 	char sPanelText[128];
-	char sFirst[64];
-	char sSecond[64];
-	FormatEx(sFirst, 64, "%T", "ZoneFirst", client);
-	FormatEx(sSecond, 64, "%T", "ZoneSecond", client);
+	char sStep[64];
 
+	if(step == 1)
+	{
+		FormatEx(sStep, 64, "%T", "ZoneFirst", client);
+	}
+	else if(step == 2)
+	{
+		FormatEx(sStep, 64, "%T", "ZoneSecond", client);
+	}
+	else if(step == 3)
+	{
+		FormatEx(sStep, 64, "%T", "ZoneThird", client);
+	}
+	
 	if(gEV_Type == Engine_TF2)
 	{
-		FormatEx(sPanelText, 128, "%T", "ZonePlaceTextTF2", client, (step == 1)? sFirst:sSecond);
+		FormatEx(sPanelText, 128, "%T", "ZonePlaceTextTF2", client, sStep);
 	}
 	else
 	{
-		FormatEx(sPanelText, 128, "%T", "ZonePlaceText", client, (step == 1)? sFirst:sSecond);
+		FormatEx(sPanelText, 128, "%T", "ZonePlaceText", client, sStep);
 	}
 
 	pPanel.DrawItem(sPanelText, ITEMDRAW_RAWLINE);
@@ -4244,8 +4256,9 @@ bool InStartOrEndZone(float point1[3], float point2[3], int track, int type)
 
 	for (int i = 0; i < MAX_ZONES; i++)
 	{
-		if ((gA_ZoneCache[i].iTrack == track && gA_ZoneCache[i].iType == type)
-		||  (gA_ZoneCache[i].iType != Zone_End && gA_ZoneCache[i].iType != Zone_Start))
+		if (gA_ZoneCache[i].iEntity == -1
+		|| 	(gA_ZoneCache[i].iTrack == track && gA_ZoneCache[i].iType == type)	// Is the same zone ? continue
+		||  (gA_ZoneCache[i].iType != Zone_End && gA_ZoneCache[i].iType != Zone_Start)) // Dont compare the point if its not an start / end zone.
 		{
 			continue;
 		}
@@ -4274,7 +4287,7 @@ bool InStartOrEndZone(float point1[3], float point2[3], int track, int type)
 
 public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float vel[3], float angles[3], TimerStatus status, int track, int style)
 {
-	if(gI_MapStep[client] > 0 && gI_MapStep[client] != 3)
+	if(gI_MapStep[client] > 0 && gI_MapStep[client] != 4)
 	{
 		int button = (gEV_Type == Engine_TF2)? IN_ATTACK2:IN_USE;
 
@@ -4300,11 +4313,9 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 					gV_WallSnap[client] = origin;
 				}
 
-				origin[2] = vPlayerOrigin[2];
-
 				if(gI_MapStep[client] == 1)
 				{
-					origin[2] += 1.0;
+					origin[2] = vPlayerOrigin[2] + 1.0;
 
 					if (!InStartOrEndZone(origin, NULL_VECTOR, gA_EditCache[client].iTrack, gA_EditCache[client].iType))
 					{
@@ -4314,14 +4325,37 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 				}
 				else if(gI_MapStep[client] == 2)
 				{
-					origin[2] += gCV_Height.FloatValue;
+					origin[2] = vPlayerOrigin[2];
 
 					if (origin[0] != gA_EditCache[client].fCorner1[0] && origin[1] != gA_EditCache[client].fCorner1[1] && !InStartOrEndZone(gA_EditCache[client].fCorner1, origin, gA_EditCache[client].iTrack, gA_EditCache[client].iType))
 					{
 						gA_EditCache[client].fCorner2 = origin;
+						ShowPanel(client, 3);
+					}
+				}
+				else if(gI_MapStep[client] == 3)
+				{
+					if((gA_EditCache[client].iType == Zone_Start || gA_EditCache[client].iType == Zone_End || gA_EditCache[client].iType == Zone_Stage))
+					{
+						if(Abs(origin[2] - gA_EditCache[client].fCorner1[2]) >= gCV_MinHeight.FloatValue)
+						{
+							gA_EditCache[client].fCorner2[2] = origin[2];
+							gI_MapStep[client]++;
+							CreateEditMenu(client, true);							
+						}
+						else
+						{
+							char sZoneName[32];
+							GetZoneName(client, gA_EditCache[client].iType, sZoneName, 32);
+							Shavit_PrintToChat(client, "%T", "ZoneLowHeight", client, sZoneName, 
+							gS_ChatStrings.sVariable, gCV_MinHeight.FloatValue, gS_ChatStrings.sText);
+						}
+					}
+					else
+					{
+						gA_EditCache[client].fCorner2[2] = origin[2];
 						gI_MapStep[client]++;
-
-						CreateEditMenu(client, true);
+						CreateEditMenu(client, true);		
 					}
 				}
 			}
@@ -4431,7 +4465,7 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 
 public Action OnClientSayCommand(int client, const char[] command, const char[] sArgs)
 {
-	if(gB_WaitingForChatInput[client] && gI_MapStep[client] == 3)
+	if(gB_WaitingForChatInput[client] && gI_MapStep[client] == 4)
 	{
 		if (gA_EditCache[client].iType == Zone_Gravity || gA_EditCache[client].iType == Zone_Speedmod)
 		{
@@ -4673,8 +4707,25 @@ public int ZoneAdjuster_Handler(Menu menu, MenuAction action, int param1, int pa
 			else
 				gA_EditCache[param1].fCorner2[iAxis] += mod;
 
-			Shavit_StopChatSound();
-			Shavit_PrintToChat(param1, "%T", (bIncrease)? "ZoneSizeIncrease":"ZoneSizeDecrease", param1, gS_ChatStrings.sVariable2, sAxis[iAxis], gS_ChatStrings.sText, iPoint, gS_ChatStrings.sVariable, gF_Modifier[param1], gS_ChatStrings.sText);
+			if((gA_EditCache[param1].iType == Zone_Start || gA_EditCache[param1].iType == Zone_End || gA_EditCache[param1].iType == Zone_Stage)
+			&& Abs(gA_EditCache[param1].fCorner2[2] - gA_EditCache[param1].fCorner1[2]) > gCV_MinHeight.FloatValue)
+			{
+				Shavit_StopChatSound();
+				Shavit_PrintToChat(param1, "%T", (bIncrease)? "ZoneSizeIncrease":"ZoneSizeDecrease", param1, gS_ChatStrings.sVariable2, sAxis[iAxis], gS_ChatStrings.sText, iPoint, gS_ChatStrings.sVariable, gF_Modifier[param1], gS_ChatStrings.sText);					
+			}
+			else
+			{
+				if (iPoint == 1)
+					gA_EditCache[param1].fCorner1[iAxis] -= mod;
+				else
+					gA_EditCache[param1].fCorner2[iAxis] -= mod;
+
+				char sZoneName[32];
+				GetZoneName(param1, gA_EditCache[param1].iType, sZoneName, 32);
+				Shavit_StopChatSound();
+				Shavit_PrintToChat(param1, "%T", "ZoneLowHeight", param1, sZoneName, 
+				gS_ChatStrings.sVariable, gCV_MinHeight.FloatValue, gS_ChatStrings.sText);
+			}
 
 			CreateAdjustMenu(param1, GetMenuSelectionPosition());
 		}
@@ -4783,21 +4834,8 @@ void InsertZone(int client)
 	Reset(client);
 
 	DataPack pack = new DataPack();
-	// TODO Sourcemod 1.11 pack.WriteCellArray
-	MyWriteCellArray(pack, c, sizeof(c));
+	pack.WriteCellArray(c, sizeof(c));
 	QueryLog(gH_SQL, SQL_InsertZone_Callback, sQuery, pack);
-}
-
-void MyWriteCellArray(DataPack pack, any[] array, int size)
-{
-	for (int i = 0; i < size; i++)
-		pack.WriteCell(array[i]);
-}
-
-void MyReadCellArray(DataPack pack, any[] array, int size)
-{
-	for (int i = 0; i < size; i++)
-		array[i] = pack.ReadCell();
 }
 
 bool MyArrayEquals(any[] a, any[] b, int size)
@@ -4812,7 +4850,7 @@ public void SQL_InsertZone_Callback(Database db, DBResultSet results, const char
 {
 	zone_cache_t cache;
 	pack.Reset();
-	MyReadCellArray(pack, cache, sizeof(cache));
+	pack.ReadCellArray(cache, sizeof(cache));
 	delete pack;
 
 	if (results == null)
@@ -4944,11 +4982,16 @@ public Action Timer_Draw(Handle Timer, any data)
 		gV_WallSnap[client] = origin;
 	}
 
-	if (gI_MapStep[client] == 1 || gA_EditCache[client].fCorner2[0] == 0.0)
+	if (gI_MapStep[client] == 1 || gI_MapStep[client] == 2)// || gA_EditCache[client].fCorner2[0] == 0.0)
 	{
-		origin[2] = (vPlayerOrigin[2] + gCV_Height.FloatValue);
+		origin[2] = vPlayerOrigin[2];
 	}
-	else
+	else if(gI_MapStep[client] == 3)
+	{
+		origin[0] = gA_EditCache[client].fCorner2[0];
+		origin[1] = gA_EditCache[client].fCorner2[1];
+	}
+	else if(gI_MapStep[client] == 4)
 	{
 		origin = gA_EditCache[client].fCorner2;
 	}
@@ -4977,10 +5020,8 @@ public Action Timer_Draw(Handle Timer, any data)
 		}
 	}
 
-	if(gI_MapStep[client] != 3 && !EmptyVector(origin))
+	if(gI_MapStep[client] != 4 && !EmptyVector(origin))
 	{
-		origin[2] -= gCV_Height.FloatValue;
-
 		TE_SetupBeamPoints(vPlayerOrigin, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 1.0, 1.0, 0, 0.0, {255, 255, 255, 75}, 0);
 		TE_SendToAll(0.0);
 
