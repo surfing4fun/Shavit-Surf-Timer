@@ -3602,7 +3602,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	//char sMessage2[255];
 
 	char sName[32+1];
-	SanerGetClientName(client, sName);
+	GetClientName(client, sName, sizeof(sName));
 
 	if(iOverwrite > 0 && (time < gF_StageWRTime[style][stage] || bServerFirstCompletion))	//new stage wr
 	{
@@ -3931,7 +3931,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	char sMessage2[255];
 
 	char sName[32+1];
-	SanerGetClientName(client, sName);
+	GetClientName(client, sName, sizeof(sName));
 
 	if(iOverwrite > 0 && (time < gF_WRTime[style][track] || bServerFirstCompletion)) // WR?
 	{

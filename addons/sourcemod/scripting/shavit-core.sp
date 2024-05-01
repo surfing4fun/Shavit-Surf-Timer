@@ -3084,7 +3084,7 @@ public void OnClientAuthorized(int client, const char[] auth)
 	}
 
 	char sName[MAX_NAME_LENGTH];
-	SanerGetClientName(client, sName);
+	GetClientName(client, sName, sizeof(sName));
 	ReplaceString(sName, MAX_NAME_LENGTH, "#", "?"); // to avoid this: https://user-images.githubusercontent.com/3672466/28637962-0d324952-724c-11e7-8b27-15ff021f0a59.png
 
 	int iLength = ((strlen(sName) * 2) + 1);
@@ -4083,6 +4083,17 @@ void TestAngles(int client, float dirangle, float yawdelta, const float vel[3])
 
 	// hsw (thanks nairda!)
 	else if((dirangle > 22.5 && dirangle < 67.5))
+	{
+		gA_Timers[client].iTotalMeasures++;
+
+		if((yawdelta != 0.0) && (vel[0] >= 100.0 || vel[1] >= 100.0) && (vel[0] >= -100.0 || vel[1] >= -100.0))
+		{
+			gA_Timers[client].iGoodGains++;
+		}
+	}
+
+	// backwards hsw
+	else if((dirangle > 112.5 && dirangle < 157.5) || (dirangle > 202.5 && dirangle < 247.5))
 	{
 		gA_Timers[client].iTotalMeasures++;
 

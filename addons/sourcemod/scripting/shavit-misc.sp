@@ -1122,7 +1122,7 @@ public Action Timer_Advertisement(Handle timer)
 			}
 
 			char sName[MAX_NAME_LENGTH];
-			SanerGetClientName(i, sName);
+			GetClientName(i, sName, sizeof(sName));
 			char sTempTempMessage[256];
 			sTempTempMessage = sTempMessage;
 			ReplaceString(sTempTempMessage, 256, "{name}", sName);
@@ -1789,7 +1789,7 @@ public Action Command_ToggleAdverts(int client, int args)
 public Action Command_PrintAdverts(int client, int args)
 {
 	char sName[MAX_NAME_LENGTH];
-	SanerGetClientName(client, sName);
+	GetClientName(client, sName, sizeof(sName));
 
 	for (int i = 0; i < gA_Advertisements.Length; i++)
 	{
@@ -1847,7 +1847,7 @@ public Action Command_Teleport(int client, int args)
 			IntToString(GetClientSerial(i), serial, 16);
 
 			char sName[MAX_NAME_LENGTH];
-			SanerGetClientName(i, sName);
+			GetClientName(i, sName, sizeof(sName));
 
 			menu.AddItem(serial, sName);
 		}
@@ -2469,7 +2469,7 @@ public Action Shavit_OnStart(int client)
 public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldwr, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
 {
 	char sName[32+1];
-	SanerGetClientName(client, sName);
+	GetClientName(client, sName, sizeof(sName));
 
 	char sTrack[32];
 	GetTrackName(LANG_SERVER, track, sTrack, 32);

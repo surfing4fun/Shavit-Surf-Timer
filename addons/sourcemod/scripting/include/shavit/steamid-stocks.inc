@@ -24,7 +24,6 @@
 #endif
 #define _steamid_stocks_included
 
-static KeyValues kv = null;
 
 // Retrieves accountid from STEAM_X:Y:Z, [U:1:123], and 765xxxxxxxxxxxxxx
 stock int SteamIDToAccountID(const char[] sInput)
@@ -85,22 +84,14 @@ stock void AccountIDToSteamID3(int accountid, char[] buf, int buflen)
 	FormatEx(buf, buflen, "[U:1:%u]", accountid);
 }
 
-stock void SteamID64ToString(int num[2], char[] buf, int buflen)
+stock void SteamID64ToString(const int num[2], char[] buf, int buflen)
 {
-	if (kv == null)
-		kv = new KeyValues("fuck sourcemod");
-
-	kv.SetUInt64(NULL_STRING, num);
-	kv.GetString(NULL_STRING, buf, buflen);
+	Int64ToString(num, buf, buflen);
 }
 
 stock int SteamID64ToAccountID(const char[] steamid64)
 {
-	if (kv == null)
-		kv = new KeyValues("fuck sourcemod");
-
 	int num[2];
-	kv.SetString(NULL_STRING, steamid64);
-	kv.GetUInt64(NULL_STRING, num);
+	StringToInt64(steamid64, num);
 	return num[0];
 }
