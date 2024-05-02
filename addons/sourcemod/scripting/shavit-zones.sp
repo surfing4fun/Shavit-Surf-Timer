@@ -2952,14 +2952,12 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 				| (1 << Zone_Slay)
 				| (1 << Zone_Freestyle)
 				| (1 << Zone_CustomSpeedLimit)
-				| (1 << Zone_Stage)
 				| (1 << Zone_NoTimerGravity)
 				// ZoneForm_func_button
 				, (1 << Zone_Start)
 				| (1 << Zone_End)
 				| (1 << Zone_Stop)
 				| (1 << Zone_Slay)
-				| (1 << Zone_Stage)
 			};
 
 			int form = gA_EditCache[param1].iForm;
@@ -4306,7 +4304,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 				}
 				else if(!(gB_SnapToWall[client] && SnapToWall(vPlayerOrigin, client, origin)))
 				{
-					origin = SnapToGrid(vPlayerOrigin, gI_GridSnap[client], false);
+					origin = (gI_MapStep[client] == 3) ? GetAimPosition(client):SnapToGrid(vPlayerOrigin, gI_GridSnap[client], false);
 				}
 				else
 				{
@@ -4975,7 +4973,7 @@ public Action Timer_Draw(Handle Timer, any data)
 	}
 	else if(!(gB_SnapToWall[client] && SnapToWall(vPlayerOrigin, client, origin)))
 	{
-		origin = SnapToGrid(vPlayerOrigin, gI_GridSnap[client], false);
+		origin = gI_MapStep[client] == 3 ? GetAimPosition(client):SnapToGrid(vPlayerOrigin, gI_GridSnap[client], false);
 	}
 	else
 	{
