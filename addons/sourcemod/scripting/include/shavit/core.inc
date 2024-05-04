@@ -101,6 +101,7 @@ enum struct chatstrings_t
 	char sPrefix[64];
 	char sText[16];
 	char sWarning[16];
+	char sImproving[16];
 	char sVariable[16];
 	char sVariable2[16];
 	char sStyle[16];

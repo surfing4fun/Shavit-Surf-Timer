@@ -3646,7 +3646,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 
 	if(fDifferenceWR < 0.0)
 	{
-		Format(sDifferenceWR, sizeof(sDifferenceWR), "\x0700ff00%s%s", sDifferenceWR, gS_ChatStrings.sText);
+		Format(sDifferenceWR, sizeof(sDifferenceWR), "%s%s%s", gS_ChatStrings.sImproving, sDifferenceWR, gS_ChatStrings.sText);
 	}
 	else
 	{
@@ -3659,7 +3659,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 
 	if(fDifferencePB < 0.0)
 	{
-		Format(sDifferencePB, sizeof(sDifferencePB), "\x0700ff00%s%s", sDifferencePB, gS_ChatStrings.sText);
+		Format(sDifferencePB, sizeof(sDifferencePB), "%s%s%s", gS_ChatStrings.sImproving, sDifferencePB, gS_ChatStrings.sText);
 	}
 	else
 	{
@@ -4026,7 +4026,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 	if(fDifferenceWR < 0.0)
 	{
-		Format(sDifferenceWR, sizeof(sDifferenceWR), "\x0700ff00%s%s", sDifferenceWR, gS_ChatStrings.sText);
+		Format(sDifferenceWR, sizeof(sDifferenceWR), "%s%s%s", gS_ChatStrings.sImproving, sDifferenceWR, gS_ChatStrings.sText);
 	}
 	else
 	{
@@ -4039,7 +4039,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 	if(fDifferencePB < 0.0)
 	{
-		Format(sDifferencePB, sizeof(sDifferencePB), "\x0700ff00%s%s", sDifferencePB, gS_ChatStrings.sText);
+		Format(sDifferencePB, sizeof(sDifferencePB), "%s%s%s", gS_ChatStrings.sImproving, sDifferencePB, gS_ChatStrings.sText);
 	}
 	else
 	{
@@ -4475,7 +4475,7 @@ public void Shavit_OnReachNextStage(int client, int track, int startStage, int e
 
 	if(fDifferenceWR <= 0.0)
 	{
-		Format(sDifferenceWR, sizeof(sDifferenceWR), "\x0700ff00%s%s", sDifferenceWR, gS_ChatStrings.sText);
+		Format(sDifferenceWR, sizeof(sDifferenceWR), "%s%s%s", gS_ChatStrings.sImproving, sDifferenceWR, gS_ChatStrings.sText);
 	}
 	else
 	{
@@ -4498,7 +4498,7 @@ public void Shavit_OnReachNextStage(int client, int track, int startStage, int e
 
 	if(fDifferencePB <= 0.0)
 	{
-		Format(sDifferencePB, sizeof(sDifferencePB), "\x0700ff00%s%s", sDifferencePB, gS_ChatStrings.sText);
+		Format(sDifferencePB, sizeof(sDifferencePB), "%s%s%s", gS_ChatStrings.sImproving, sDifferencePB, gS_ChatStrings.sText);
 	}
 	else
 	{

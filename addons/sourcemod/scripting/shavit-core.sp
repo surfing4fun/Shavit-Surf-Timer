@@ -978,7 +978,7 @@ public Action Command_ToggleRepeat(int client, int args)
 
 	if (!IsPlayerAlive(client))
 	{
-		Shavit_PrintToChat(client, "%T", "RepeatCommandAlive", gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "RepeatCommandAlive", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 		return Plugin_Handled;
 	}
 
@@ -3193,18 +3193,20 @@ bool LoadMessages()
 
 	kv.JumpToKey((IsSource2013(gEV_Type))? "CS:S":"CS:GO");
 
-	kv.GetString("prefix", gS_ChatStrings.sPrefix, sizeof(chatstrings_t::sPrefix), "\x075e70d0[Timer]");
+	kv.GetString("prefix", gS_ChatStrings.sPrefix, sizeof(chatstrings_t::sPrefix), "\x07ffffff[\x075fadafTimer\x07ffffff] -");
 	kv.GetString("text", gS_ChatStrings.sText, sizeof(chatstrings_t::sText), "\x07ffffff");
-	kv.GetString("warning", gS_ChatStrings.sWarning, sizeof(chatstrings_t::sWarning), "\x07af2a22");
-	kv.GetString("variable", gS_ChatStrings.sVariable, sizeof(chatstrings_t::sVariable), "\x077fd772");
-	kv.GetString("variable2", gS_ChatStrings.sVariable2, sizeof(chatstrings_t::sVariable2), "\x07276f5c");
-	kv.GetString("style", gS_ChatStrings.sStyle, sizeof(chatstrings_t::sStyle), "\x07db88c2");
+	kv.GetString("warning", gS_ChatStrings.sWarning, sizeof(chatstrings_t::sWarning), "\x07fd2626");
+	kv.GetString("improving", gS_ChatStrings.sImproving, sizeof(chatstrings_t::sImproving), "\x0700ff00");
+	kv.GetString("variable", gS_ChatStrings.sVariable, sizeof(chatstrings_t::sVariable), "\x07e9e500");
+	kv.GetString("variable2", gS_ChatStrings.sVariable2, sizeof(chatstrings_t::sVariable2), "\x075fadaf");
+	kv.GetString("style", gS_ChatStrings.sStyle, sizeof(chatstrings_t::sStyle), "\x07eaa9e5");
 
 	delete kv;
 
 	ReplaceColors(gS_ChatStrings.sPrefix, sizeof(chatstrings_t::sPrefix));
 	ReplaceColors(gS_ChatStrings.sText, sizeof(chatstrings_t::sText));
 	ReplaceColors(gS_ChatStrings.sWarning, sizeof(chatstrings_t::sWarning));
+	ReplaceColors(gS_ChatStrings.sImproving, sizeof(chatstrings_t::sImproving));
 	ReplaceColors(gS_ChatStrings.sVariable, sizeof(chatstrings_t::sVariable));
 	ReplaceColors(gS_ChatStrings.sVariable2, sizeof(chatstrings_t::sVariable2));
 	ReplaceColors(gS_ChatStrings.sStyle, sizeof(chatstrings_t::sStyle));
