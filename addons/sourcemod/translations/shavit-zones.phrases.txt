@@ -179,6 +179,11 @@
 	{
 		"en"		"Change Axis"
 	}
+	"ZoneCreateType"
+	{
+		"#format"	"{1:s}{2:s}{3:s}"
+		"en"		"Creating zone: {1}{2}{3}."
+	}
 	"ZoneCustomSpawnSuccess"
 	{
 		"en"		"Successfully placed custom spawn!"

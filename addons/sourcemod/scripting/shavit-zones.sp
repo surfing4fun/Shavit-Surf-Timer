@@ -3962,6 +3962,11 @@ public int MenuHandler_SelectZoneType(Menu menu, MenuAction action, int param1, 
 
 		gA_EditCache[param1].iType = StringToInt(info);
 
+		char sZoneName[32];
+		GetZoneName(param1, gA_EditCache[param1].iType, sZoneName, 32);
+
+		Shavit_PrintToChat(param1, "%T", "ZoneCreateType", param1, gS_ChatStrings.sVariable, sZoneName, gS_ChatStrings.sText);
+
 		if (gA_EditCache[param1].iType == Zone_Gravity || gA_EditCache[param1].iType == Zone_Speedmod)
 		{
 			gA_EditCache[param1].iData = view_as<int>(1.0);
@@ -4595,6 +4600,11 @@ void CreateEditMenu(int client, bool autostage=false)
 	{
 		if (autostage)
 		{
+			if(gI_HighestStage[gA_EditCache[client].iTrack] == 0 && GetZoneIndex(Zone_Start, gA_EditCache[client].iTrack) != -1)
+			{
+				gI_HighestStage[gA_EditCache[client].iTrack] = 1;
+			}
+
 			gA_EditCache[client].iData = gI_HighestStage[gA_EditCache[client].iTrack] + 1;
 		}
 
@@ -5020,7 +5030,8 @@ public Action Timer_Draw(Handle Timer, any data)
 
 	if(gI_MapStep[client] != 4 && !EmptyVector(origin))
 	{
-		TE_SetupBeamPoints(vPlayerOrigin, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 1.0, 1.0, 0, 0.0, {255, 255, 255, 75}, 0);
+		TE_SetupBeamPoints(vPlayerOrigin, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 
+		gA_ZoneSettings[type][track].fWidth, gA_ZoneSettings[type][track].fWidth, 0, 0.0, {255, 255, 255, 75}, 0);
 		TE_SendToAll(0.0);
 
 		// visualize grid snap
@@ -5035,7 +5046,8 @@ public Action Timer_Draw(Handle Timer, any data)
 			snap2 = origin;
 			snap2[i] += gI_GridSnap[client];
 
-			TE_SetupBeamPoints(snap1, snap2, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 1.0, 1.0, 0, 0.0, {255, 255, 255, 75}, 0);
+			TE_SetupBeamPoints(snap1, snap2, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 
+			gA_ZoneSettings[type][track].fWidth, gA_ZoneSettings[type][track].fWidth, 0, 0.0, {255, 255, 255, 75}, 0);
 			TE_SendToAll(0.0);
 		}
 	}
@@ -5115,7 +5127,7 @@ void DrawZone(float points[8][3], int color[4], float life, float width, bool fl
 
 		for (int j = 0; j < 12; j++)
 		{
-			float actual_width = (j >= 8) ? 0.5 : 1.0;
+			float actual_width = (j >= 8) ? 0.3 : 0.4;
 			char x = magic[editaxis*12+j];
 			TE_SetupBeamPoints(points[x >> 4], points[x & 7], beam, halo, 0, 0, life, actual_width, actual_width, 0, 0.0, clrs[((j >= 8) ? ZoneColor_White : ZoneColor_Green) - 1], speed);
 			TE_Send(clients, count, 0.0);

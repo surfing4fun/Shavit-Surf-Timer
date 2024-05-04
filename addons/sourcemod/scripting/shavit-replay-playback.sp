@@ -4069,7 +4069,7 @@ float GetClosestReplayTime(int client)
 {
 	int style = gI_TimeDifferenceStyle[client];
 	int track = Shavit_GetClientTrack(client);
-	int stage = Shavit_IsOnlyStageMode(client) ? Shavit_GetClientLastStage(client) : 0;
+	int stage = (Shavit_IsOnlyStageMode(client) && track == Track_Main) ? Shavit_GetClientLastStage(client) : 0;
 
 	if (gA_FrameCache[style][track][stage].aFrames == null)
 	{

@@ -2588,6 +2588,14 @@ public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 	}
 }
 
+public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
+{
+	if (IsClientInGame(client))
+	{
+		UpdateKeyHint(client);
+	}
+}
+
 public int Native_ForceHUDUpdate(Handle handler, int numParams)
 {
 	int clients[MAXPLAYERS+1];
