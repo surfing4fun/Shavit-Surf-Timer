@@ -43,6 +43,7 @@ enum
 	Migration_Lowercase_maptiers,
 	Migration_Lowercase_mapzones,
 	Migration_Lowercase_playertimes,
+	Migration_Lowercase_stagecpwr,// 20
 	Migration_Lowercase_startpositions,
 	Migration_AddPlayertimesPointsCalcedFrom, // points calculated from wr float added to playertimes
 	Migration_RemovePlayertimesPointsCalcedFrom, // lol
