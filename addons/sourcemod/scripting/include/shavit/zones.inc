@@ -109,6 +109,7 @@ enum struct zone_cache_t
 	int iDatabaseID; // Can be the database ID (> 0) for "sql" sources. Non-sql sources can fill this with whatever.
 	int iFlags; // The ZF_* flags.
 	int iData; // Depends on the zone. Zone_Stage stores the stage number in this for example.
+	bool bUseSpeedLimit; // Stage zone speed limit for surf maps. there are constant staged surf map exist like surf_ace.
 	float fCorner1[3]; // the hull mins. (or unused if ZoneForm_AreasAndClusters) // TODO, maybe reuse for cluster & areas?
 	float fCorner2[3]; // the hull maxs. (or unused if ZoneForm_AreasAndClusters)
 	float fDestination[3]; // Used by Zone_CustomSpawn, Zone_Teleport, and Zone_Stage.
@@ -348,9 +349,10 @@ native void Shavit_Zones_DeleteMap(const char[] map);
  * @param client                    Client index.
  * @param track                     Mapzone track, -1 to ignore track.
  * @param stage                     Reference to variable that will hold the zone's stage.
+ * @param limitspeed				Reference to variable that will hold whether the stage zone liimit prespeed.
  * @return                          Boolean value.
  */
-native bool Shavit_InsideZoneStage(int client, int track, int &stage);
+native bool Shavit_InsideZoneStage(int client, int track, int &stage, bool &limitspeed = true);
 
 /**
  * Checks if a player is inside a mapzone.
@@ -437,6 +439,14 @@ native int Shavit_GetMapTrackCount(bool bonus);
  * @return                          Zone type.
  */
 native int Shavit_GetZoneType(int zoneid);
+
+/**
+ * Returns the if the zone limit prespeed.
+ *
+ * @param zoneid                    Zone index.
+ * @return                          Bool value, true if the zone limit prespeed.
+ */
+native bool Shavit_GetZoneUseSpeedLimit(int zoneid);
 
 /**
  * Sets the player's current location as their spawn location for the specified track.
@@ -597,5 +607,6 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_SetClientStageTime");
 	MarkNativeAsOptional("Shavit_GetStageStartSnapshot");
 	MarkNativeAsOptional("Shavit_TeleportToStartZone");
+	MarkNativeAsOptional("Shavit_GetZoneUseSpeedLimit");
 }
 #endif

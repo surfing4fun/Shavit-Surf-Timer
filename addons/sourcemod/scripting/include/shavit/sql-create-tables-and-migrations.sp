@@ -31,7 +31,7 @@ enum
 	Migration_ConvertSteamIDsPlayertimes,
 	Migration_ConvertSteamIDsChat,
 	Migration_PlayertimesDateToInt,
-	Migration_AddZonesFlagsAndData, // 10
+	Migration_AddZonesFlagsAndDataAndSpeedLimit, // 10
 	Migration_AddPlayertimesCompletions,
 	Migration_AddCustomChatAccess,
 	Migration_AddPlayertimesExactTimeInt,
@@ -43,14 +43,13 @@ enum
 	Migration_Lowercase_maptiers,
 	Migration_Lowercase_mapzones,
 	Migration_Lowercase_playertimes,
-	//Migration_Lowercase_stagetimeswr, // 20
-	Migration_Lowercase_stagecpwr,
 	Migration_Lowercase_startpositions,
 	Migration_AddPlayertimesPointsCalcedFrom, // points calculated from wr float added to playertimes
 	Migration_RemovePlayertimesPointsCalcedFrom, // lol
 	Migration_NormalizeMapzonePoints,
 	Migration_AddMapzonesForm, // 25
 	Migration_AddMapzonesTarget,
+	Migration_AddMapZonesSpeelimit,
 	Migration_DeprecateExactTimeInt,
 	Migration_AddPlayertimesAuthFK,
 	Migration_FixSQLiteMapzonesROWID,
@@ -68,7 +67,7 @@ char gS_MigrationNames[][] = {
 	"ConvertSteamIDsPlayertimes",
 	"ConvertSteamIDsChat",
 	"PlayertimesDateToInt",
-	"AddZonesFlagsAndData",
+	"AddZonesFlagsAndDataAndSpeedlimit",
 	"AddPlayertimesCompletions",
 	"AddCustomChatAccess",
 	"AddPlayertimesExactTimeInt",
@@ -79,13 +78,13 @@ char gS_MigrationNames[][] = {
 	"Lowercase_mapzones",
 	"Lowercase_playertimes",
 	"Lowercase_stagecpwr",
-	//"Lowercase_stagetimeswr",
 	"Lowercase_startpositions",
 	"AddPlayertimesPointsCalcedFrom",
 	"RemovePlayertimesPointsCalcedFrom",
 	"NormalizeMapzonePoints",
 	"AddMapzonesForm",
 	"AddMapzonesTarget",
+	"AddMapzonesSpeedlimit",
 	"DeprecateExactTimeInt",
 	"AddPlayertimesAuthFK",
 	"FixSQLiteMapzonesROWID",
@@ -288,14 +287,14 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	if (driver == Driver_mysql)
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INT AUTO_INCREMENT, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `form` TINYINT, `target` VARCHAR(63), PRIMARY KEY (`id`)) %s;",
+			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INT AUTO_INCREMENT, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `speedlimit` TINYINT NOT NULL DEFAULT 350.0, `form` TINYINT, `target` VARCHAR(63), PRIMARY KEY (`id`)) %s;",
 			gS_SQLPrefix, sOptionalINNODB);
 		AddQueryLog(trans, sQuery);
 	}
 	else
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INTEGER PRIMARY KEY, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `form` TINYINT, `target` VARCHAR(63));",
+			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INTEGER PRIMARY KEY, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `speedlimit` TINYINT NOT NULL DEFAULT 350.0, `form` TINYINT, `target` VARCHAR(63));",
 			gS_SQLPrefix);
 		AddQueryLog(trans, sQuery);
 		strcopy(SQLiteMapzonesQuery, sizeof(SQLiteMapzonesQuery), sQuery);
@@ -393,7 +392,7 @@ void ApplyMigration(int migration)
 		case Migration_ConvertSteamIDsUsers: ApplyMigration_ConvertSteamIDs();
 		case Migration_ConvertSteamIDsPlayertimes, Migration_ConvertSteamIDsChat: return; // this is confusing, but the above case handles all of them
 		case Migration_PlayertimesDateToInt: ApplyMigration_PlayertimesDateToInt();
-		case Migration_AddZonesFlagsAndData: ApplyMigration_AddZonesFlagsAndData();
+		case Migration_AddZonesFlagsAndDataAndSpeedLimit: ApplyMigration_AddZonesFlagsAndDataAndSpeedLimit();
 		case Migration_AddPlayertimesCompletions: ApplyMigration_AddPlayertimesCompletions();
 		case Migration_AddCustomChatAccess: ApplyMigration_AddCustomChatAccess();
 		case Migration_AddPlayertimesExactTimeInt: ApplyMigration_AddPlayertimesExactTimeInt();
@@ -403,7 +402,6 @@ void ApplyMigration(int migration)
 		case Migration_Lowercase_maptiers: ApplyMigration_LowercaseMaps("maptiers", migration);
 		case Migration_Lowercase_mapzones: ApplyMigration_LowercaseMaps("mapzones", migration);
 		case Migration_Lowercase_playertimes: ApplyMigration_LowercaseMaps("playertimes", migration);
-		//case Migration_Lowercase_stagetimeswr: ApplyMigration_LowercaseMaps("stagetimewrs", migration);
 		case Migration_Lowercase_stagecpwr: ApplyMigration_LowercaseMaps("stagecpwrs", migration);
 		case Migration_Lowercase_startpositions: ApplyMigration_LowercaseMaps("startpositions", migration);
 		case Migration_AddPlayertimesPointsCalcedFrom: ApplyMigration_AddPlayertimesPointsCalcedFrom();
@@ -411,6 +409,7 @@ void ApplyMigration(int migration)
 		case Migration_NormalizeMapzonePoints: ApplyMigration_NormalizeMapzonePoints();
 		case Migration_AddMapzonesForm: ApplyMigration_AddMapzonesForm();
 		case Migration_AddMapzonesTarget: ApplyMigration_AddMapzonesTarget();
+		case Migration_AddMapZonesSpeelimit: ApplyMigration_AddMapzonesSpeedlimit();
 		case Migration_DeprecateExactTimeInt: ApplyMigration_DeprecateExactTimeInt();
 		case Migration_AddPlayertimesAuthFK: ApplyMigration_AddPlayertimesAuthFK();
 		case Migration_FixSQLiteMapzonesROWID: ApplyMigration_FixSQLiteMapzonesROWID();
@@ -438,11 +437,11 @@ void ApplyMigration_PlayertimesDateToInt()
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_PlayertimesDateToInt, DBPrio_High);
 }
 
-void ApplyMigration_AddZonesFlagsAndData()
+void ApplyMigration_AddZonesFlagsAndDataAndSpeedLimit()
 {
 	char sQuery[192];
-	FormatEx(sQuery, 192, "ALTER TABLE `%smapzones` ADD COLUMN `flags` INT NULL AFTER `track`, ADD COLUMN `data` INT NULL AFTER `flags`;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddZonesFlagsAndData, DBPrio_High);
+	FormatEx(sQuery, 192, "ALTER TABLE `%smapzones` ADD COLUMN `flags` INT NULL AFTER `track`, ADD COLUMN `data` INT NULL AFTER `flags`, ADD COLUMN `speedlimit` TINYINT NOT NULL DEFAULT 1 AFTER `data`;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddZonesFlagsAndDataAndSpeedLimit, DBPrio_High);
 }
 
 void ApplyMigration_AddPlayertimesCompletions()
@@ -565,6 +564,13 @@ void ApplyMigration_AddMapzonesTarget()
 	char sQuery[192];
 	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smapzones` ADD COLUMN `target` VARCHAR(63);", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddMapzonesTarget, DBPrio_High);
+}
+
+void ApplyMigration_AddMapzonesSpeedlimit()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smapzones` ADD COLUMN `speedlimit` TINYINT;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddMapZonesSpeelimit, DBPrio_High);
 }
 
 void ApplyMigration_DeprecateExactTimeInt()
@@ -703,7 +709,7 @@ public void SQL_FixSQLiteMapzonesROWID_Callback(Database db, DBResultSet results
 		AddQueryLog(trans, SQLiteMapzonesQuery);
 
 		// Can't do SELECT * FROM temp_mapzones because DBs created < v3.3.0 have an extra `prebuilt` column
-		FormatEx(sQuery, sizeof(sQuery), "INSERT INTO `%smapzones` SELECT `id`, `map`, `type`, `corner1_x`, `corner1_y`, `corner1_z`, `corner2_x`, `corner2_y`, `corner2_z`, `destination_x`, `destination_y`, `destination_z`, `track`, `flags`, `data`, `form`, `target` FROM temp_mapzones;", gS_SQLPrefix);
+		FormatEx(sQuery, sizeof(sQuery), "INSERT INTO `%smapzones` SELECT `id`, `map`, `type`, `corner1_x`, `corner1_y`, `corner1_z`, `corner2_x`, `corner2_y`, `corner2_z`, `destination_x`, `destination_y`, `destination_z`, `track`, `flags`, `data`, `speedlimit`, `form`, `target` FROM temp_mapzones;", gS_SQLPrefix);
 		AddQueryLog(trans, sQuery);
 
 		FormatEx(sQuery, sizeof(sQuery), "DROP TABLE `temp_mapzones`;");

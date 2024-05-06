@@ -1301,8 +1301,28 @@ void DumbSetVelocity(int client, float fSpeed[3])
 public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float vel[3], float angles[3], TimerStatus status, int track, int style)
 {
 	bool bNoclip = (GetEntityMoveType(client) == MOVETYPE_NOCLIP);
+
+	if (gB_AutoRestart[client])
+	{
+		float current = Shavit_GetClientTime(client);	
+		float bestTime = Shavit_IsOnlyStageMode(client) ? Shavit_GetClientStagePB(client, style, Shavit_GetClientLastStage(client)):Shavit_GetClientPB(client, style, track);
+
+		if (bestTime != 0 && current > bestTime)
+		{
+			Shavit_RestartTimer(client, track, false, false);
+			Shavit_PrintToChat(client, "%T", "AutoRestartTriggered1", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+			Shavit_PrintToChat(client, "%T", "AutoRestartTriggered2", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		}
+	}
+
 	int iZoneStage;
-	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage);
+	bool bIsStageLimitPrespeed;
+	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage, bIsStageLimitPrespeed);
+	
+	if(!bIsStageLimitPrespeed)
+	{
+		bInsideStageZone = false;
+	}
 
 	bool bInStart = false;
 
@@ -1327,7 +1347,6 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 		}
 	}
 	
-
 	// i will not be adding a setting to toggle this off
 	if(bNoclip)
 	{
@@ -1359,20 +1378,11 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 		}
 	}
 
-	if (gB_AutoRestart[client])
-	{
-		float bestTime = Shavit_GetClientPB(client, style, track);
-		float current = Shavit_GetClientTime(client);
-
-		if (bestTime != 0 && current > bestTime)
-		{
-			Shavit_RestartTimer(client, track, false);
-			Shavit_PrintToChat(client, "%T", "AutoRestartTriggered1", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
-			Shavit_PrintToChat(client, "%T", "AutoRestartTriggered2", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
-		}
-	}
-
 	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+	if(GetEntityFlags(client) & FL_BASEVELOCITY) // they are on booster, dont limit them
+	{
+		bInStart = false;
+	}
 
 	// prespeed
 	if(!bNoclip && Shavit_GetStyleSettingInt(gI_Style[client], "prespeed") == 0 && bInStart)

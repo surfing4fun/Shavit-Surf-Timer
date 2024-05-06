@@ -303,6 +303,11 @@
 		"#format"	"{1:d}"
 		"en"		"Stage: {1}"
 	}
+	"ZoneUseStageSpeedLimit"
+	{
+		"#format"	"{1:s}"
+		"en"		"Use prespeed limit: {1}"
+	}
 	"ZoneSetGravity"
 	{
 		"#format"   "{1:f}"

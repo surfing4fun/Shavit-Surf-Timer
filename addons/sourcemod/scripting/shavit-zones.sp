@@ -242,6 +242,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_SetStageStartInfo", Native_SetStageStartInfo);
 	CreateNative("Shavit_GetStageStartTime", Native_GetStageStartTime);
 	CreateNative("Shavit_InsideZoneStage", Native_InsideZoneStage);
+	CreateNative("Shavit_GetZoneUseSpeedLimit", Native_GetZoneUseSpeedLimit);
 
 	// registers library, check "bool LibraryExists(const char[] name)" in order to use with other plugins
 	RegPluginLibrary("shavit-zones");
@@ -729,6 +730,11 @@ public int Native_GetZoneData(Handle handler, int numParams)
 	return gA_ZoneCache[GetNativeCell(1)].iData;
 }
 
+public int Native_GetZoneUseSpeedLimit(Handle handler, int numParams)
+{
+	return gA_ZoneCache[GetNativeCell(1)].bUseSpeedLimit;
+}
+
 public int Native_GetZoneFlags(Handle handler, int numParams)
 {
 	return gA_ZoneCache[GetNativeCell(1)].iFlags;
@@ -751,6 +757,10 @@ public int Native_InsideZoneStage(Handle handler, int numParams)
 		{
 			iZoneStage = gA_ZoneCache[i].iType == Zone_Start ? 1 : gA_ZoneCache[i].iData;
 			SetNativeCellRef(3, iZoneStage);
+			if(numParams > 3)
+			{
+				SetNativeCellRef(4, gA_ZoneCache[i].bUseSpeedLimit);				
+			}
 
 			return true;
 		}
@@ -1774,7 +1784,7 @@ void RefreshZones()
 {
 	char sQuery[512];
 	FormatEx(sQuery, 512,
-		"SELECT type, corner1_x, corner1_y, corner1_z, corner2_x, corner2_y, corner2_z, destination_x, destination_y, destination_z, track, %s, flags, data, form, target FROM %smapzones WHERE map = '%s';",
+		"SELECT type, corner1_x, corner1_y, corner1_z, corner2_x, corner2_y, corner2_z, destination_x, destination_y, destination_z, track, %s, flags, data, speedlimit, form, target FROM %smapzones WHERE map = '%s';",
 		(gI_Driver != Driver_sqlite)? "id":"rowid", gS_MySQLPrefix, gS_Map);
 
 	QueryLog(gH_SQL, SQL_RefreshZones_Callback, sQuery, 0, DBPrio_High);
@@ -1818,8 +1828,9 @@ public void SQL_RefreshZones_Callback(Database db, DBResultSet results, const ch
 		cache.iDatabaseID = results.FetchInt(11);
 		cache.iFlags = results.FetchInt(12);
 		cache.iData = results.FetchInt(13);
-		cache.iForm = results.FetchInt(14);
-		results.FetchString(15, cache.sTarget, sizeof(cache.sTarget));
+		cache.bUseSpeedLimit = view_as<bool>(results.FetchFloat(14));
+		cache.iForm = results.FetchInt(15);
+		results.FetchString(16, cache.sTarget, sizeof(cache.sTarget));
 		cache.sSource = "sql";
 
 		if (cache.iForm == ZoneForm_Box)
@@ -4433,6 +4444,10 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 			Shavit_PrintToChat(param1, "%T", "ZoneEnterDataChat", param1);
 			return 0;
 		}
+		else if(StrEqual(sInfo, "togglespdlimit"))
+		{
+			gA_EditCache[param1].bUseSpeedLimit = !gA_EditCache[param1].bUseSpeedLimit;
+		}
 		else if(StrEqual(sInfo, "forcerender"))
 		{
 			gA_EditCache[param1].iFlags ^= ZF_ForceRender;
@@ -4610,6 +4625,9 @@ void CreateEditMenu(int client, bool autostage=false)
 
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetStage", client, gA_EditCache[client].iData);
 		menu.AddItem("datafromchat", sMenuItem);
+
+		FormatEx(sMenuItem, 64, "%T", "ZoneUseStageSpeedLimit", client, gA_EditCache[client].bUseSpeedLimit ? "ON":"OFF");
+		menu.AddItem("togglespdlimit", sMenuItem);
 	}
 	else if (gA_EditCache[client].iType == Zone_Airaccelerate)
 	{
@@ -4777,12 +4795,12 @@ void InsertZone(int client)
 		Shavit_LogMessage(
 			"%L - added %s %s to map `%s`. \
 			p1(%f, %f, %f), p2(%f, %f, %f), dest(%f, %f, %f), \
-			flags=%d, data=%d, form=%d, target='%s'",
+			flags=%d, data=%d, speedlimit=%d, form=%d, target='%s'",
 			client, sTrack, sZoneName, gS_Map,
 			EXPAND_VECTOR(c.fCorner1),
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
-			c.iFlags, c.iData,
+			c.iFlags, c.iData, view_as<int>(c.bUseSpeedLimit),
 			c.iForm, c.sTarget
 		);
 
@@ -4791,19 +4809,20 @@ void InsertZone(int client)
 			corner1_x, corner1_y, corner1_z, \
 			corner2_x, corner2_y, corner2_z, \
 			destination_x, destination_y, destination_z, \
-			track, flags, data, form, target) VALUES \
+			track, flags, data, speedlimit, form, target) VALUES \
 			('%s', %d,  \
 			%f, %f, %f, \
 			%f, %f, %f, \
 			%f, %f, %f, \
 			%d, %d, %d, \
-			%d, '%s');",
+			%d, %d, '%s');",
 			gS_MySQLPrefix,
 			gS_Map, c.iType,
 			EXPAND_VECTOR(c.fCorner1),
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
 			c.iTrack, c.iFlags, c.iData,
+			view_as<int>(c.bUseSpeedLimit), 
 			c.iForm, c.sTarget
 		);
 	}
@@ -4812,12 +4831,12 @@ void InsertZone(int client)
 		Shavit_LogMessage(
 			"%L - updated %s %s (%d) in map `%s`. \
 			p1(%f, %f, %f), p2(%f, %f, %f), dest(%f, %f, %f), \
-			flags=%d, data=%d, form=%d, target='%s'",
+			flags=%d, data=%d, speedlimit=%d, form=%d, target='%s'",
 			client, sTrack, sZoneName, c.iDatabaseID, gS_Map,
 			EXPAND_VECTOR(c.fCorner1),
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
-			c.iFlags, c.iData,
+			c.iFlags, c.iData, view_as<int>(c.bUseSpeedLimit),
 			c.iForm, c.sTarget
 		);
 
@@ -4827,6 +4846,7 @@ void InsertZone(int client)
 			, corner2_x = '%f', corner2_y = '%f', corner2_z = '%f' \
 			, destination_x = '%f', destination_y = '%f', destination_z = '%f' \
 			, flags = %d, data = %d \
+			, speedlimit = %d \
 			, form = %d, target = '%s' \
 			WHERE %s = %d;",
 			gS_MySQLPrefix,
@@ -4834,6 +4854,7 @@ void InsertZone(int client)
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
 			c.iFlags, c.iData,
+			view_as<int>(c.bUseSpeedLimit),
 			c.iForm, c.sTarget,
 			(gI_Driver != Driver_sqlite) ? "id" : "rowid", c.iDatabaseID
 		);
@@ -5842,6 +5863,8 @@ public void TouchPost(int entity, int other)
 		}
 		case Zone_Stage:
 		{
+			// PrintToChatAll("[DEBUG] Usage of speedlimit in current stage zone: %s", gA_ZoneCache[zone].bUseSpeedLimit ? "T":"F");
+
 			if (GetEntPropEnt(other, Prop_Send, "m_hGroundEntity") == -1 && !Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(other), "startinair"))
 			{
 				return;

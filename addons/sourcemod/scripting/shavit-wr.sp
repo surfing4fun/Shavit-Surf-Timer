@@ -4544,11 +4544,12 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 	}
 	else if (type == Zone_Stage)
 	{
-		int num = Shavit_GetZoneData(Shavit_GetZoneID(entity));
+		int zone = Shavit_GetZoneID(entity);
+		int num = Shavit_GetZoneData(zone);
 		int stage = Shavit_GetClientLastStage(client);
 		float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
 
-		gA_StageTimeValid[client][track][num] = (curVel <= limit);
+		gA_StageTimeValid[client][track][num] = Shavit_GetZoneUseSpeedLimit(zone) ? (curVel <= limit) : true;
 
 		if(stage == num && curVel >= 15.0)
 		{
