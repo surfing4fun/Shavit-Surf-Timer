@@ -1877,7 +1877,7 @@ void UpdateMainHUD(int client)
 	huddata.iZoneHUD = iZoneHUD;
 
 	huddata.fTime = (bReplay)? fReplayTime:Shavit_GetClientTime(target);
-	huddata.fStageTime = (bReplay)? 0.0:Shavit_GetClientStageTime(target, huddata.iTrack, huddata.iCurrentStage);
+	huddata.fStageTime = (bReplay)? 0.0:Shavit_GetClientStageTime(target);
 	huddata.iJumps = (bReplay)? 0:Shavit_GetClientJumps(target);
 	huddata.iStrafes = (bReplay)? 0:Shavit_GetStrafeCount(target);
 	huddata.iRank = (bReplay)? 0 : Shavit_IsOnlyStageMode(target) ? Shavit_GetStageRankForTime(huddata.iStyle, huddata.fTime, huddata.iCurrentStage):Shavit_GetRankForTime(huddata.iStyle, huddata.fTime, huddata.iTrack);

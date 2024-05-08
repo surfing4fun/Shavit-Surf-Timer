@@ -162,7 +162,7 @@ enum struct timer_snapshot_t
 
 	stagestart_info_t aStageStartInfo;
 
-	float fCPTime[MAX_STAGES];
+	float fCPTimes[MAX_STAGES];
 
 	float fplayer_speedmod;
 	float fNextFrameTime;
@@ -724,21 +724,11 @@ forward void Shavit_OnFinish(int client, int style, float time, int jumps, int s
  * Called before a player finishes a stage.
  *
  * @param client					Client index.
- * @param track						Timer track.
- * @param style						Style the record was done on.
- * @param stage						Stage number.
- * @param time						Record time.
- * @param oldtime					The player's best time on the stage before this finish.
- * @param jumps						Jumps amount.
- * @param strafes					Amount of strafes.
- * @param sync						Sync percentage (0.0 to 100.0) or -1.0 when not measured.
- * @param oldtime					The player's best time on the map before this finish.
- * @param avgvel					Player's average velocity throughout the run.
- * @param maxvel					Player's highest reached velocity.
- * @param timestamp					System time of when player finished.
- * @noreturn
+ * @param snapshot					A snapshot of the player's timer.
+ * 
+ * @return							Plugin_Continue to do nothing, Plugin_Changed to change the variables or anything else to stop the timer from finishing.
  */
-forward Action Shavit_OnFinishStagePre(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp);
+forward Action Shavit_OnFinishStagePre(int client, timer_snapshot_t snapshot);
 
 /**
  * Called when a player finishes a stage. (touches the next stage zone)
@@ -811,6 +801,16 @@ forward void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int t
  * @noreturn
  */
 forward void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack);
+
+/**
+ * Called when a player's last stage changed.
+ *
+ * @param client                    Client index.
+ * @param oldstage					Stage number before change.
+ * @param newstage               	New stage number.
+ * @noreturn                        
+ */
+forward void Shavit_OnStageChanged(int client, int oldstage, int newstage);
 
 /**
  * Called when the styles configuration finishes loading and it's ready to load everything into the cache.
@@ -951,6 +951,17 @@ native Database Shavit_GetDatabase(int& outdriver=0);
 native void Shavit_StartTimer(int client, int track);
 
 /**
+ * Starts the stage timer for a player.
+ * Will not teleport the player to anywhere, it's handled inside the mapzones plugin.
+ *
+ * @param client					Client index.
+ * @param track						Timer track.
+ * @param stage						stage number of stage zone.
+ * @noreturn
+ */
+native void Shavit_StartStageTimer(int client, int track, int stage);
+
+/**
  * Restarts the timer for a player.
  * Will work as if the player just used sm_r.
  *
@@ -1014,6 +1025,15 @@ native void Shavit_FinishStage(int client, int track, int stage);
 native float Shavit_GetClientTime(int client);
 
 /**
+ * Get Client's current time of stage
+ *
+ * @param client					Client index.
+ *
+ * @return							Client's current stage time.
+ */
+native float Shavit_GetClientStageTime(int client);
+
+/**
  * Retrieve the client's track. (Track_Main/Track_Bonus etc..)
  *
  * @param client					Client index.
@@ -1029,6 +1049,60 @@ native int Shavit_GetClientTrack(int client);
  * @return                          Timer track.
  */
 native void Shavit_SetClientTrack(int client, int track);
+
+/**
+ * Retrieve the client's current stage number.
+ *
+ * @param client                    Client index.
+ * @return                          The client's current stage number.
+ */
+native int Shavit_GetClientLastStage(int client);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param stagenum                  Stage to set.
+ * @noreturn                          
+ */
+native void Shavit_SetClientLastStage(int client, int stagenum);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param cpTimes                   Any float array to hold the checkpoint times.
+ * @noreturn                          
+ */
+native void Shavit_GetClientCPTimes(int client, float[] cpTimes);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param cpTimes                   Any float array of checkpoint times.
+ * @noreturn                          
+ */
+native void Shavit_SetClientCPTimes(int client, float[] cpTimes);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param checkpoint				Checkpoint number.
+ * @return							The time of specific checkpoint                          
+ */
+native float Shavit_GetClientCPTime(int client, int checkpoint);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param checkpoint				Checkpoint number.
+ * @param time                   	The specific time to set.
+ * @noreturn                          
+ */
+native void Shavit_SetClientCPTime(int client, int checkpoint, float time);
 
 /**
  * Retrieve client jumps since timer start.
@@ -1558,7 +1632,15 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetChatStringsStruct");
 	MarkNativeAsOptional("Shavit_GetClientJumps");
 	MarkNativeAsOptional("Shavit_GetClientTime");
+	MarkNativeAsOptional("Shavit_GetClientStageTime");
 	MarkNativeAsOptional("Shavit_GetClientTrack");
+	MarkNativeAsOptional("Shavit_SetClientTrack");
+	MarkNativeAsOptional("Shavit_GetClientLastStage");
+	MarkNativeAsOptional("Shavit_SetClientLastStage");
+	MarkNativeAsOptional("Shavit_GetClientCPTimes");
+	MarkNativeAsOptional("Shavit_GetClientCPTimes");
+	MarkNativeAsOptional("Shavit_SetClientCPTime");
+	MarkNativeAsOptional("Shavit_SetClientCPTime");
 	MarkNativeAsOptional("Shavit_GetDatabase");
 	MarkNativeAsOptional("Shavit_GetOrderedStyles");
 	MarkNativeAsOptional("Shavit_GetPerfectJumps");
@@ -1589,6 +1671,7 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_SaveSnapshot");
 	MarkNativeAsOptional("Shavit_SetPracticeMode");
 	MarkNativeAsOptional("Shavit_StartTimer");
+	MarkNativeAsOptional("Shavit_StartStageTimer");
 	MarkNativeAsOptional("Shavit_StopChatSound");
 	MarkNativeAsOptional("Shavit_StopTimer");
 	MarkNativeAsOptional("Shavit_GetClientTimescale");

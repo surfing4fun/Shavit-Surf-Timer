@@ -406,10 +406,6 @@ native float Shavit_GetStageTimeForRank(int style, int rank, int stage);
  */
 native int Shavit_GetClientStageCompletions(int client, int style, int stage);
 
-native void Shavit_GetClientCPTime(int client, float[] cpTimes);
-
-native void Shavit_SetClientCPTime(int client, float[] cpTimes);
-
 
 public SharedPlugin __pl_shavit_wr =
 {

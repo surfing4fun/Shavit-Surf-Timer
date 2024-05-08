@@ -2009,6 +2009,7 @@ bool DefaultLoadReplay(frame_cache_t cache, int style, int track, int stage)
 #endif
 		delete gH_ClosestPos[style][track][stage];
 		gH_ClosestPos[style][track][stage] = new ClosestPos(cache.aFrames, 0, cache.iPreFrames, cache.iFrameCount);
+
 #if DEBUG
 		p.Stop();
 		PrintToServer(">>> ClosestPos / DefaultLoadReplay(style=%d, track=%d) = %f", style, track, p.Time);
@@ -4119,7 +4120,7 @@ float GetClosestReplayTime(int client)
 #if USE_CLOSESTPOS
 	if (gB_ClosestPos)
 	{
-		if (!gH_ClosestPos[track][style][stage])
+		if (!gH_ClosestPos[style][track][stage])
 		{
 			return -1.0;
 		}

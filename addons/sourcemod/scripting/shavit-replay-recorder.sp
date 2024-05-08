@@ -82,6 +82,7 @@ bool gB_RecordingEnabled[MAXPLAYERS+1]; // just a simple thing to prevent plugin
 
 // stuff related to postframes
 finished_run_info gA_FinishedRunInfo[MAXPLAYERS+1][2];
+stagestart_info_t gA_StageStartInfo[MAXPLAYERS+1];
 bool gB_GrabbingPostFrames[MAXPLAYERS+1][2];
 bool gB_DelayClearFrame[MAXPLAYERS+1];
 Handle gH_PostFramesTimer[MAXPLAYERS+1][2];
@@ -239,6 +240,24 @@ void ClearFrames(int client)
 	gI_PlayerFinishFrame[client] = 0;
 	gI_HijackFrames[client] = 0;
 	gB_HijackFramesKeepOnStart[client] = false;
+}
+
+public Action Shavit_OnFinishStagePre(int client, timer_snapshot_t snapshot)
+{
+	if(!snapshot.bOnlyStageMode)
+	{
+		if(snapshot.iLastStage > 1)
+		{
+			gA_StageStartInfo[client] = snapshot.aStageStartInfo;	
+		}
+		else if (snapshot.iLastStage == 1)
+		{
+			stagestart_info_t empty_info;
+			gA_StageStartInfo[client] = empty_info;
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 public Action Shavit_OnStart(int client)
@@ -433,12 +452,9 @@ void DoReplaySaverCallbacks(int iSteamID, int client, int style, float time, int
 
 	if (bShouldEdit) // need edit replay
 	{
-		timer_snapshot_t snapeshot;
-		Shavit_GetStageStartSnapshot(client, 0, stage, snapeshot, sizeof(snapeshot));
-
 		ArrayList aOriginalFrames = view_as<ArrayList>(CloneHandle(gA_PlayerFrames[client]));
-		iPreFrames = CaculateStageStartPreFrames(client, snapeshot.iFullTicks + gI_PlayerPrerunFrames[client], stage);
-		iStartFrame = snapeshot.iFullTicks + gI_PlayerPrerunFrames[client] - iPreFrames;
+		iPreFrames = CaculateStageStartPreFrames(client, gA_StageStartInfo[client].iFullTicks + gI_PlayerPrerunFrames[client], stage);
+		iStartFrame = gA_StageStartInfo[client].iFullTicks + gI_PlayerPrerunFrames[client] - iPreFrames;
 		iEndFrame = gI_PlayerFrames[client];
 		iFrameCount = iEndFrame - iStartFrame;
 

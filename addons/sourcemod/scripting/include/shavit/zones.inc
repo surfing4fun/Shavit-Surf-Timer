@@ -25,7 +25,7 @@
 #define _shavit_zones_included
 
 #define MAX_ZONES 128
-#define MAX_STAGES 50
+#define MAX_STAGES 64
 
 enum
 {
@@ -278,16 +278,6 @@ forward void Shavit_OnLeaveZone(int client, int type, int track, int id, int ent
 forward void Shavit_LoadZonesHere();
 
 /**
- * Called when a player's last stage changed.
- *
- * @param client                    Client index.
- * @param oldstage					Stage number before change.
- * @param newstage               	New stage number.
- * @noreturn                        
- */
-forward void Shavit_OnStageChanged(int client, int oldstage, int newstage);
-
-/**
  * Called when a player reach next stage.
  *
  * @param client                    Client index.
@@ -299,7 +289,7 @@ forward void Shavit_OnStageChanged(int client, int oldstage, int newstage);
  * 
  * @noreturn                        
  */
-forward void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage, float stageStartTime, float stageFinishTime);
+forward void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage);
 
 /**
  * Called when a player reach next cp.
@@ -414,23 +404,6 @@ native int Shavit_GetStageCount(int track);
 native int Shavit_GetCheckpointCount(int track);
 
 /**
- * Retrieve the client's current stage number.
- *
- * @param client                    Client index.
- * @return                          The client's current stage number.
- */
-native int Shavit_GetClientLastStage(int client);
-
-/**
- * Returns the zone index for the entity if available.
- *
- * @param client                    Client index.
- * @param stagenum                  Stage to set.
- * @noreturn                          
- */
-native void Shavit_SetClientLastStage(int client, int stagenum);
-
-/**
  * Returns the zone index for the entity if available.
  *
  * @param entity                    Client index.
@@ -541,51 +514,6 @@ native int Shavit_AddZone(any[] zonecache, int size = sizeof(zone_cache_t));
  */
 native void Shavit_RemoveZone(int index);
 
-/**
- * Get Client's current time of stage
- *
- * @param client		Client index
- * @param stage			The stage number
- *
- * @return				Client's current stage time.
- */
-native float Shavit_GetClientStageTime(int client, int track, int stage);
-
-/**
- * Get Client's current start time of stage
- *
- * @param client		Client index
- * @param track			Track number, should be 0.
- * @param stage			The stage number
- *
- * @return				Client's current stage start time.
- */
-native float Shavit_GetStageStartTime(int client, int track, int stage);
-
-/**
- * Get Client's current time of stage
- *
- * @param client			Client index.
- * @param track				Track number, should be 0.
- * @param stage				The stage number.
- * @param stagestartinfo	Struct stagestart_info_t to set.
- * @param size				Size of stagestart_info_t.
- *
- * @noreturn				
- */
-native void Shavit_SetStageStartInfo(int client, int track, int stage, any[] stagestartinfo, int size);
-
-/**
- * Get Client's timer snapshot of stage start
- *
- * @param client		Client index
- * @param stage			The stage number
- * @param snapshot		The time need to set
- * @param size			Size of struct timer_snapshot_t
- *
- * @noreturn				
- */
-native void Shavit_GetStageStartSnapshot(int client, int track, int stage, any[] snapshot, int size);
 
 public SharedPlugin __pl_shavit_zones =
 {
@@ -612,8 +540,6 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_Zones_DeleteMap");
 	MarkNativeAsOptional("Shavit_SetStart");
 	MarkNativeAsOptional("Shavit_DeleteSetStart");
-	MarkNativeAsOptional("Shavit_GetClientLastStage");
-	MarkNativeAsOptional("Shavit_SetClientLastStage");
 	MarkNativeAsOptional("Shavit_GetZoneTrack");
 	MarkNativeAsOptional("Shavit_GetZoneType");
 	MarkNativeAsOptional("Shavit_GetZoneID");
@@ -623,11 +549,7 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetZone");
 	MarkNativeAsOptional("Shavit_AddZone");
 	MarkNativeAsOptional("Shavit_RemoveZone");
-	MarkNativeAsOptional("Shavit_GetClientStageTime");
 	MarkNativeAsOptional("Shavit_InsideZoneStage");
-	MarkNativeAsOptional("Shavit_GetClientStageTime");
-	MarkNativeAsOptional("Shavit_SetClientStageTime");
-	MarkNativeAsOptional("Shavit_GetStageStartSnapshot");
 	MarkNativeAsOptional("Shavit_TeleportToStartZone");
 	MarkNativeAsOptional("Shavit_GetZoneUseSpeedLimit");
 }

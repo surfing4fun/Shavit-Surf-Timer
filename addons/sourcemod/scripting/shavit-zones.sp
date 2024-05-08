@@ -118,9 +118,6 @@ int gI_EntityZone[2048] = {-1, ...};
 // stage & checkpoint stuffs
 int gI_HighestStage[TRACKS_SIZE];
 int gI_HighestCheckpoint[TRACKS_SIZE];
-int gI_LastStage[MAXPLAYERS+1]; // i use it as checkpoint as well ;)
-
-timer_snapshot_t gA_StageStartTimer[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES];
 
 char gS_BeamSprite[PLATFORM_MAX_PATH];
 char gS_BeamSpriteIgnoreZ[PLATFORM_MAX_PATH];
@@ -173,7 +170,7 @@ chatstrings_t gS_ChatStrings;
 Handle gH_Forwards_EnterZone = null;
 Handle gH_Forwards_LeaveZone = null;
 Handle gH_Forwards_LoadZonesHere = null;
-Handle gH_Forwards_OnStageChanged = null;
+
 Handle gH_Forwards_ReachNextStage = null;
 Handle gH_Forwards_ReachNextCP = null;
 
@@ -200,7 +197,7 @@ bool gB_ReplayRecorder = false;
 bool gB_ReplayPlayback = false;
 bool gB_AdminMenu = false;
 
-#define CZONE_VER 'c'
+#define CZONE_VER 'b'
 // custom zone stuff
 Cookie gH_CustomZoneCookie = null;
 int gI_ZoneDisplayType[MAXPLAYERS+1][ZONETYPES_SIZE][TRACKS_SIZE];
@@ -232,8 +229,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_Zones_DeleteMap", Native_Zones_DeleteMap);
 	CreateNative("Shavit_SetStart", Native_SetStart);
 	CreateNative("Shavit_DeleteSetStart", Native_DeleteSetStart);
-	CreateNative("Shavit_GetClientLastStage", Native_GetClientLastStage);
-	CreateNative("Shavit_SetClientLastStage", Native_SetClientLastStage);
 	CreateNative("Shavit_GetZoneTrack", Native_GetZoneTrack);
 	CreateNative("Shavit_GetZoneType", Native_GetZoneType);
 	CreateNative("Shavit_GetZoneID", Native_GetZoneID);
@@ -245,10 +240,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_RemoveZone", Native_RemoveZone);
 	CreateNative("Shavit_GetMapTrackCount", Native_GetMapTrackCount);
 	CreateNative("Shavit_TeleportToStartZone", Native_TeleportToStartZone);
-	CreateNative("Shavit_GetClientStageTime", Native_GetClientStageTime);
-	CreateNative("Shavit_GetStageStartSnapshot", Native_GetStageStartSnapshot);
-	CreateNative("Shavit_SetStageStartInfo", Native_SetStageStartInfo);
-	CreateNative("Shavit_GetStageStartTime", Native_GetStageStartTime);
 	CreateNative("Shavit_InsideZoneStage", Native_InsideZoneStage);
 	CreateNative("Shavit_GetZoneUseSpeedLimit", Native_GetZoneUseSpeedLimit);
 
@@ -343,8 +334,8 @@ public void OnPluginStart()
 	gH_Forwards_EnterZone = CreateGlobalForward("Shavit_OnEnterZone", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_LeaveZone = CreateGlobalForward("Shavit_OnLeaveZone", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_LoadZonesHere = CreateGlobalForward("Shavit_LoadZonesHere", ET_Event);
-	gH_Forwards_OnStageChanged = CreateGlobalForward("Shavit_OnStageChanged", ET_Event, Param_Cell, Param_Cell, Param_Cell);
-	gH_Forwards_ReachNextStage = CreateGlobalForward("Shavit_OnReachNextStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+
+	gH_Forwards_ReachNextStage = CreateGlobalForward("Shavit_OnReachNextStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_ReachNextCP = CreateGlobalForward("Shavit_OnReachNextCP", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 
 	// cvars and stuff
@@ -828,58 +819,11 @@ public int Native_GetCheckpointCount(Handle handler, int numParas)
 	return gB_LinearMap ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack];
 }
 
-public int Native_GetClientStageTime(Handle handler, int numParas)
-{
-	int client = GetNativeCell(1);
-	int track = GetNativeCell(2);
-	int stage = GetNativeCell(3);
 
-	return view_as<int>(Shavit_GetClientTime(client) - gA_StageStartTimer[client][track][stage].fCurrentTime);
-}
 
-public int Native_GetStageStartSnapshot(Handle handler, int numParas)
-{
-	if(GetNativeCell(5) != sizeof(timer_snapshot_t))
-	{
-		return ThrowNativeError(200, "timer_snapshot_t does not match latest(got %i expected %i). Please update your includes and recompile your plugins",
-			GetNativeCell(5), sizeof(timer_snapshot_t));
-	}
 
-	int client = GetNativeCell(1);
-	int track = GetNativeCell(2);
-	int stage = GetNativeCell(3);
 
-	return SetNativeArray(4, gA_StageStartTimer[client][track][stage], sizeof(timer_snapshot_t));
-}
 
-public int Native_GetStageStartTime(Handle handler, int numParas)
-{
-	return view_as<int>(gA_StageStartTimer[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)].fCurrentTime);
-}
-
-public int Native_SetStageStartInfo(Handle handler, int numParas)
-{
-	int client = GetNativeCell(1);
-	int track = GetNativeCell(2);
-	int stage = GetNativeCell(3);
-
-	if(GetNativeCell(5) != sizeof(stagestart_info_t))
-	{
-		return ThrowNativeError(200, "stagestart_info_t does not match latest(got %i expected %i). Please update your includes and recompile your plugins",
-			GetNativeCell(5), sizeof(stagestart_info_t));
-	}
-
-	stagestart_info_t info;
-	GetNativeArray(4, info, sizeof(stagestart_info_t));
-
-	gA_StageStartTimer[client][track][stage].fCurrentTime = info.fStageStartTime;
-	gA_StageStartTimer[client][track][stage].iFullTicks = info.iFullTicks;
-	gA_StageStartTimer[client][track][stage].iFractionalTicks = info.iFractionalTicks;
-	gA_StageStartTimer[client][track][stage].iJumps = info.iJumps;
-	gA_StageStartTimer[client][track][stage].iStrafes = info.iStrafes;
-
-	return 1;
-}
 
 public int Native_Zones_DeleteMap(Handle handler, int numParams)
 {
@@ -941,17 +885,6 @@ public int Native_SetStart(Handle handler, int numParams)
 public int Native_DeleteSetStart(Handle handler, int numParams)
 {
 	DeleteSetStart(GetNativeCell(1), GetNativeCell(2));
-	return 1;
-}
-
-public int Native_GetClientLastStage(Handle plugin, int numParams)
-{
-	return gI_LastStage[GetNativeCell(1)];
-}
-
-public int Native_SetClientLastStage(Handle handler, int numParams)
-{
-	ChangeClientLastStage(GetNativeCell(1), GetNativeCell(2));
 	return 1;
 }
 
@@ -1560,22 +1493,6 @@ void FindEntitiesToHook(const char[] classname, int form)
 			}
 		}
 	}
-}
-
-public void ChangeClientLastStage(int client, int stage)
-{
-	if(gI_LastStage[client] == stage)
-	{
-		return;
-	}
-	
-	int oldstage = gI_LastStage[client];
-	gI_LastStage[client] = stage;
-	Call_StartForward(gH_Forwards_OnStageChanged);
-	Call_PushCell(client);
-	Call_PushCell(oldstage);
-	Call_PushCell(stage);
-	Call_Finish();
 }
 
 public void OnMapEnd()
@@ -2269,6 +2186,15 @@ public Action Command_DrawAllZones(int client, int args)
 	if (CanDrawAllZones(client))
 	{
 		gB_DrawAllZones[client] = !gB_DrawAllZones[client];
+		if(gB_DrawAllZones[client])
+		{
+			Shavit_PrintToChat(client, "%T", "ZoneDrawAllZoneEnabled", client, gS_ChatStrings.sVariable2, gS_ChatStrings.sText);			
+		}
+		else
+		{
+			Shavit_PrintToChat(client, "%T", "ZoneDrawAllZoneDisabled", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);			
+		}
+
 		gH_DrawAllZonesCookie.Set(client, gB_DrawAllZones[client] ? "1" : "0");
 	}
 
@@ -2631,6 +2557,9 @@ public Action Command_Stages(int client, int args)
 	}
 
 	int iStage = -1;
+
+	int iLastStage = Shavit_GetClientLastStage(client);
+
 	bool bBack = false;
 	char sCommand[16];
 	GetCmdArg(0, sCommand, 16);
@@ -2647,13 +2576,13 @@ public Action Command_Stages(int client, int args)
 		int iZoneStage;
 		bool bInsideStageZone = Shavit_InsideZoneStage(client, Shavit_GetClientTrack(client), iZoneStage);
 
-		if (bInsideStageZone && gI_LastStage[client] == iZoneStage)
+		if (bInsideStageZone && iLastStage == iZoneStage)
 		{
 			Shavit_PrintToChat(client, "%T", "StageCommandInsideStageZone", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 			return Plugin_Handled;
 		}
 
-		iStage = gI_LastStage[client];
+		iStage = iLastStage;
 		bBack = true;
 	}
 	else if ('0' <= sCommand[4] <= '9')
@@ -2686,7 +2615,7 @@ public Action Command_Stages(int client, int args)
 					Shavit_SetClientTrack(client, gA_ZoneCache[i].iTrack);
 				}
 
-				ChangeClientLastStage(client, iStage);
+				Shavit_SetClientLastStage(client, iStage);
 
 				if (!EmptyVector(gA_ZoneCache[i].fDestination))
 				{
@@ -2748,7 +2677,7 @@ public int MenuHandler_SelectStage(Menu menu, MenuAction action, int param1, int
 		menu.GetItem(param2, sInfo, 8);
 		int iIndex = StringToInt(sInfo);
 		
-		ChangeClientLastStage(param1, gA_ZoneCache[iIndex].iData);
+		Shavit_SetClientLastStage(param1, gA_ZoneCache[iIndex].iData);
 
 		Shavit_StopTimer(param1);
 		Shavit_SetClientTrack(param1, gA_ZoneCache[iIndex].iTrack);
@@ -3417,7 +3346,7 @@ Action OpenEditMenu(int client, int pos = 0)
 		char sZoneName[32];
 		GetZoneName(client, gA_ZoneCache[i].iType, sZoneName, sizeof(sZoneName));
 
-		if (gA_ZoneCache[i].iType == Zone_CustomSpeedLimit || gA_ZoneCache[i].iType == Zone_Stage || gA_ZoneCache[i].iType == Zone_Airaccelerate)
+		if (gA_ZoneCache[i].iType == Zone_CustomSpeedLimit || gA_ZoneCache[i].iType == Zone_Stage || gA_ZoneCache[i].iType == Zone_Airaccelerate || gA_ZoneCache[i].iType == Zone_Checkpoint)
 		{
 			FormatEx(sDisplay, sizeof(sDisplay), "#%d - %s %d (%s)%s", (i + 1), sZoneName, gA_ZoneCache[i].iData, sTrack, sTarget);
 		}
@@ -3876,7 +3805,8 @@ public void CallOnZoneDeleted(int type, int track, int data, bool all)
 		{
 			for(int i = 0; i < MaxClients; i++)
 			{
-				if(Shavit_GetClientTrack(i) == Track_Main && Shavit_IsOnlyStageMode(i) && (gI_LastStage[i] == data || gI_LastStage[i] + 1 == data))
+				int iLastStage = Shavit_GetClientLastStage(i);
+				if(Shavit_GetClientTrack(i) == Track_Main && Shavit_IsOnlyStageMode(i) && (iLastStage == data || iLastStage + 1 == data))
 				{
 					GetZoneName(i, type, sZoneName, 32);
 					FormatEx(sTrack, 32, "%T %d", "StageText", i, data);
@@ -4397,7 +4327,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 				}
 				else if(gI_MapStep[client] == 2)
 				{
-					origin[2] = vPlayerOrigin[2];
+					origin[2] = gA_EditCache[client].fCorner1[2];
 
 					if (origin[0] != gA_EditCache[client].fCorner1[0] && origin[1] != gA_EditCache[client].fCorner1[1] && !InStartOrEndZone(gA_EditCache[client].fCorner1, origin, gA_EditCache[client].iTrack, gA_EditCache[client].iType))
 					{
@@ -4694,7 +4624,7 @@ void CreateEditMenu(int client, bool autostage=false)
 			gA_EditCache[client].iData = gI_HighestCheckpoint[gA_EditCache[client].iTrack] + 1;
 		}
 
-		FormatEx(sMenuItem, 64, "%T", "ZoneSetStage", client, gA_EditCache[client].iData);
+		FormatEx(sMenuItem, 64, "%T", "ZoneSetCheckpoint", client, gA_EditCache[client].iData);
 		menu.AddItem("datafromchat", sMenuItem);
 	}
 	else if (gA_EditCache[client].iType == Zone_Airaccelerate)
@@ -5079,9 +5009,13 @@ public Action Timer_Draw(Handle Timer, any data)
 		gV_WallSnap[client] = origin;
 	}
 
-	if (gI_MapStep[client] == 1 || gI_MapStep[client] == 2)// || gA_EditCache[client].fCorner2[0] == 0.0)
+	if (gI_MapStep[client] == 1)// || gA_EditCache[client].fCorner2[0] == 0.0)
 	{
 		origin[2] = vPlayerOrigin[2];
+	}
+	else if(gI_MapStep[client] == 2)
+	{
+		origin[2] = gA_EditCache[client].fCorner1[2];
 	}
 	else if(gI_MapStep[client] == 3)
 	{
@@ -5108,7 +5042,7 @@ public Action Timer_Draw(Handle Timer, any data)
 
 		int colors[4];
 		GetZoneColors(colors, type, track, 125);
-		DrawZone(points, colors, 0.1, gA_ZoneSettings[type][track].fWidth, false, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, track, type, gA_ZoneSettings[type][track].iSpeed, false, 0, gI_AdjustAxis[client]);
+		DrawZone(points, colors, 0.1, 0.3, false, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, track, type, gA_ZoneSettings[type][track].iSpeed, false, 0, gI_AdjustAxis[client]);
 
 		if (gA_EditCache[client].iType == Zone_Teleport && !EmptyVector(gA_EditCache[client].fDestination))
 		{
@@ -5119,8 +5053,7 @@ public Action Timer_Draw(Handle Timer, any data)
 
 	if(gI_MapStep[client] != 4 && !EmptyVector(origin))
 	{
-		TE_SetupBeamPoints(vPlayerOrigin, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 
-		gA_ZoneSettings[type][track].fWidth, gA_ZoneSettings[type][track].fWidth, 0, 0.0, {255, 255, 255, 75}, 0);
+		TE_SetupBeamPoints(vPlayerOrigin, origin, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 0.3, 0.3, 0, 0.0, {255, 255, 255, 75}, 0);
 		TE_SendToAll(0.0);
 
 		// visualize grid snap
@@ -5135,8 +5068,7 @@ public Action Timer_Draw(Handle Timer, any data)
 			snap2 = origin;
 			snap2[i] += gI_GridSnap[client];
 
-			TE_SetupBeamPoints(snap1, snap2, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 
-			gA_ZoneSettings[type][track].fWidth, gA_ZoneSettings[type][track].fWidth, 0, 0.0, {255, 255, 255, 75}, 0);
+			TE_SetupBeamPoints(snap1, snap2, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 0.3, 0.3, 0, 0.0, {255, 255, 255, 75}, 0);
 			TE_SendToAll(0.0);
 		}
 	}
@@ -5216,7 +5148,7 @@ void DrawZone(float points[8][3], int color[4], float life, float width, bool fl
 
 		for (int j = 0; j < 12; j++)
 		{
-			float actual_width = (j >= 8) ? 0.3 : 0.4;
+			float actual_width = (j >= 8) ? (gA_ZoneSettings[type][track].fWidth * 0.65) : gA_ZoneSettings[type][track].fWidth;
 			char x = magic[editaxis*12+j];
 			TE_SetupBeamPoints(points[x >> 4], points[x & 7], beam, halo, 0, 0, life, actual_width, actual_width, 0, 0.0, clrs[((j >= 8) ? ZoneColor_White : ZoneColor_Green) - 1], speed);
 			TE_Send(clients, count, 0.0);
@@ -5353,7 +5285,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 		if (Shavit_IsOnlyStageMode(client) && !tostartzone)
 		{
-			iIndex = GetStageZoneIndex(track, gI_LastStage[client]);
+			iIndex = GetStageZoneIndex(track, Shavit_GetClientLastStage(client));
 			
 			if(iIndex != -1)
 			{
@@ -5731,9 +5663,10 @@ public void StartTouchPost(int entity, int other)
 		{
 			if (!bReplay && status == Timer_Running && Shavit_GetClientTrack(other) == track)
 			{
-				if(gI_LastStage[other] == Shavit_GetStageCount(track) && Shavit_GetStageCount(track) > 1)
+				int iLastStage = Shavit_GetClientLastStage(other);
+				if(iLastStage == Shavit_GetStageCount(track) && Shavit_GetStageCount(track) > 1)
 				{
-					Shavit_FinishStage(other, track, gI_LastStage[other]);
+					Shavit_FinishStage(other, track, iLastStage);
 				}
 
 				if(!Shavit_IsOnlyStageMode(other) || track != Track_Main)
@@ -5751,20 +5684,19 @@ public void StartTouchPost(int entity, int other)
 			{
 				if (status == Timer_Running && Shavit_GetClientTrack(other) == track)
 				{
-					if (stage > gI_LastStage[other])
+					int iLastStage = Shavit_GetClientLastStage(other);
+					if (stage > iLastStage)
 					{
 						Call_StartForward(gH_Forwards_ReachNextStage);
 						Call_PushCell(other);
 						Call_PushCell(track);
-						Call_PushCell(gI_LastStage[other]);
+						Call_PushCell(iLastStage);
 						Call_PushCell(stage);
-						Call_PushCell(gA_StageStartTimer[other][track][gI_LastStage[other]].fCurrentTime);
-						Call_PushCell(Shavit_GetClientStageTime(other, track, gI_LastStage[other]));
 						Call_Finish();
 
-						if(stage == gI_LastStage[other] + 1)
+						if(stage == iLastStage + 1)
 						{
-							Shavit_FinishStage(other, track, gI_LastStage[other]);
+							Shavit_FinishStage(other, track, iLastStage);
 						}
 
 						if (!Shavit_IsOnlyStageMode(other))
@@ -5776,7 +5708,7 @@ public void StartTouchPost(int entity, int other)
 							Call_PushCell(Shavit_GetClientTime(other));
 							Call_Finish();
 
-							ChangeClientLastStage(other, stage);
+							Shavit_SetClientLastStage(other, stage);
 						}
 					}
 				}
@@ -5786,16 +5718,15 @@ public void StartTouchPost(int entity, int other)
 		case Zone_Checkpoint:
 		{
 			int checkpoint = gA_ZoneCache[zone].iData;
+			int iLastCP = Shavit_GetClientLastStage(other);
 	
 			// There are conflict between checkpoint zone and stage zone 
 			// Because stage zone are used as checkpoint as well
 			// So i decided to block checkpoint zone if there are stage zone exist
 			if(gB_LinearMap && !bReplay && status == Timer_Running && Shavit_GetClientTrack(other) == track && !Shavit_IsOnlyStageMode(other))
 			{
-				PrintToChatAll("[Debug] cp: %d, laststage: %d", checkpoint, gI_LastStage[other]);
-				if (checkpoint > gI_LastStage[other])
+				if (checkpoint > iLastCP)
 				{
-					PrintToChatAll("[Debug] inside here");
 					Call_StartForward(gH_Forwards_ReachNextCP);
 					Call_PushCell(other);
 					Call_PushCell(track);
@@ -5803,7 +5734,7 @@ public void StartTouchPost(int entity, int other)
 					Call_PushCell(Shavit_GetClientTime(other));
 					Call_Finish();
 
-					gI_LastStage[other] = checkpoint;
+					Shavit_SetClientLastStage(other, checkpoint);
 				}
 			}
 		}
@@ -5958,9 +5889,7 @@ public void TouchPost(int entity, int other)
 
 			if(Shavit_GetStageCount(track) > 1)
 			{
-				timer_snapshot_t snapshot;
-				Shavit_SaveSnapshot(other, snapshot, sizeof(snapshot));
-				gA_StageStartTimer[other][track][1] = snapshot;
+				Shavit_StartStageTimer(other, track, 1);
 			}
 
 			if(Shavit_IsOnlyStageMode(other) && !Shavit_IsClientRepeat(other))
@@ -5970,37 +5899,14 @@ public void TouchPost(int entity, int other)
 		}
 		case Zone_Stage:
 		{
-			// PrintToChatAll("[DEBUG] Usage of speedlimit in current stage zone: %s", gA_ZoneCache[zone].bUseSpeedLimit ? "T":"F");
-
 			if (GetEntPropEnt(other, Prop_Send, "m_hGroundEntity") == -1 && !Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(other), "startinair"))
 			{
 				return;
 			}
 
 			int num = gA_ZoneCache[zone].iData;
-			TimerStatus status = Shavit_GetTimerStatus(other);
-			bool bOnlyStageMode = Shavit_IsOnlyStageMode(other);
-			
-			if(status == Timer_Stopped && bOnlyStageMode)
-			{
-				Shavit_StartTimer(other, track);
-			}
-			else if(status == Timer_Running)
-			{
-				if (bOnlyStageMode)
-				{
-					if(num <= gI_LastStage[other])
-					{
-						Shavit_StartTimer(other, track);						
-					}
-				}
-				else if(gI_LastStage[other] == num)
-				{
-					timer_snapshot_t snapshot;
-					Shavit_SaveSnapshot(other, snapshot, sizeof(snapshot));
-					gA_StageStartTimer[other][track][num] = snapshot;
-				}
-			}
+
+			Shavit_StartStageTimer(other, track, num);
 		}
 		case Zone_Respawn:
 		{

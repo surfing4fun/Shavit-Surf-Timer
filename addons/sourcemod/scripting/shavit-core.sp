@@ -81,6 +81,7 @@ Handle gH_Forwards_OnResume = null;
 Handle gH_Forwards_OnStyleCommandPre = null;
 Handle gH_Forwards_OnStyleChanged = null;
 Handle gH_Forwards_OnTrackChanged = null;
+Handle gH_Forwards_OnStageChanged = null;
 Handle gH_Forwards_OnChatConfigLoaded = null;
 Handle gH_Forwards_OnUserCmdPre = null;
 Handle gH_Forwards_OnTimeIncrement = null;
@@ -130,6 +131,9 @@ bool gB_ReplayPlayback = false;
 bool gB_Rankings = false;
 bool gB_HUD = false;
 bool gB_AdminMenu = false;
+
+// use to clear players checkpoint times
+float empty_times[MAX_STAGES] = {-1.0, ...};
 
 TopMenu gH_AdminMenu = null;
 TopMenuObject gH_TimerCommands = INVALID_TOPMENUOBJECT;
@@ -212,8 +216,15 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetChatStringsStruct", Native_GetChatStringsStruct);
 	CreateNative("Shavit_GetClientJumps", Native_GetClientJumps);
 	CreateNative("Shavit_GetClientTime", Native_GetClientTime);
+	CreateNative("Shavit_GetClientStageTime", Native_GetClientStageTime);
 	CreateNative("Shavit_GetClientTrack", Native_GetClientTrack);
 	CreateNative("Shavit_SetClientTrack", Native_SetClientTrack);
+	CreateNative("Shavit_GetClientLastStage", Native_GetClientLastStage);
+	CreateNative("Shavit_SetClientLastStage", Native_SetClientLastStage);
+	CreateNative("Shavit_GetClientCPTimes", Native_GetClientCPTimes);
+	CreateNative("Shavit_SetClientCPTimes", Native_SetClientCPTimes);
+	CreateNative("Shavit_GetClientCPTime", Native_GetClientCPTime);
+	CreateNative("Shavit_SetClientCPTime", Native_SetClientCPTime);
 	CreateNative("Shavit_GetDatabase", Native_GetDatabase);
 	CreateNative("Shavit_GetPerfectJumps", Native_GetPerfectJumps);
 	CreateNative("Shavit_GetStrafeCount", Native_GetStrafeCount);
@@ -235,6 +246,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_SaveSnapshot", Native_SaveSnapshot);
 	CreateNative("Shavit_SetPracticeMode", Native_SetPracticeMode);
 	CreateNative("Shavit_StartTimer", Native_StartTimer);
+	CreateNative("Shavit_StartStageTimer", Native_StartStageTimer);
 	CreateNative("Shavit_StopChatSound", Native_StopChatSound);
 	CreateNative("Shavit_StopTimer", Native_StopTimer);
 	CreateNative("Shavit_GetClientTimescale", Native_GetClientTimescale);
@@ -269,7 +281,7 @@ public void OnPluginStart()
 	gH_Forwards_StopPre = CreateGlobalForward("Shavit_OnStopPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_FinishPre = CreateGlobalForward("Shavit_OnFinishPre", ET_Hook, Param_Cell, Param_Array);
 	gH_Forwards_Finish = CreateGlobalForward("Shavit_OnFinish", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-	gH_Forwards_FinishStagePre = CreateGlobalForward("Shavit_OnFinishStagePre", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_FinishStagePre = CreateGlobalForward("Shavit_OnFinishStagePre", ET_Event, Param_Cell, Param_Array);
 	gH_Forwards_FinishStage = CreateGlobalForward("Shavit_OnFinishStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnRestartPre = CreateGlobalForward("Shavit_OnRestartPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_OnRestart = CreateGlobalForward("Shavit_OnRestart", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
@@ -280,6 +292,7 @@ public void OnPluginStart()
 	gH_Forwards_OnStyleCommandPre = CreateGlobalForward("Shavit_OnStyleCommandPre", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnStyleChanged = CreateGlobalForward("Shavit_OnStyleChanged", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnTrackChanged = CreateGlobalForward("Shavit_OnTrackChanged", ET_Event, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_OnStageChanged = CreateGlobalForward("Shavit_OnStageChanged", ET_Event, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnChatConfigLoaded = CreateGlobalForward("Shavit_OnChatConfigLoaded", ET_Event);
 	gH_Forwards_OnUserCmdPre = CreateGlobalForward("Shavit_OnUserCmdPre", ET_Event, Param_Cell, Param_CellByRef, Param_CellByRef, Param_Array, Param_Array, Param_Cell, Param_Cell, Param_Cell, Param_Array, Param_Array);
 	gH_Forwards_OnTimeIncrement = CreateGlobalForward("Shavit_OnTimeIncrement", ET_Event, Param_Cell, Param_Array, Param_CellByRef, Param_Array);
@@ -911,7 +924,7 @@ public Action Command_TogglePause(int client, int args)
 	int iZoneStage;
 	int iTrack = Shavit_GetClientTrack(client);
 	bool InsideStage = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
-	if((Shavit_IsOnlyStageMode(client) && InsideStage && iZoneStage == Shavit_GetClientLastStage(client)))
+	if((Shavit_IsOnlyStageMode(client) && InsideStage && iZoneStage == gA_Timers[client].iLastStage))
 	{
 		Shavit_PrintToChat(client, "%T", "PauseStageStartZone", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 		return Plugin_Handled;
@@ -1010,7 +1023,7 @@ public void CallOnRepeatChanged(int client, bool old_value, bool new_value)
 	{
 		if(Shavit_GetStageCount(Track_Main) > 1)
 		{
-			FormatEx(sTrack, 32, "%T %d", "StageText", client, Shavit_GetClientLastStage(client));			
+			FormatEx(sTrack, 32, "%T %d", "StageText", client, gA_Timers[client].iLastStage);			
 		}
 		else
 		{
@@ -1956,6 +1969,13 @@ public int Native_GetClientTime(Handle handler, int numParams)
 	return view_as<int>(gA_Timers[GetNativeCell(1)].fCurrentTime);
 }
 
+public int Native_GetClientStageTime(Handle handler, int numParas)
+{
+	int client = GetNativeCell(1);
+
+	return view_as<int>(gA_Timers[client].fCurrentTime - gA_Timers[client].aStageStartInfo.fStageStartTime);
+}
+
 public int Native_GetClientTrack(Handle handler, int numParams)
 {
 	return gA_Timers[GetNativeCell(1)].iTimerTrack;
@@ -1998,6 +2018,36 @@ public int Native_StartTimer(Handle handler, int numParams)
 {
 	StartTimer(GetNativeCell(1), GetNativeCell(2));
 	return 0;
+}
+
+public int Native_StartStageTimer(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+	int track = GetNativeCell(2);
+	int stage = GetNativeCell(3);
+
+	if(GetTimerStatus(client) == Timer_Stopped && gA_Timers[client].bOnlyStageMode)
+	{
+		StartTimer(client, track);
+	}
+	else if(GetTimerStatus(client) == Timer_Running)
+	{
+		if (gA_Timers[client].bOnlyStageMode)
+		{
+			if(stage <= gA_Timers[client].iLastStage)
+			{
+				StartTimer(client, track);
+			}
+		}
+		else if(gA_Timers[client].iLastStage == stage)
+		{
+			gA_Timers[client].aStageStartInfo.fStageStartTime = gA_Timers[client].fCurrentTime;
+			gA_Timers[client].aStageStartInfo.iFractionalTicks = gA_Timers[client].iFractionalTicks;
+			gA_Timers[client].aStageStartInfo.iFullTicks = gA_Timers[client].iFullTicks;
+			gA_Timers[client].aStageStartInfo.iJumps = gA_Timers[client].iJumps;
+			gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
+		}
+	}
 }
 
 public int Native_StopTimer(Handle handler, int numParams)
@@ -2256,29 +2306,15 @@ public int Native_FinishStage(Handle handler, int numParams)
 
 	if(!gA_Timers[client].bOnlyStageMode)
 	{
-		timer_snapshot_t start;
-		Shavit_GetStageStartSnapshot(client, track, stage, start, sizeof(start));
-
-		end.fCurrentTime = Shavit_GetClientStageTime(client, track, stage);
-		end.iJumps -= start.iJumps;
-		end.iStrafes -= start.iStrafes;
+		end.fCurrentTime -= end.aStageStartInfo.fStageStartTime;
+		end.iJumps -= end.aStageStartInfo.iJumps;
+		end.iStrafes -= end.aStageStartInfo.iStrafes;
 	}
 
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_FinishStagePre);
 	Call_PushCell(client);
-	Call_PushCell(track);
-	Call_PushCell(end.bsStyle);
-	Call_PushCell(stage);
-	Call_PushCell(end.fCurrentTime);
-	Call_PushCell(Shavit_GetClientStagePB(client, end.bsStyle, stage));
-	Call_PushCell(end.iJumps);
-	Call_PushCell(end.iStrafes);
-	Call_PushCell(CalcSync(end));
-	Call_PushCell(CalcPerfs(end));
-	Call_PushCell(end.fAvgVelocity);
-	Call_PushCell(end.fMaxVelocity);
-	Call_PushCell(timestamp);	//13 total
+	Call_PushArrayEx(end, sizeof(timer_snapshot_t), SM_PARAM_COPYBACK);
 	Call_Finish(result);
 
 	if(result != Plugin_Continue)
@@ -2672,16 +2708,7 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 	}
 
 	//Added
-	if(Shavit_GetClientLastStage(client) != snapshot.iLastStage)
-	{
-		Shavit_SetClientLastStage(client, snapshot.iLastStage);
-	}
-
-	Shavit_SetStageStartInfo(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.aStageStartInfo, sizeof(stagestart_info_t));
 	Shavit_SetStageTimeValid(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.bStageTimeValid);
-	Shavit_SetOnlyStageMode(client, snapshot.bOnlyStageMode);
-
-	Shavit_SetClientCPTime(client, snapshot.fCPTime);
 
 	float oldts = gA_Timers[client].fTimescale;
 
@@ -2695,6 +2722,7 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 
 	return 1;
 }
+
 
 public int Native_LogMessage(Handle plugin, int numParams)
 {
@@ -2747,6 +2775,34 @@ public int Native_SetClientTimescale(Handle handler, int numParams)
 	return 1;
 }
 
+public int Native_GetClientCPTimes(Handle plugin, int numParams)
+{
+	return SetNativeArray(2, gA_Timers[GetNativeCell(1)].fCPTimes, MAX_STAGES);
+}
+
+public int Native_SetClientCPTimes(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float times[MAX_STAGES];
+
+	GetNativeArray(2, times, MAX_STAGES);
+	gA_Timers[client].fCPTimes = times;
+
+	return 0;
+}
+
+public int Native_GetClientCPTime(Handle plugin, int numParams)
+{
+	return view_as<int>(gA_Timers[GetNativeCell(1)].fCPTimes[GetNativeCell(2)]);
+}
+
+public int Native_SetClientCPTime(Handle plugin, int numParams)
+{
+	gA_Timers[GetNativeCell(1)].fCPTimes[GetNativeCell(2)] = GetNativeCell(3);
+
+	return 0;
+}
+
 public any Native_GetAvgVelocity(Handle plugin, int numParams)
 {
 	return gA_Timers[GetNativeCell(1)].fAvgVelocity;
@@ -2767,6 +2823,33 @@ public any Native_SetMaxVelocity(Handle plugin, int numParams)
 {
 	gA_Timers[GetNativeCell(1)].fMaxVelocity = GetNativeCell(2);
 	return 1;
+}
+
+public int Native_GetClientLastStage(Handle plugin, int numParams)
+{
+	return gA_Timers[GetNativeCell(1)].iLastStage;
+}
+
+public int Native_SetClientLastStage(Handle handler, int numParams)
+{
+	ChangeClientLastStage(GetNativeCell(1), GetNativeCell(2));
+	return 1;
+}
+
+public void ChangeClientLastStage(int client, int stage)
+{
+	if(gA_Timers[client].iLastStage == stage)
+	{
+		return;
+	}
+	
+	int oldstage = gA_Timers[client].iLastStage;
+	gA_Timers[client].iLastStage = stage;
+	Call_StartForward(gH_Forwards_OnStageChanged);
+	Call_PushCell(client);
+	Call_PushCell(oldstage);
+	Call_PushCell(stage);
+	Call_Finish();
 }
 
 public any Native_ShouldProcessFrame(Handle plugin, int numParams)
@@ -2857,11 +2940,6 @@ void StartTimer(int client, int track)
 			Call_PushCell(track);
 			Call_Finish(result);
 
-			if (gA_Timers[client].bClientPaused)
-			{
-				//SetEntityMoveType(client, MOVETYPE_WALK);
-			}
-
 			gA_Timers[client].iZoneIncrement = 0;
 			gA_Timers[client].iFullTicks = 0;
 			gA_Timers[client].iFractionalTicks = 0;
@@ -2888,12 +2966,16 @@ void StartTimer(int client, int track)
 			if (gA_Timers[client].bOnlyStageMode)
 			{
 				Shavit_InsideZoneStage(client, track, gA_Timers[client].iLastStage);
-				Shavit_SetClientLastStage(client, gA_Timers[client].iLastStage);
 			}
 			else
 			{
 				gA_Timers[client].iLastStage = Shavit_GetStageCount(track) > 2 ? 1 : 0; // i use it as last checkpoint number when the map is linear.
-				Shavit_SetClientLastStage(client, gA_Timers[client].iLastStage);
+				
+				//set it -1.0 to make cptime dont need to reset of often
+				if(gA_Timers[client].fCPTimes[1] != -1.0)	
+				{
+					gA_Timers[client].fCPTimes = empty_times;					
+				}
 			}
 
 			gA_Timers[client].iTimerTrack = track;
@@ -3583,21 +3665,6 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	snapshot.fServerTime = GetEngineTime();
 	snapshot.fTimescale = (gA_Timers[client].fTimescale > 0.0) ? gA_Timers[client].fTimescale : 1.0;
 	
-	snapshot.iLastStage = Shavit_GetClientLastStage(client);
-
-	Shavit_GetClientCPTime(client, snapshot.fCPTime);
-
-	timer_snapshot_t stagestartsnapshot;
-	Shavit_GetStageStartSnapshot(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage, stagestartsnapshot, sizeof(timer_snapshot_t));
-
-	stagestart_info_t info;
-	info.fStageStartTime = stagestartsnapshot.fCurrentTime;
-	info.iFullTicks = stagestartsnapshot.iFullTicks;
-	info.iFractionalTicks = stagestartsnapshot.iFractionalTicks;
-	info.iJumps = stagestartsnapshot.iJumps;
-	info.iStrafes = stagestartsnapshot.iStrafes;
-	snapshot.aStageStartInfo = info;
-
 	snapshot.bStageTimeValid = Shavit_StageTimeValid(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
 	//snapshot.iLandingTick = ?????; // TODO: Think about handling segmented scroll? /shrug
 }
@@ -3663,7 +3730,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	
 	bool bInsideStageZone = Shavit_InsideZoneStage(client, gA_Timers[client].iTimerTrack, iZoneStage);
 	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, gA_Timers[client].iTimerTrack) || 
-						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == gA_Timers[client].iLastStage);
 
 	if (gA_Timers[client].bTimerEnabled && !gA_Timers[client].bClientPaused)
 	{

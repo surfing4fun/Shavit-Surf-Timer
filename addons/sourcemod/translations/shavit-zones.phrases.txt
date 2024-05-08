@@ -93,6 +93,16 @@
 		"#format"	"{1:s},{2:s}"
 		"en"		"You {1}cannot{2} setup mapzones when you're dead."
 	}
+	"ZoneDrawAllZoneEnabled"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"Draw all zones {1}enabled{2}."
+	}
+	"ZoneDrawAllZoneDisabled"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"Draw all zones {1}disabled{2}."		
+	}
 	"ZonesNotSQL"
 	{
 		"#format"   "{1:s},{2:s}"
@@ -307,6 +317,11 @@
 	{
 		"#format"	"{1:s}"
 		"en"		"[{1}] Use prespeed limit"
+	}
+	"ZoneSetCheckpoint"
+	{
+		"#format"	"{1:d}"
+		"en"		"Checkpoint: {1}"
 	}
 	"ZoneSetGravity"
 	{

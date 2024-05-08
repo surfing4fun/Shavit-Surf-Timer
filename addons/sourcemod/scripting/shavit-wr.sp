@@ -129,7 +129,6 @@ ArrayList gA_StageCP_PB[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE]; // player's bes
 //stagetimewrcp_t gA_StageWRCP[STYLE_LIMIT][TRACKS_SIZE];
 // stage times.
 
-float gA_StageReachedTimes[MAXPLAYERS+1][MAX_STAGES];  // player's current run times of reached a stage
 bool gA_StageTimeValid[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES];
 
 Menu gH_PBMenu[MAXPLAYERS+1];
@@ -164,8 +163,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetStageCPPB", Native_GetStageCPPB);
 	CreateNative("Shavit_StageTimeValid", Native_StageTimeValid);
 	CreateNative("Shavit_SetStageTimeValid", Native_SetStageTimeValid);
-	CreateNative("Shavit_GetClientCPTime", Native_GetClientCPTime);
-	CreateNative("Shavit_SetClientCPTime", Native_SetClientCPTime);
 	CreateNative("Shavit_GetStageWorldRecord", Native_GetStageWorldRecord);
 	CreateNative("Shavit_GetStageWRName", Native_GetStageWRName);
 	CreateNative("Shavit_GetStageWRRecordID", Native_GetStageWRRecordID);
@@ -213,7 +210,6 @@ public void OnPluginStart()
 	// player commands
 	RegConsoleCmd("sm_wr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_wr [map]");
 	RegConsoleCmd("sm_worldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_worldrecord [map]");
-	RegConsoleCmd("sm_wrtest", Command_WRTest);
 
 	RegConsoleCmd("sm_cpwr", Command_WorldRecord);
 	RegConsoleCmd("sm_swr", Command_WorldRecord);
@@ -350,16 +346,6 @@ public void OnLibraryAdded(const char[] name)
 	{
 		gB_AdminMenu = true;
 	}
-}
-
-public Action Command_WRTest(int client, int args)
-{
-	for(int i = 1; i < 15; i++)
-	{
-		PrintToChatAll("[DEBUG] CP %d | Time. Time: %.2f", i, gA_StageReachedTimes[client][i]);
-	}
-
-	return Plugin_Handled;
 }
 
 public void OnAllPluginsLoaded()
@@ -1251,21 +1237,6 @@ public int Native_DeleteWR(Handle handle, int numParams)
 
 	DeleteWR(style, track, map, steamid, recordid, delete_sql, update_cache);
 	return 1;
-}
-
-public int Native_GetClientCPTime(Handle plugin, int numParams)
-{
-	return SetNativeArray(2, gA_StageReachedTimes[GetNativeCell(1)], MAX_STAGES);
-}
-
-public int Native_SetClientCPTime(Handle plugin, int numParams)
-{
-	int client = GetNativeCell(1);
-	float cpTimes[MAX_STAGES];
-	GetNativeArray(2, cpTimes, MAX_STAGES);
-
-	gA_StageReachedTimes[client] = cpTimes;
-	return 0;
 }
 
 public int Native_GetStageCPWR(Handle plugin, int numParams)
@@ -3844,8 +3815,13 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 }
 
 
-public Action Shavit_OnFinishStagePre(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp)
+public Action Shavit_OnFinishStagePre(int client, timer_snapshot_t snapshot)
 {
+	int track = snapshot.iTimerTrack;
+	int style = snapshot.bsStyle;
+	int stage = snapshot.iLastStage;
+	float time = snapshot.fCurrentTime - snapshot.aStageStartInfo.fStageStartTime;
+
 	if (!gA_StageTimeValid[client][track][stage])
 	{
 		char sMessage[255];
@@ -3994,10 +3970,10 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 		for (int i = 0; i < MAX_STAGES; i++)
 		{
-			float fTime = gA_StageReachedTimes[client][i];
+			float fTime = Shavit_GetClientCPTime(client, i);
 			gA_StageCP_WR[style][track][i] = fTime;
 
-			if (fTime == 0.0)
+			if (fTime <= 0.0)
 			{
 				continue;
 			}
@@ -4007,8 +3983,6 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 				"INSERT INTO `%sstagecpwr` (`style`, `track`, `map`, `auth`, `time`, `stage`) VALUES (%d, %d, '%s', %d, %f, %d);",
 				gS_MySQLPrefix, style, track, gS_Map, iSteamID, fTime, i
 			);
-
-			PrintToServer("[DEBUG] %s", query);
 
 			AddQueryLog(trans, query);
 		}
@@ -4294,17 +4268,15 @@ public void UpdateClientStagePBCacheOnFinish(int client, int style, int overwrit
 
 		for (int i = 0; i < MAX_STAGES; i++)
 		{
-			float fTime = gA_StageReachedTimes[client][i];
+			float fTime = Shavit_GetClientCPTime(client, i);
 			if(i > cpCount)
 			{
-				PrintToServer("[DEBUG] out of cpcount: %d / %d", i, cpCount);
 				break;
 			}
 
-			PrintToServer("[DEBUG] set time inside pb arraylist, %.2f", fTime);
 			gA_StageCP_PB[client][style][track].Set(i, fTime);
 
-			if (fTime == 0.0)
+			if (fTime <= 0.0)
 			{
 				continue;
 			}
@@ -4313,8 +4285,6 @@ public void UpdateClientStagePBCacheOnFinish(int client, int style, int overwrit
 				// "INSERT INTO `%sstagetimespb` (`style`, `track`, `map`, `auth`, `time`, `stage`) VALUES (%d, %d, '%s', %d, %f, %d);",
 				"INSERT INTO `%sstagecppb` (`style`, `track`, `map`, `auth`, `time`, `stage`) VALUES (%d, %d, '%s', %d, %f, %d);",
 				gS_MySQLPrefix, style, track, gS_Map, iSteamID, fTime, i);
-
-			PrintToServer("[DEBUG] %s", sQuery);
 
 			AddQueryLog(trans, sQuery);
 		}
@@ -4443,7 +4413,7 @@ public void SQL_UpdateStageLeaderboards_Callback(Database db, DBResultSet result
 	Call_Finish();
 }
 
-public void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage, float stageStartTime, float stageFinishTime)
+public void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage)
 {
 
 }
@@ -4452,8 +4422,7 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 {
 	if(!Shavit_IsPracticeMode(client))
 	{
-		PrintToChatAll("[DEBUG] Assign time to global here! %.2f", time);
-		gA_StageReachedTimes[client][checkpoint] = time;
+		Shavit_SetClientCPTime(client, checkpoint, time);
 	}
 
 	int style = Shavit_GetBhopStyle(client);
@@ -4572,13 +4541,6 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 	}
 }
 
-public Action Shavit_OnStart(int client, int track)
-{
-	float empty_times[MAX_STAGES];
-	gA_StageReachedTimes[client] = empty_times;
-
-	return Plugin_Continue;
-}
 
 int GetRecordAmount(int style, int track)
 {
