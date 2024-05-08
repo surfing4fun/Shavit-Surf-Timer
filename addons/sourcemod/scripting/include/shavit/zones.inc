@@ -31,6 +31,8 @@ enum
 {
 	Zone_Start, 			// starts timer
 	Zone_End, 				// stops timer
+	Zone_Stage,				// as a start zone in stageed map
+	Zone_Checkpoint,		// shows time when entering zone	
 	Zone_Respawn, 			// respawns the player
 	Zone_Stop,				// stops the player's timer
 	Zone_Slay,				// slays (kills) players which come to this zone
@@ -41,7 +43,6 @@ enum
 	Zone_Easybhop,			// forces easybhop whether if the player is in non-easy styles or if the server has different settings
 	Zone_Slide,				// allows players to slide, in order to fix parts like the 5th stage of bhop_arcane
 	Zone_Airaccelerate,		// custom sv_airaccelerate inside this,
-	Zone_Stage,				// shows time when entering zone
 	Zone_NoTimerGravity,	// prevents the timer from setting gravity while inside this zone
 	Zone_Gravity,			// lets you set a specific gravity while inside this zone
 	Zone_Speedmod,			// creates a player_speedmod
@@ -123,6 +124,8 @@ stock void GetZoneName(int client, int zoneType, char[] output, int size)
 	static char sTranslationStrings[ZONETYPES_SIZE][] = {
 		"Zone_Start",
 		"Zone_End",
+		"Zone_Stage",	
+		"Zone_Checkpoint",
 		"Zone_Respawn",
 		"Zone_Stop",
 		"Zone_Slay",
@@ -133,7 +136,6 @@ stock void GetZoneName(int client, int zoneType, char[] output, int size)
 		"Zone_Easybhop",
 		"Zone_Slide",
 		"Zone_Airaccelerate",
-		"Zone_Stage",
 		"Zone_NoTimerGravity",
 		"Zone_Gravity",
 		"Zone_Speedmod",
@@ -286,7 +288,7 @@ forward void Shavit_LoadZonesHere();
 forward void Shavit_OnStageChanged(int client, int oldstage, int newstage);
 
 /**
- * Called when a player leaves a zone.
+ * Called when a player reach next stage.
  *
  * @param client                    Client index.
  * @param track						Track index.
@@ -298,6 +300,18 @@ forward void Shavit_OnStageChanged(int client, int oldstage, int newstage);
  * @noreturn                        
  */
 forward void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage, float stageStartTime, float stageFinishTime);
+
+/**
+ * Called when a player reach next cp.
+ *
+ * @param client                    Client index.
+ * @param track						Track index.
+ * @param checkpoint				Checkpoint number of zone which client entered.
+ * @param time						Client's current time.
+ * 
+ * @noreturn                        
+ */
+forward void Shavit_OnReachNextCP(int client, int track, int checkpoint, float time);
 
 /**
  * Checks if a mapzone exists.
@@ -390,6 +404,14 @@ native bool Shavit_IsClientCreatingZone(int client);
  * @return                          Number of stages.
  */
 native int Shavit_GetStageCount(int track);
+
+/**
+ * Retrieve the highest checkpoint number for a given track.
+ *
+ * @param track                     Track number.
+ * @return                          Number of stages.
+ */
+native int Shavit_GetCheckpointCount(int track);
 
 /**
  * Retrieve the client's current stage number.

@@ -26,6 +26,7 @@
 
 #define SHAVIT_VERSION "3.4.2"
 #define STYLE_LIMIT 128 // 256 is too much for style.
+#define MAX_STAGES 64
 
 // god i fucking hate sourcemod. NULL_VECTOR isn't const so it's not guaranteed to be 0,0,0
 #define ZERO_VECTOR view_as<float>({0,0,0})
@@ -161,7 +162,7 @@ enum struct timer_snapshot_t
 
 	stagestart_info_t aStageStartInfo;
 
-	// float fStageStartTime;
+	float fCPTime[MAX_STAGES];
 
 	float fplayer_speedmod;
 	float fNextFrameTime;

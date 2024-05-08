@@ -58,6 +58,8 @@ int gI_Driver = Driver_unknown;
 
 bool gB_YouCanLoadZonesNow = false;
 
+bool gB_LinearMap;
+
 char gS_Map[PLATFORM_MAX_PATH];
 
 enum struct zone_settings_t
@@ -109,10 +111,14 @@ zone_cache_t gA_ZoneCache[MAX_ZONES]; // Vectors will not be inside this array.
 int gI_MapZones = 0;
 float gV_MapZones_Visual[MAX_ZONES][8][3];
 float gV_ZoneCenter[MAX_ZONES][3];
-int gI_HighestStage[TRACKS_SIZE];
 float gF_CustomSpawn[TRACKS_SIZE][3];
 int gI_EntityZone[2048] = {-1, ...};
-int gI_LastStage[MAXPLAYERS+1];
+
+
+// stage & checkpoint stuffs
+int gI_HighestStage[TRACKS_SIZE];
+int gI_HighestCheckpoint[TRACKS_SIZE];
+int gI_LastStage[MAXPLAYERS+1]; // i use it as checkpoint as well ;)
 
 timer_snapshot_t gA_StageStartTimer[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES];
 
@@ -169,6 +175,7 @@ Handle gH_Forwards_LeaveZone = null;
 Handle gH_Forwards_LoadZonesHere = null;
 Handle gH_Forwards_OnStageChanged = null;
 Handle gH_Forwards_ReachNextStage = null;
+Handle gH_Forwards_ReachNextCP = null;
 
 // sdkcalls
 Handle gH_PhysicsRemoveTouchedList = null;
@@ -217,6 +224,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetZoneData", Native_GetZoneData);
 	CreateNative("Shavit_GetZoneFlags", Native_GetZoneFlags);
 	CreateNative("Shavit_GetStageCount", Native_GetStageCount);
+	CreateNative("Shavit_GetCheckpointCount", Native_GetCheckpointCount);
 	CreateNative("Shavit_InsideZone", Native_InsideZone);
 	CreateNative("Shavit_InsideZoneGetID", Native_InsideZoneGetID);
 	CreateNative("Shavit_IsClientCreatingZone", Native_IsClientCreatingZone);
@@ -337,6 +345,7 @@ public void OnPluginStart()
 	gH_Forwards_LoadZonesHere = CreateGlobalForward("Shavit_LoadZonesHere", ET_Event);
 	gH_Forwards_OnStageChanged = CreateGlobalForward("Shavit_OnStageChanged", ET_Event, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_ReachNextStage = CreateGlobalForward("Shavit_OnReachNextStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_ReachNextCP = CreateGlobalForward("Shavit_OnReachNextCP", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 
 	// cvars and stuff
 	gCV_SQLZones = new Convar("shavit_zones_usesql", "1", "Whether to automatically load zones from the database or not.\n0 - Load nothing. (You'll need a plugin to add zones with `Shavit_AddZone()`)\n1 - Load zones from database.", 0, true, 0.0, true, 1.0);
@@ -807,6 +816,18 @@ public int Native_GetStageCount(Handle handler, int numParas)
 	return gI_HighestStage[iTrack];
 }
 
+public int Native_GetCheckpointCount(Handle handler, int numParas)
+{
+	int iTrack = GetNativeCell(1);
+	
+	if(iTrack < 0 || iTrack > TRACKS_SIZE)
+	{
+		return 0;
+	}
+
+	return gB_LinearMap ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack];
+}
+
 public int Native_GetClientStageTime(Handle handler, int numParas)
 {
 	int client = GetNativeCell(1);
@@ -1049,6 +1070,14 @@ public any Native_AddZone(Handle plugin, int numParams)
 		}
 	}
 
+	if (cache.iType == Zone_Checkpoint)
+	{
+		if (cache.iData > gI_HighestCheckpoint[cache.iTrack])
+		{
+			gI_HighestCheckpoint[cache.iTrack] = cache.iData;
+		}
+	}
+
 	return gI_MapZones++;
 }
 
@@ -1102,8 +1131,14 @@ public any Native_RemoveZone(Handle plugin, int numParams)
 	RecalcInsideZoneAll();
 
 	if (cache.iType == Zone_Stage && cache.iData == gI_HighestStage[cache.iTrack])
+	{
 		RecalcHighestStage();
+		gB_LinearMap = gI_HighestStage[cache.iTrack] < 2;		
+	}
 
+	if (cache.iType == Zone_Checkpoint && cache.iData == gI_HighestCheckpoint[cache.iTrack])
+		RecalcHighestCheckpoint();
+		
 	// call EndTouchPost(zoneent, player) manually here?
 
 	return 0;
@@ -1120,6 +1155,8 @@ bool JumpToZoneType(KeyValues kv, int type, int track)
 	static const char config_keys[ZONETYPES_SIZE][2][50] = {
 		{"Start", ""},
 		{"End", ""},
+		{"Stage", ""},		
+		{"Checkpoint", ""},
 		{"Glitch_Respawn", "Glitch Respawn"},
 		{"Glitch_Stop", "Glitch Stop"},
 		{"Glitch_Slay", "Glitch Slay"},
@@ -1130,7 +1167,6 @@ bool JumpToZoneType(KeyValues kv, int type, int track)
 		{"Easybhop", ""},
 		{"Slide", ""},
 		{"Airaccelerate", ""},
-		{"Stage", ""},
 		{"No Timer Gravity", ""},
 		{"Gravity", ""},
 		{"Speedmod", ""},
@@ -1730,6 +1766,7 @@ void UnloadZones()
 	}
 
 	gI_HighestStage = empty_tracks;
+	gI_HighestCheckpoint = empty_tracks;
 
 	for(int i = 0; i < TRACKS_SIZE; i++)
 	{
@@ -1777,6 +1814,25 @@ void RecalcHighestStage()
 
 		if (stagenum > gI_HighestStage[track])
 			gI_HighestStage[track] = stagenum;
+	}
+}
+
+void RecalcHighestCheckpoint()
+{
+	int empty_tracks[TRACKS_SIZE];
+	gI_HighestCheckpoint = empty_tracks;
+
+	for (int i = 0; i < gI_MapZones; i++)
+	{
+		int type = gA_ZoneCache[i].iType;
+		if (type != Zone_Checkpoint) 
+			continue;
+
+		int track = gA_ZoneCache[i].iTrack;
+		int checkpoint = gA_ZoneCache[i].iData;
+
+		if (checkpoint > gI_HighestCheckpoint[track])
+			gI_HighestCheckpoint[track] = checkpoint;
 	}
 }
 
@@ -2944,6 +3000,8 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 				// ZoneForm_trigger_multiple
 				, (1 << Zone_Start)
 				| (1 << Zone_End)
+				| (1 << Zone_Stage)
+				| (1 << Zone_Checkpoint)
 				| (1 << Zone_Respawn)
 				| (1 << Zone_Stop)
 				| (1 << Zone_Slay)
@@ -2953,11 +3011,11 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 				| (1 << Zone_Easybhop)
 				| (1 << Zone_Slide)
 				| (1 << Zone_Airaccelerate)
-				| (1 << Zone_Stage)
 				| (1 << Zone_NoTimerGravity)
 				| (1 << Zone_Gravity)
 				// ZoneForm_trigger_teleport
 				, (1 << Zone_End)
+				| (1 << Zone_Checkpoint)
 				| (1 << Zone_Respawn)
 				| (1 << Zone_Stop)
 				| (1 << Zone_Slay)
@@ -2967,6 +3025,7 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 				// ZoneForm_func_button
 				, (1 << Zone_Start)
 				| (1 << Zone_End)
+				| (1 << Zone_Checkpoint)
 				| (1 << Zone_Stop)
 				| (1 << Zone_Slay)
 			};
@@ -3815,7 +3874,6 @@ public void CallOnZoneDeleted(int type, int track, int data, bool all)
 		}
 		else if(type == Zone_Stage)
 		{
-			RecalcHighestStage();
 			for(int i = 0; i < MaxClients; i++)
 			{
 				if(Shavit_GetClientTrack(i) == Track_Main && Shavit_IsOnlyStageMode(i) && (gI_LastStage[i] == data || gI_LastStage[i] + 1 == data))
@@ -3831,7 +3889,6 @@ public void CallOnZoneDeleted(int type, int track, int data, bool all)
 	}
 	else
 	{
-		RecalcHighestStage();
 		for(int i = 0; i < MaxClients; i++)
 		{
 			Shavit_PrintToChat(i, "%T", "AllZoneDeletedStopTimer", i, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
@@ -3997,6 +4054,7 @@ void Reset(int client)
 {
 	zone_cache_t cache;
 	cache.iDatabaseID = -1;
+	cache.bUseSpeedLimit = true;
 	gA_EditCache[client] = cache;
 	gI_MapStep[client] = 0;
 	gI_HookListPos[client] = -1;
@@ -4349,7 +4407,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 				}
 				else if(gI_MapStep[client] == 3)
 				{
-					if((gA_EditCache[client].iType == Zone_Start || gA_EditCache[client].iType == Zone_End || gA_EditCache[client].iType == Zone_Stage))
+					if(gA_EditCache[client].iType == Zone_Start || gA_EditCache[client].iType == Zone_End || gA_EditCache[client].iType == Zone_Stage || gA_EditCache[client].iType == Zone_Checkpoint)
 					{
 						if(Abs(origin[2] - gA_EditCache[client].fCorner1[2]) >= gCV_MinHeight.FloatValue)
 						{
@@ -4613,6 +4671,9 @@ void CreateEditMenu(int client, bool autostage=false)
 
 	if (gA_EditCache[client].iType == Zone_Stage)
 	{
+		FormatEx(sMenuItem, 64, "%T", "ZoneUseStageSpeedLimit", client, gA_EditCache[client].bUseSpeedLimit ? "＋":"－");
+		menu.AddItem("togglespdlimit", sMenuItem);
+
 		if (autostage)
 		{
 			if(gI_HighestStage[gA_EditCache[client].iTrack] == 0 && GetZoneIndex(Zone_Start, gA_EditCache[client].iTrack) != -1)
@@ -4625,9 +4686,16 @@ void CreateEditMenu(int client, bool autostage=false)
 
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetStage", client, gA_EditCache[client].iData);
 		menu.AddItem("datafromchat", sMenuItem);
+	}
+	else if(gA_EditCache[client].iType == Zone_Checkpoint)
+	{
+		if (autostage)
+		{
+			gA_EditCache[client].iData = gI_HighestCheckpoint[gA_EditCache[client].iTrack] + 1;
+		}
 
-		FormatEx(sMenuItem, 64, "%T", "ZoneUseStageSpeedLimit", client, gA_EditCache[client].bUseSpeedLimit ? "ON":"OFF");
-		menu.AddItem("togglespdlimit", sMenuItem);
+		FormatEx(sMenuItem, 64, "%T", "ZoneSetStage", client, gA_EditCache[client].iData);
+		menu.AddItem("datafromchat", sMenuItem);
 	}
 	else if (gA_EditCache[client].iType == Zone_Airaccelerate)
 	{
@@ -5224,6 +5292,8 @@ public void Shavit_OnDatabaseLoaded()
 		RefreshZones();
 	}
 
+	gB_LinearMap = gI_HighestStage[Track_Main] < 2;
+
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if (IsValidClient(i) && !IsFakeClient(i))
@@ -5675,28 +5745,65 @@ public void StartTouchPost(int entity, int other)
 
 		case Zone_Stage:
 		{
-			int num = gA_ZoneCache[zone].iData;
+			int stage = gA_ZoneCache[zone].iData;
 
 			if(!bReplay)
 			{
 				if (status == Timer_Running && Shavit_GetClientTrack(other) == track)
 				{
-					if (num > gI_LastStage[other])
+					if (stage > gI_LastStage[other])
 					{
 						Call_StartForward(gH_Forwards_ReachNextStage);
 						Call_PushCell(other);
 						Call_PushCell(track);
 						Call_PushCell(gI_LastStage[other]);
-						Call_PushCell(num);
+						Call_PushCell(stage);
 						Call_PushCell(gA_StageStartTimer[other][track][gI_LastStage[other]].fCurrentTime);
 						Call_PushCell(Shavit_GetClientStageTime(other, track, gI_LastStage[other]));
 						Call_Finish();
 
+						if(stage == gI_LastStage[other] + 1)
+						{
+							Shavit_FinishStage(other, track, gI_LastStage[other]);
+						}
+
 						if (!Shavit_IsOnlyStageMode(other))
 						{
-							ChangeClientLastStage(other, num);
+							Call_StartForward(gH_Forwards_ReachNextCP);
+							Call_PushCell(other);
+							Call_PushCell(track);
+							Call_PushCell(stage - 1);
+							Call_PushCell(Shavit_GetClientTime(other));
+							Call_Finish();
+
+							ChangeClientLastStage(other, stage);
 						}
 					}
+				}
+			}
+		}
+
+		case Zone_Checkpoint:
+		{
+			int checkpoint = gA_ZoneCache[zone].iData;
+	
+			// There are conflict between checkpoint zone and stage zone 
+			// Because stage zone are used as checkpoint as well
+			// So i decided to block checkpoint zone if there are stage zone exist
+			if(gB_LinearMap && !bReplay && status == Timer_Running && Shavit_GetClientTrack(other) == track && !Shavit_IsOnlyStageMode(other))
+			{
+				PrintToChatAll("[Debug] cp: %d, laststage: %d", checkpoint, gI_LastStage[other]);
+				if (checkpoint > gI_LastStage[other])
+				{
+					PrintToChatAll("[Debug] inside here");
+					Call_StartForward(gH_Forwards_ReachNextCP);
+					Call_PushCell(other);
+					Call_PushCell(track);
+					Call_PushCell(checkpoint);
+					Call_PushCell(Shavit_GetClientTime(other));
+					Call_Finish();
+
+					gI_LastStage[other] = checkpoint;
 				}
 			}
 		}

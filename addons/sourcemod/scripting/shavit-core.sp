@@ -1791,6 +1791,8 @@ void ChangeClientStyle(int client, int style, bool manual)
 
 public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
 {
+	gA_Timers[client].iLastStage = newstage;
+
 	if(gB_PlayerRepeat[client] && gA_Timers[client].iTimerTrack == Track_Main)
 	{
 		char sStage[32];
@@ -2679,6 +2681,8 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 	Shavit_SetStageTimeValid(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.bStageTimeValid);
 	Shavit_SetOnlyStageMode(client, snapshot.bOnlyStageMode);
 
+	Shavit_SetClientCPTime(client, snapshot.fCPTime);
+
 	float oldts = gA_Timers[client].fTimescale;
 
 	gA_Timers[client] = snapshot;
@@ -2784,11 +2788,6 @@ public Action Shavit_OnStartPre(int client, int track)
 		return Plugin_Stop;
 	}
 
-	if(gB_Zones && !gA_Timers[client].bOnlyStageMode)
-	{
-		Shavit_SetClientLastStage(client, 1);
-	}		
-
 	return Plugin_Continue;
 }
 
@@ -2893,9 +2892,9 @@ void StartTimer(int client, int track)
 			}
 			else
 			{
-				gA_Timers[client].iLastStage = 1;
+				gA_Timers[client].iLastStage = Shavit_GetStageCount(track) > 2 ? 1 : 0; // i use it as last checkpoint number when the map is linear.
 				Shavit_SetClientLastStage(client, gA_Timers[client].iLastStage);
-			}				
+			}
 
 			gA_Timers[client].iTimerTrack = track;
 			gA_Timers[client].bTimerEnabled = true;
@@ -3586,6 +3585,8 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	
 	snapshot.iLastStage = Shavit_GetClientLastStage(client);
 
+	Shavit_GetClientCPTime(client, snapshot.fCPTime);
+
 	timer_snapshot_t stagestartsnapshot;
 	Shavit_GetStageStartSnapshot(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage, stagestartsnapshot, sizeof(timer_snapshot_t));
 
@@ -3595,11 +3596,9 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	info.iFractionalTicks = stagestartsnapshot.iFractionalTicks;
 	info.iJumps = stagestartsnapshot.iJumps;
 	info.iStrafes = stagestartsnapshot.iStrafes;
-
 	snapshot.aStageStartInfo = info;
 
 	snapshot.bStageTimeValid = Shavit_StageTimeValid(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
-	snapshot.bOnlyStageMode = Shavit_IsOnlyStageMode(client);
 	//snapshot.iLandingTick = ?????; // TODO: Think about handling segmented scroll? /shrug
 }
 

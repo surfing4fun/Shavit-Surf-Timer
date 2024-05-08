@@ -263,7 +263,7 @@
 	}
 	"ZoneLowHeight"
 	{
-		"#format"	"{1:s}, {2:s}, {3:.1f}, {4:s}"
+		"#format"	"{1:s},{2:s},{3:.1f},{4:s}"
 		"en"		"The height of {1} must be greater than {2}{3}{4}."
 	}
 	"ZoneSecond"
@@ -306,7 +306,7 @@
 	"ZoneUseStageSpeedLimit"
 	{
 		"#format"	"{1:s}"
-		"en"		"Use prespeed limit: {1}"
+		"en"		"[{1}] Use prespeed limit"
 	}
 	"ZoneSetGravity"
 	{
@@ -550,6 +550,10 @@
 	"Zone_Stage"
 	{
 		"en"		"Stage Zone"
+	}
+	"Zone_Checkpoint"
+	{
+		"en"		"Checkpont Zone"
 	}
 	"Zone_NoTimerGravity"
 	{

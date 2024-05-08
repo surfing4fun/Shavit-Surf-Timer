@@ -288,14 +288,14 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	if (driver == Driver_mysql)
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INT AUTO_INCREMENT, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `speedlimit` TINYINT NOT NULL DEFAULT 350.0, `form` TINYINT, `target` VARCHAR(63), PRIMARY KEY (`id`)) %s;",
+			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INT AUTO_INCREMENT, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `speedlimit` TINYINT NOT NULL DEFAULT 1, `form` TINYINT, `target` VARCHAR(63), PRIMARY KEY (`id`)) %s;",
 			gS_SQLPrefix, sOptionalINNODB);
 		AddQueryLog(trans, sQuery);
 	}
 	else
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INTEGER PRIMARY KEY, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `speedlimit` TINYINT NOT NULL DEFAULT 350.0, `form` TINYINT, `target` VARCHAR(63));",
+			"CREATE TABLE IF NOT EXISTS `%smapzones` (`id` INTEGER PRIMARY KEY, `map` VARCHAR(255) NOT NULL, `type` INT, `corner1_x` FLOAT, `corner1_y` FLOAT, `corner1_z` FLOAT, `corner2_x` FLOAT, `corner2_y` FLOAT, `corner2_z` FLOAT, `destination_x` FLOAT NOT NULL DEFAULT 0, `destination_y` FLOAT NOT NULL DEFAULT 0, `destination_z` FLOAT NOT NULL DEFAULT 0, `track` INT NOT NULL DEFAULT 0, `flags` INT NOT NULL DEFAULT 0, `data` INT NOT NULL DEFAULT 0, `speedlimit` TINYINT NOT NULL DEFAULT 1, `form` TINYINT, `target` VARCHAR(63));",
 			gS_SQLPrefix);
 		AddQueryLog(trans, sQuery);
 		strcopy(SQLiteMapzonesQuery, sizeof(SQLiteMapzonesQuery), sQuery);

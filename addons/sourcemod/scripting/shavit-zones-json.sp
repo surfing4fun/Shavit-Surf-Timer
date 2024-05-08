@@ -38,6 +38,8 @@
 static char gS_ZoneTypes[ZONETYPES_SIZE][18] = {
 	"start",
 	"end",
+	"stage",	
+	"checkpoint",
 	"respawn",
 	"stop",
 	"slay",
@@ -48,7 +50,6 @@ static char gS_ZoneTypes[ZONETYPES_SIZE][18] = {
 	"easybhop",
 	"slide",
 	"airaccel",
-	"stage",
 	"notimergravity",
 	"gravity",
 	"speedmod",
