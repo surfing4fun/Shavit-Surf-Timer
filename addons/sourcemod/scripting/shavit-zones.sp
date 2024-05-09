@@ -2765,7 +2765,7 @@ public int MenuHandler_SelectZoneTrack(Menu menu, MenuAction action, int param1,
 
 		for(int i = 0; i < ZONETYPES_SIZE; i++)
 		{
-			if(i == Zone_CustomSpawn || (i == Zone_Stage && gA_EditCache[param1].iTrack != Track_Main))
+			if(i == Zone_CustomSpawn || ((i == Zone_Stage || i == Zone_Checkpoint) && gA_EditCache[param1].iTrack != Track_Main))
 			{
 				continue;
 			}
@@ -3051,7 +3051,7 @@ void OpenHookMenu_Editor(int client)
 	menu.AddItem(
 		"hook", display,
 		((zonetype == -1 && hooktype == -1 && track == -1) || 
-		(track != Track_Main && zonetype == Zone_Stage)) ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT
+		(track != Track_Main && (zonetype == Zone_Stage || zonetype == Zone_Checkpoint))) ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT
 	);
 
 	menu.ExitBackButton = true;
