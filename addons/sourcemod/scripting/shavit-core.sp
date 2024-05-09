@@ -1259,7 +1259,12 @@ public Action Command_NoclipSpeed(int client, int args)
 	float fNewNoclipSpeed = StringToFloat(sCommand);
 	float fOldNoclipSpeed = sv_noclipspeed.FloatValue;
 
-	if (fNewNoclipSpeed <= 2.0 || fNewNoclipSpeed >= 30.0 || fNewNoclipSpeed == fOldNoclipSpeed)
+	if(fNewNoclipSpeed == fOldNoclipSpeed)
+	{
+		return Plugin_Handled;
+	}
+
+	if (fNewNoclipSpeed < 2.0 || fNewNoclipSpeed > 30.0)
 	{
 		Shavit_PrintToChat(client, "%T", "ArgumentsMissing", client, "sm_noclipspeed <value> (2-30)");
 		return Plugin_Handled;
