@@ -1,6 +1,113 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+
+# Shavit SurfTimer - Change log - 2024-5-9 -
+
+* [Rework stage timer](https://github.com/bhopppp/shavitsurftimer/commit/fc9dd1842392d6c4e56b76d4e46acfbbbb7d497a#diff-a6d6c2b4761eea8f68202daa7a99cb0b1fcd07186b000ca75e9db88a587769c5)
+* [Add new zone `Zone_Checkpoint`](https://github.com/bhopppp/shavitsurftimer/commit/2e76de14636f4aee0c5343c1d7d94393fb2c2ebc#diff-a6d6c2b4761eea8f68202daa7a99cb0b1fcd07186b000ca75e9db88a587769c5)
+* [Add limit prespeed option when edit `Zone_Stage`](https://github.com/bhopppp/shavitsurftimer/commit/642c23dab5d83dbcd016c222b3cd9f96bd8ac72a)
+* [Change zone create style](https://github.com/bhopppp/shavitsurftimer/commit/c7e03467110f9df9f9f73ecca7f6a4169bdedda2)
+* [Add new command `sm_noclipspeed`](https://github.com/bhopppp/shavitsurftimer/commit/79f0d2ecb56b53326c41c4f128edca2b425012c6)
+* [Add new message color config key `improving`](https://github.com/bhopppp/shavitsurftimer/commit/979e343f123fbb5728f0c6f2a65f46f98a9d1aae)
+* [Drop support for sourcemod 1.10](https://github.com/bhopppp/shavitsurftimer/commit/f55a40dd437ae3a26a4117f1d0ee2ff848f78c79)
+* [Bug fixes]()
+
+## Rework of stage timer  
+* [Main Commit](https://github.com/bhopppp/shavitsurftimer/commit/fc9dd1842392d6c4e56b76d4e46acfbbbb7d497a#diff-a6d6c2b4761eea8f68202daa7a99cb0b1fcd07186b000ca75e9db88a587769c5)
+### shavit-core.sp
+- Add new native `Shavit_GetClientStageTime` 
+- Add new native `Shavit_GetClientLastStage`
+- Add new native `Shavit_SetClientLastStage`
+- Add new native `Shavit_StartStageTimer`
+- Add new forawrd `Shavit_OnStageChanged`
+- Change forawrd `Shavit_OnFinishStagePre` paramters
+- Add float varible `fCPTimes` in struct `timer_snapshot_t`
+
+### shavit-zones.sp
+- Remove global `gA_StageStartTimer`
+- Remove global `gI_LastStage`
+- Remove native `Shavit_GetClientLastStage` 
+- Remove native `Shavit_SetClientLastStage`
+- Remove native `Shavit_GetClientStageTime`
+- Remove native `Shavit_GetStageStartSnapshot`
+- Remove native `Shavit_SetStageStartInfo`
+- Remove native `Shavit_GetStageStartTime`
+- Remove forawrd `Shavit_OnStageChanged`
+- Change forward `Shavit_OnReachNextStage` parameters
+- Call `Shavit_StartStageTimer` wehn client touchpost in stage zone
+
+### shavit-wr.sp
+- Remove global `gA_StageReachedTimes`
+
+
+## Add new zone `Zone_Checkpoint`
+* [Main Commit](https://github.com/bhopppp/shavitsurftimer/commit/2e76de14636f4aee0c5343c1d7d94393fb2c2ebc#diff-a6d6c2b4761eea8f68202daa7a99cb0b1fcd07186b000ca75e9db88a587769c5)
+### shavit-zones.sp
+- Add new forward `Shavit_OnReachNextCP`
+- Add new native `Shavit_GetCheckpointCount`
+- Change `Zone_Stage` iType from `12` -> `2`
+- Add `Zone_Checkpoint` iType is `3`
+- The rest of zone's type increased by `2` than original type
+- Add new function `RecalcHighestCheckpoint`
+- Add translations
+
+### shavit-core.sp
+- Add new native `Shavit_GetClientCPTimes`
+- Add new native `Shavit_SetClientCPTimes`
+- Add new native `Shavit_GetClientCPTime`
+- Add new native `Shavit_SetClientCPTime`
+
+
+## Add limit prespeed option when edit `Zone_Stage`
+* [Main Commit](https://github.com/bhopppp/shavitsurftimer/commit/642c23dab5d83dbcd016c222b3cd9f96bd8ac72a)
+### shavit-zones.sp
+- Add native `Shavit_GetZoneUseSpeedLimit`
+- Add bool variable `bUseSpeedLimit` to struct `zone_cache_t`
+- Add parameter `&limitspeed` to references if the stage zone limit prespeed
+- Add new translation
+
+### sql-create-tables-and-migrations.sp
+- Change migrations `Migration_AddZonesFlagsAndData` to `Migration_AddZonesFlagsAndDataAndSpeedlimit`
+- Add new migration `AddMapzonesSpeedlimit
+- Add new column `speedlimit` in `mapzones` table
+
+### misc
+- Update prespeed limit processing for this new feature
+- Stop setting player's stage time invalid  when leave a stage zone without prespeed limit.`
+
+
+## Change zone create style
+* [Main commit](https://github.com/bhopppp/shavitsurftimer/commit/c7e03467110f9df9f9f73ecca7f6a4169bdedda2)
+### shavit-zones.sp
+- Change zone creation style from 2 steps to 3 steps
+	The original style was to create a zone two points and use default height, the new one need to set three points to create a zone (specify length, width and height).
+- Add new convar `gCV_MinHeight`
+- Delete convar `gCV_Height
+- Add translations`
+
+
+## Add new command `sm_noclipspeed`
+* [Main commit](https://github.com/bhopppp/shavitsurftimer/commit/79f0d2ecb56b53326c41c4f128edca2b425012c6)
+### shavit-core.sp
+- Add new global `gF_NoclipSpeed`
+- Add new convar `sv_noclipspeed`
+- Add new command `sm_ns` `sm_noclipspeed` to trigger `Command_Noclipspeed`
+
+## Add new message color config key `improving`
+* [Main commit](https://github.com/bhopppp/shavitsurftimer/commit/979e343f123fbb5728f0c6f2a65f46f98a9d1aae)
+- Add new char[] variable `sImproving` in `chatstrings_t`
+
+
+## Bug fixes
+- Fix the bug that start zone stop players when they are in booster
+- Fix the bug which show uncorrect time differences when player in bonus
+- Fix the bug which cannot read stage replay file correctly due to the not enough string size
+
+
+
+
+
 # Shavit SurfTimer v1.0.0 - Change log - 2024-4-30 -
 
 -Add new command `sm_repeat`.
@@ -27,8 +134,6 @@ Note: Dates are UTC+0.
 
 ## shavit-hud
 - Bug fix and show ZoneHUD `In Stage 1 Start` instead `In Main Start` when player repeating on stage 1 
-
-
 
 
 # Shavit SurfTimer v1.0.0 release - Change log - 2024-4-25 -
