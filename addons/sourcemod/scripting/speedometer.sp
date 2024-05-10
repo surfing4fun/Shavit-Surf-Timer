@@ -692,7 +692,8 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 
 	if (!bReplay)
 	{
-		if (gB_AllLibraryExists && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), iTrack, iStage) != 0)
+		bool hasFrames = Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), iTrack, Shavit_IsOnlyStageMode(target) ? iStage : 0) != 0;
+		if (gB_AllLibraryExists && hasFrames)
 		{
 			fClosestReplayTime = Shavit_GetClosestReplayTime(target, fClosestReplayLength);
 

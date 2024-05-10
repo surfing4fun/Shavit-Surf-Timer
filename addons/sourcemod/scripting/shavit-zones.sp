@@ -29,6 +29,7 @@
 
 #include <shavit/core>
 #include <shavit/zones>
+#include <shavit/hud>
 #include <shavit/physicsuntouch>
 
 #undef REQUIRE_PLUGIN
@@ -152,6 +153,8 @@ Convar gCV_ResetTargetnameMain = null;
 Convar gCV_ResetTargetnameBonus = null;
 Convar gCV_ResetClassnameMain = null;
 Convar gCV_ResetClassnameBonus = null;
+
+ConVar gCV_PrestrafeLimit = null;
 
 // handles
 Handle gH_DrawVisible = null;
@@ -527,6 +530,11 @@ void LoadDHooks()
 	}
 
 	delete hGameData;
+}
+
+public void OnAllPluginsLoaded()
+{
+	gCV_PrestrafeLimit = FindConVar("shavit_misc_prestrafelimit");
 }
 
 public void OnLibraryAdded(const char[] name)
@@ -5799,6 +5807,35 @@ public void EndTouchPost(int entity, int other)
 	{
 		SetVariantString("1.0");
 		AcceptEntityInput(entity, "ModifySpeed", other, entity, 0);
+	}
+
+	if (type == Zone_Start || type == Zone_Stage /*|| type = Zone_Checkpoint*/)
+	{
+		float fSpeed[3];
+		GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
+		float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+		float speed = GetVectorLength(fSpeed);
+		int style = Shavit_GetBhopStyle(other);
+		int zonestage = (type == Zone_Stage) ? gA_ZoneCache[entityzone].iData : 1;
+		int stage = Shavit_GetClientLastStage(other);
+		float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+
+		if(stage == zonestage && curVel >= 15.0)
+		{
+			bool valid = type == Zone_Stage && Shavit_GetZoneUseSpeedLimit(entityzone) ? (curVel <= limit) : true;
+			Shavit_SetStageTimeValid(other, valid);
+
+			char sZoneName[32];
+			FormatEx(sZoneName, 32, "%T %s%d%s ", "StageText", other, gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText);
+
+			if (Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0)
+			{
+				Shavit_StopChatSound();
+				Shavit_PrintToChat(other, "%sStart: %s%.2f %su/s", 
+				stage == 1 ? "" : sZoneName,
+				valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+			}
+		}
 	}
 
 	Call_StartForward(gH_Forwards_LeaveZone);

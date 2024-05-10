@@ -1105,6 +1105,23 @@ native float Shavit_GetClientCPTime(int client, int checkpoint);
 native void Shavit_SetClientCPTime(int client, int checkpoint, float time);
 
 /**
+ * Returns if client's current stage run is valid.
+ *
+ * @param client                    Client index.
+ * @return							Bool value.                          
+ */
+native bool Shavit_StageTimeValid(int client);
+
+/**
+ * Set client's current stage run valid to specific value.
+ *
+ * @param client                    Client index.
+ * @param valid						The value need to set.
+ * @return							Bool value.                          
+ */
+native void Shavit_SetStageTimeValid(int client, bool valid);
+
+/**
  * Retrieve client jumps since timer start.
  *
  * @param client					Client index.
@@ -1641,6 +1658,8 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetClientCPTimes");
 	MarkNativeAsOptional("Shavit_SetClientCPTime");
 	MarkNativeAsOptional("Shavit_SetClientCPTime");
+	MarkNativeAsOptional("Shavit_StageTimeValid");
+	MarkNativeAsOptional("Shavit_SetStageTimeValid");
 	MarkNativeAsOptional("Shavit_GetDatabase");
 	MarkNativeAsOptional("Shavit_GetOrderedStyles");
 	MarkNativeAsOptional("Shavit_GetPerfectJumps");

@@ -225,6 +225,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_SetClientCPTimes", Native_SetClientCPTimes);
 	CreateNative("Shavit_GetClientCPTime", Native_GetClientCPTime);
 	CreateNative("Shavit_SetClientCPTime", Native_SetClientCPTime);
+	CreateNative("Shavit_StageTimeValid", Native_StageTimeValid);
+	CreateNative("Shavit_SetStageTimeValid", Native_SetStageTimeValid);
 	CreateNative("Shavit_GetDatabase", Native_GetDatabase);
 	CreateNative("Shavit_GetPerfectJumps", Native_GetPerfectJumps);
 	CreateNative("Shavit_GetStrafeCount", Native_GetStrafeCount);
@@ -2712,9 +2714,6 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 		CallOnStyleChanged(client, gA_Timers[client].bsStyle, snapshot.bsStyle, false);
 	}
 
-	//Added
-	Shavit_SetStageTimeValid(client, snapshot.iTimerTrack, snapshot.iLastStage, snapshot.bStageTimeValid);
-
 	float oldts = gA_Timers[client].fTimescale;
 
 	gA_Timers[client] = snapshot;
@@ -2806,6 +2805,18 @@ public int Native_SetClientCPTime(Handle plugin, int numParams)
 	gA_Timers[GetNativeCell(1)].fCPTimes[GetNativeCell(2)] = GetNativeCell(3);
 
 	return 0;
+}
+
+public int Native_StageTimeValid(Handle plugin, int numParams)
+{
+	return view_as<int>(gA_Timers[GetNativeCell(1)].bStageTimeValid);
+}
+
+public int Native_SetStageTimeValid(Handle plugin, int numParams)
+{
+	gA_Timers[GetNativeCell(1)].bStageTimeValid = GetNativeCell(2);
+	
+	return 1;
 }
 
 public any Native_GetAvgVelocity(Handle plugin, int numParams)
@@ -3669,8 +3680,6 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	snapshot = gA_Timers[client];
 	snapshot.fServerTime = GetEngineTime();
 	snapshot.fTimescale = (gA_Timers[client].fTimescale > 0.0) ? gA_Timers[client].fTimescale : 1.0;
-	
-	snapshot.bStageTimeValid = Shavit_StageTimeValid(client, gA_Timers[client].iTimerTrack, snapshot.iLastStage);
 	//snapshot.iLandingTick = ?????; // TODO: Think about handling segmented scroll? /shrug
 }
 

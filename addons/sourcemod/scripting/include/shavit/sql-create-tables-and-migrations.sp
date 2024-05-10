@@ -43,15 +43,17 @@ enum
 	Migration_Lowercase_maptiers,
 	Migration_Lowercase_mapzones,
 	Migration_Lowercase_playertimes,
-	Migration_Lowercase_stagecpwr,// 20
+	Migration_Lowercase_stagetimes, // 20
+	Migration_Lowercase_cptimes,
+	Migration_Lowercase_cpwrs,
 	Migration_Lowercase_startpositions,
 	Migration_AddPlayertimesPointsCalcedFrom, // points calculated from wr float added to playertimes
-	Migration_RemovePlayertimesPointsCalcedFrom, // lol
+	Migration_RemovePlayertimesPointsCalcedFrom, // 25
 	Migration_NormalizeMapzonePoints,
-	Migration_AddMapzonesForm, // 25
+	Migration_AddMapzonesForm, 
 	Migration_AddMapzonesTarget,
 	Migration_AddMapZonesSpeelimit,
-	Migration_DeprecateExactTimeInt,
+	Migration_DeprecateExactTimeInt, // 30
 	Migration_AddPlayertimesAuthFK,
 	Migration_FixSQLiteMapzonesROWID,
 	MIGRATIONS_END
@@ -78,7 +80,9 @@ char gS_MigrationNames[][] = {
 	"Lowercase_maptiers",
 	"Lowercase_mapzones",
 	"Lowercase_playertimes",
-	"Lowercase_stagecpwr",
+	"Lowercase_stagetimes",
+	"Lowercase_cptimes",
+	"Lowercase_cpwrs",
 	"Lowercase_startpositions",
 	"AddPlayertimesPointsCalcedFrom",
 	"RemovePlayertimesPointsCalcedFrom",
@@ -231,14 +235,12 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	AddQueryLog(trans, sQuery);
 
 	FormatEx(sQuery, sizeof(sQuery),
-		//"CREATE TABLE IF NOT EXISTS `%sstagetimeswr` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `stage`)) %s;",
-		"CREATE TABLE IF NOT EXISTS `%sstagecpwr` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `stage`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%scpwrs` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `checkpoint` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `checkpoint`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
 	FormatEx(sQuery, sizeof(sQuery),
-		//"CREATE TABLE IF NOT EXISTS `%sstagetimespb` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `stage`)) %s;",
-		"CREATE TABLE IF NOT EXISTS `%sstagecppb` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `stage` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `stage`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%scptimes` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `checkpoint` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `checkpoint`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
@@ -403,7 +405,9 @@ void ApplyMigration(int migration)
 		case Migration_Lowercase_maptiers: ApplyMigration_LowercaseMaps("maptiers", migration);
 		case Migration_Lowercase_mapzones: ApplyMigration_LowercaseMaps("mapzones", migration);
 		case Migration_Lowercase_playertimes: ApplyMigration_LowercaseMaps("playertimes", migration);
-		case Migration_Lowercase_stagecpwr: ApplyMigration_LowercaseMaps("stagecpwrs", migration);
+		case Migration_Lowercase_stagetimes:ApplyMigration_LowercaseMaps("stagetimes", migration);
+		case Migration_Lowercase_cptimes:ApplyMigration_LowercaseMaps("cptimes", migration);
+		case Migration_Lowercase_cpwrs: ApplyMigration_LowercaseMaps("cpwrs", migration);
 		case Migration_Lowercase_startpositions: ApplyMigration_LowercaseMaps("startpositions", migration);
 		case Migration_AddPlayertimesPointsCalcedFrom: ApplyMigration_AddPlayertimesPointsCalcedFrom();
 		case Migration_RemovePlayertimesPointsCalcedFrom: ApplyMigration_RemovePlayertimesPointsCalcedFrom();

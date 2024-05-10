@@ -253,30 +253,6 @@ native float Shavit_GetStageCPWR(int track, int style, int stage);
  */
 native float Shavit_GetStageCPPB(int client, int track, int style, int stage);
 
-/**
- * Retrieve the client's PB stage time.
- *
- * @param client                    Client index.
- * @param stage                     Stage number.
- *                           
- * @return							If the stage time valid
- */
-native bool Shavit_StageTimeValid(int client, int track, int stage);
-
-/**
- * Retrieve the client's PB stage time.
- *
- * @param client                    Client index.
- * @param stage                     Stage number.
- * @param valid                     Bool value to set
- *									
- * @noreturn
- */
-native bool Shavit_SetStageTimeValid(int client, int track, int stage, bool valid);
-
-//native float Shavit_GetStageWRCP(int track, int style, int stage);
-//native float Shavit_GetStagePBCP(int client, int track, int style, int stage);
-
 /*
  * Used to delete a WR. Used to ensure Shavit_OnWRDeleted is ran.
  *
@@ -435,8 +411,6 @@ public void __pl_shavit_wr_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_DeleteWR");
 	MarkNativeAsOptional("Shavit_GetStageCPWR");
 	MarkNativeAsOptional("Shavit_GetStageCPPB");
-	MarkNativeAsOptional("Shavit_StageTimeValid");
-	MarkNativeAsOptional("Shavit_SetStageTimeValid");
 	MarkNativeAsOptional("Shavit_GetStageWorldRecord");
 	MarkNativeAsOptional("Shavit_GetStageWRRecordID");
 	MarkNativeAsOptional("Shavit_GetStageWRName");

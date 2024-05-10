@@ -1911,7 +1911,9 @@ void UpdateMainHUD(int client)
 	huddata.fClosestVelocityDifference = 0.0;
 	huddata.fClosestReplayLength = 0.0;
 
-	if (!bReplay && gB_ReplayPlayback && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), huddata.iTrack, huddata.iCurrentStage) != 0)
+	bool hasFrames = Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), huddata.iTrack, Shavit_IsOnlyStageMode(target) ? huddata.iCurrentStage : 0) != 0;
+
+	if (!bReplay && gB_ReplayPlayback && hasFrames)
 	{
 		huddata.fClosestReplayTime = Shavit_GetClosestReplayTime(target, huddata.fClosestReplayLength);
 
