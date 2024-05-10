@@ -2326,9 +2326,9 @@ void UpdateTopLeftHUD(int client, bool wait)
 }
 
 
-void UpdateKeyHint(int client)
+void UpdateKeyHint(int client, bool force = false)
 {
-	if ((gI_Cycle % 10) != 0)
+	if ((gI_Cycle % 20) != 0 || !force)
 	{
 		return;
 	}
@@ -2578,7 +2578,7 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 {
 	if(IsClientInGame(client))
 	{
-		UpdateKeyHint(client);
+		UpdateKeyHint(client, true);
 	}
 }
 
@@ -2586,7 +2586,7 @@ public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateKeyHint(client);
+		UpdateKeyHint(client, true);
 	}
 }
 
@@ -2594,7 +2594,7 @@ public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateKeyHint(client);
+		UpdateKeyHint(client, true);
 	}
 }
 
