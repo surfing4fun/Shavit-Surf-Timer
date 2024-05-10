@@ -5809,7 +5809,7 @@ public void EndTouchPost(int entity, int other)
 		AcceptEntityInput(entity, "ModifySpeed", other, entity, 0);
 	}
 
-	if (type == Zone_Start || type == Zone_Stage /*|| type = Zone_Checkpoint*/)
+	if ((type == Zone_Start || type == Zone_Stage /*|| type = Zone_Checkpoint*/) && Shavit_GetTimerStatus(other) == Timer_Running)
 	{
 		float fSpeed[3];
 		GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);

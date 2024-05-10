@@ -1391,7 +1391,14 @@ public int Native_GetReplayBotStage(Handle handler, int numParams)
 
 public int Native_GetReplayBotCurrentStage(Handle handler, int numParams)
 {
-	return gA_BotInfo[GetBotInfoIndex(GetNativeCell(1))].iCurrentStage;
+	int index = GetBotInfoIndex(GetNativeCell(1));
+
+	if(gA_BotInfo[index].iStage > 0)
+	{
+		return gA_BotInfo[index].iStage;
+	}
+
+	return gA_BotInfo[index].iCurrentStage;
 }
 
 public int Native_GetReplayBotType(Handle handler, int numParams)

@@ -1911,9 +1911,7 @@ void UpdateMainHUD(int client)
 	huddata.fClosestVelocityDifference = 0.0;
 	huddata.fClosestReplayLength = 0.0;
 
-	bool hasFrames = Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), huddata.iTrack, Shavit_IsOnlyStageMode(target) ? huddata.iCurrentStage : 0) != 0;
-
-	if (!bReplay && gB_ReplayPlayback && hasFrames)
+	if (!bReplay && gB_ReplayPlayback && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), huddata.iTrack, Shavit_IsOnlyStageMode(target) ? huddata.iCurrentStage : 0) != 0)
 	{
 		huddata.fClosestReplayTime = Shavit_GetClosestReplayTime(target, huddata.fClosestReplayLength);
 
@@ -2326,9 +2324,9 @@ void UpdateTopLeftHUD(int client, bool wait)
 }
 
 
-void UpdateKeyHint(int client, bool force = false)
+void UpdateKeyHint(int client)
 {
-	if ((gI_Cycle % 20) != 0 || !force)
+	if ((gI_Cycle % 20) != 0)
 	{
 		return;
 	}
@@ -2578,7 +2576,7 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 {
 	if(IsClientInGame(client))
 	{
-		UpdateKeyHint(client, true);
+		UpdateKeyHint(client);
 	}
 }
 
@@ -2586,7 +2584,7 @@ public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateKeyHint(client, true);
+		UpdateKeyHint(client);
 	}
 }
 
@@ -2594,7 +2592,7 @@ public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateKeyHint(client, true);
+		UpdateKeyHint(client);
 	}
 }
 
