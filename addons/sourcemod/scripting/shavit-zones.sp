@@ -4739,26 +4739,27 @@ public int ZoneAdjuster_Handler(Menu menu, MenuAction action, int param1, int pa
 			else
 				gA_EditCache[param1].fCorner2[iAxis] += mod;
 
-			if((gA_EditCache[param1].iType == Zone_Start || gA_EditCache[param1].iType == Zone_End || gA_EditCache[param1].iType == Zone_Stage)
-			&& Abs(gA_EditCache[param1].fCorner2[2] - gA_EditCache[param1].fCorner1[2]) > gCV_MinHeight.FloatValue)
+			if((gA_EditCache[param1].iType == Zone_Start || gA_EditCache[param1].iType == Zone_End || gA_EditCache[param1].iType == Zone_Stage || gA_EditCache[param1].iType == Zone_Checkpoint))
 			{
-				Shavit_StopChatSound();
-				Shavit_PrintToChat(param1, "%T", (bIncrease)? "ZoneSizeIncrease":"ZoneSizeDecrease", param1, gS_ChatStrings.sVariable2, sAxis[iAxis], gS_ChatStrings.sText, iPoint, gS_ChatStrings.sVariable, gF_Modifier[param1], gS_ChatStrings.sText);					
+				if (Abs(gA_EditCache[param1].fCorner2[2] - gA_EditCache[param1].fCorner1[2]) < gCV_MinHeight.FloatValue)
+				{
+					if (iPoint == 1)
+						gA_EditCache[param1].fCorner1[iAxis] -= mod;
+					else
+						gA_EditCache[param1].fCorner2[iAxis] -= mod;
+					
+					char sZoneName[32];
+					GetZoneName(param1, gA_EditCache[param1].iType, sZoneName, 32);
+					Shavit_StopChatSound();
+					Shavit_PrintToChat(param1, "%T", "ZoneLowHeight", param1, sZoneName, gS_ChatStrings.sVariable, gCV_MinHeight.FloatValue, gS_ChatStrings.sText);
+					CreateAdjustMenu(param1, GetMenuSelectionPosition());
+					
+					return 0;
+				}
 			}
-			else
-			{
-				if (iPoint == 1)
-					gA_EditCache[param1].fCorner1[iAxis] -= mod;
-				else
-					gA_EditCache[param1].fCorner2[iAxis] -= mod;
 
-				char sZoneName[32];
-				GetZoneName(param1, gA_EditCache[param1].iType, sZoneName, 32);
-				Shavit_StopChatSound();
-				Shavit_PrintToChat(param1, "%T", "ZoneLowHeight", param1, sZoneName, 
-				gS_ChatStrings.sVariable, gCV_MinHeight.FloatValue, gS_ChatStrings.sText);
-			}
-
+			Shavit_StopChatSound();
+			Shavit_PrintToChat(param1, "%T", (bIncrease)? "ZoneSizeIncrease":"ZoneSizeDecrease", param1, gS_ChatStrings.sVariable2, sAxis[iAxis], gS_ChatStrings.sText, iPoint, gS_ChatStrings.sVariable, gF_Modifier[param1], gS_ChatStrings.sText);		
 			CreateAdjustMenu(param1, GetMenuSelectionPosition());
 		}
 	}
