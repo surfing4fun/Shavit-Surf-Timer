@@ -97,6 +97,10 @@ float gF_Angle[MAXPLAYERS+1];
 float gF_PreviousAngle[MAXPLAYERS+1];
 float gF_AngleDiff[MAXPLAYERS+1];
 
+float gF_RampVelocity[MAXPLAYERS+1];
+float gF_PrevRampVelocity[MAXPLAYERS+1];
+int gI_LastSurfTick[MAXPLAYERS+1];
+
 bool gB_Late = false;
 char gS_HintPadding[MAX_HINT_SIZE];
 bool gB_AlternateCenterKeys[MAXPLAYERS+1]; // use for css linux gamers
@@ -223,7 +227,7 @@ public void OnPluginStart()
 		..."HUD2_RANK				64\n"
 		..."HUD2_TRACK				128\n"
 		..."HUD2_SPLITPB				256\n"
-		..."HUD2_MAPTIER				512\n"
+		..."HUD2_RAMPSPEED				512\n"
 		..."HUD2_TIMEDIFFERENCE		1024\n"
 		..."HUD2_STAGEWRPB				2048\n"
 		..."HUD2_STAGETIME		4096\n"
@@ -376,6 +380,16 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 	gI_Buttons[client] = buttons;
 	MakeAngleDiff(client, angles[1]);
 
+	if(Shavit_BunnyhopStats.IsSurfing(client))
+	{
+		gI_LastSurfTick[client] = GetGameTickCount();		
+	}
+	else if((gF_RampVelocity[client] != -1.0 || gF_PrevRampVelocity[client] != -1.0) && (Shavit_BunnyhopStats.IsOnGround(client) || (GetGameTickCount() - gI_LastSurfTick[client] > (5.0 / GetTickInterval()))))
+	{
+		gF_PrevRampVelocity[client] = -1.0;
+		gF_RampVelocity[client] = -1.0;
+	}
+
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(i == client || (IsValidClient(i) && GetSpectatorTarget(i, i) == client))
@@ -398,6 +412,8 @@ public void OnClientPutInServer(int client)
 	gI_ScrollCount[client] = 0;
 	gB_FirstPrint[client] = false;
 	gB_AlternateCenterKeys[client] = false;
+	gF_PrevRampVelocity[client] = -1.0;	
+	gF_RampVelocity[client] = -1.0;
 
 	if(IsFakeClient(client))
 	{
@@ -697,13 +713,6 @@ Action ShowHUDMenu(int client, int item)
 	FormatEx(sHudItem, 64, "%T", "HudZoneHud", client);
 	menu.AddItem(sInfo, sHudItem);
 
-	if(gB_Rankings)
-	{
-		FormatEx(sInfo, 16, "@%d", HUD2_MAPTIER);
-		FormatEx(sHudItem, 64, "%T", "HudMapTierText", client);
-		menu.AddItem(sInfo, sHudItem);
-	}
-
 	FormatEx(sInfo, 16, "@%d", HUD2_TIME);
 	FormatEx(sHudItem, 64, "%T", "HudTimeText", client);
 	menu.AddItem(sInfo, sHudItem);
@@ -840,6 +849,10 @@ Action ShowHUDMenu(int client, int item)
 		FormatEx(sHudItem, 64, "%T", "HudCenterKeys", client);
 		menu.AddItem(sInfo, sHudItem);
 	}
+
+	FormatEx(sInfo, 16, "@%d", HUD2_RAMPSPEED);
+	FormatEx(sHudItem, 64, "%T", "HudRampSpeedText", client);
+	menu.AddItem(sInfo, sHudItem);
 
 	menu.ExitButton = true;
 	menu.DisplayAt(client, item, MENU_TIME_FOREVER);
@@ -1156,10 +1169,11 @@ void TriggerHUDUpdate(int client, bool keysonly = false) // keysonly because CS:
 
 	bool draw_keys = HUD1Enabled(gI_HUDSettings[client], HUD_KEYOVERLAY);
 	bool center_keys = HUD2Enabled(gI_HUD2Settings[client], HUD2_CENTERKEYS);
+	bool draw_rampspeed = HUD2Enabled(gI_HUD2Settings[client], HUD2_RAMPSPEED);
 
-	if (draw_keys && center_keys)
+	if (draw_rampspeed || (draw_keys && center_keys))
 	{
-		UpdateCenterKeys(client);
+		UpdateCenterText(client, draw_keys, draw_rampspeed);
 	}
 
 	if(IsSource2013(gEV_Type))
@@ -1302,12 +1316,12 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
 			{
 				char sTime[32];
-				FormatSeconds(data.fTime < 0.0 ? 0.0 : data.fTime, sTime, 32, false);
+				FormatSeconds(data.fTime < 0.0 ? 0.0 : data.fTime, sTime, 32, false, false, true);
 
 				// char sWR[32];
 				// FormatSeconds(data.fWR, sWR, 32, false);
 
-				FormatEx(sLine, 128, "%T: %s (%.1f％)", "HudTimeText", client, sTime, ((data.fTime < 0.0 ? 0.0 : data.fTime / data.fWR) * 100));
+				FormatEx(sLine, 128, "%T: %s", "HudTimeText", client, sTime);
 				AddHUDLine(buffer, maxlen, sLine, iLines);
 			}
 
@@ -1637,10 +1651,10 @@ int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
 
 	if (data.iTrack == Track_Main)
 	{
-		if (gB_Rankings && (gI_HUD2Settings[client] & HUD2_MAPTIER) == 0)
-		{
-			FormatEx(sFirstThing, sizeof(sFirstThing), "%T", "HudZoneTier", client, data.iMapTier);
-		}
+		// if (gB_Rankings && (gI_HUD2Settings[client] & HUD2_MAPTIER) == 0)
+		// {
+		// 	FormatEx(sFirstThing, sizeof(sFirstThing), "%T", "HudZoneTier", client, data.iMapTier);
+		// }
 	}
 	else
 	{
@@ -1880,7 +1894,7 @@ void UpdateMainHUD(int client)
 	huddata.fStageTime = (bReplay)? 0.0:Shavit_GetClientStageTime(target);
 	huddata.iJumps = (bReplay)? 0:Shavit_GetClientJumps(target);
 	huddata.iStrafes = (bReplay)? 0:Shavit_GetStrafeCount(target);
-	huddata.iRank = (bReplay)? 0 : Shavit_IsOnlyStageMode(target) ? Shavit_GetStageRankForTime(huddata.iStyle, huddata.fTime, huddata.iCurrentStage):Shavit_GetRankForTime(huddata.iStyle, huddata.fTime, huddata.iTrack);
+	huddata.iRank = (bReplay)? 0 : (Shavit_IsOnlyStageMode(target) && huddata.iTrack == Track_Main) ? Shavit_GetStageRankForTime(huddata.iStyle, huddata.fTime, huddata.iCurrentStage):Shavit_GetRankForTime(huddata.iStyle, huddata.fTime, huddata.iTrack);
 	huddata.fSync = (bReplay)? 0.0:Shavit_GetSync(target);
 	huddata.fPB = (bReplay)? 0.0:Shavit_GetClientPB(target, huddata.iStyle, huddata.iTrack);
 	huddata.fWR = (bReplay)? fReplayLength:Shavit_GetWorldRecord(huddata.iStyle, huddata.iTrack);
@@ -1911,7 +1925,7 @@ void UpdateMainHUD(int client)
 	huddata.fClosestVelocityDifference = 0.0;
 	huddata.fClosestReplayLength = 0.0;
 
-	if (!bReplay && gB_ReplayPlayback && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), huddata.iTrack, Shavit_IsOnlyStageMode(target) ? huddata.iCurrentStage : 0) != 0)
+	if (!bReplay && gB_ReplayPlayback && Shavit_GetReplayFrameCount(Shavit_GetClosestReplayStyle(target), huddata.iTrack, (Shavit_IsOnlyStageMode(target) && huddata.iTrack == Track_Main) ? huddata.iCurrentStage : 0) != 0)
 	{
 		huddata.fClosestReplayTime = Shavit_GetClosestReplayTime(target, huddata.fClosestReplayLength);
 
@@ -2050,13 +2064,24 @@ public void Shavit_Bhopstats_OnJumpPressed(int client)
 	gI_ScrollCount[client] = Shavit_BunnyhopStats.GetScrollCount(client);
 }
 
-void UpdateCenterKeys(int client)
+public void Shavit_Bhopstats_OnTouchRamp(int client)
 {
-	if((gI_HUDSettings[client] & HUD_KEYOVERLAY) == 0)
-	{
-		return;
-	}
+	float fSpeed[3];
+	gF_PrevRampVelocity[client] = gF_RampVelocity[client];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+	gF_RampVelocity[client] = GetVectorLength(fSpeed);
+}
 
+public void Shavit_Bhopstats_OnLeaveRamp(int client)
+{
+	float fSpeed[3];
+	gF_PrevRampVelocity[client] = gF_RampVelocity[client];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+	gF_RampVelocity[client] = GetVectorLength(fSpeed);
+}
+
+void UpdateCenterText(int client, bool keys, bool rampspeed)
+{
 	int current_tick = GetGameTickCount();
 	static int last_drawn[MAXPLAYERS+1];
 
@@ -2134,7 +2159,7 @@ void UpdateCenterKeys(int client)
 
 	if (preresult == Plugin_Continue)
 	{
-		FillCenterKeys(client, target, style, buttons, fAngleDiff, sCenterText, usable_size);
+		FillCenterText(client, target, keys, rampspeed, style, buttons, fAngleDiff, sCenterText, usable_size);
 	}
 
 	if (IsSource2013(gEV_Type))
@@ -2147,36 +2172,43 @@ void UpdateCenterKeys(int client)
 	}
 }
 
-void FillCenterKeys(int client, int target, int style, int buttons, float fAngleDiff, char[] buffer, int buflen)
+void FillCenterText(int client, int target, bool keys, bool rampspeed, int style, int buttons, float fAngleDiff, char[] buffer, int buflen)
 {
-	if (gEV_Type == Engine_CSGO)
+	if(rampspeed)
 	{
-		FormatEx(buffer, buflen, "%s   %s\n%s  %s  %s\n%s　 %s 　%s\n %s　　%s",
-			(buttons & IN_JUMP) > 0? "Ｊ":"ｰ", (buttons & IN_DUCK) > 0? "Ｃ":"ｰ",
-			(fAngleDiff > 0) ? "<":"ｰ", (buttons & IN_FORWARD) > 0 ? "Ｗ":"ｰ", (fAngleDiff < 0) ? ">":"ｰ",
-			(buttons & IN_MOVELEFT) > 0? "Ａ":"ｰ", (buttons & IN_BACK) > 0? "Ｓ":"ｰ", (buttons & IN_MOVERIGHT) > 0? "Ｄ":"ｰ",
-			(buttons & IN_LEFT) > 0? "Ｌ":" ", (buttons & IN_RIGHT) > 0? "Ｒ":" ");
+		char sRampVel[8];
+		char sVelDiff[16];
+		float fVelDiff = gF_RampVelocity[target] - gF_PrevRampVelocity[target];
+		FormatEx(sRampVel, 8, "%s%.0f", gF_RampVelocity[target] < 1000.0 ? " ":"", gF_RampVelocity[target]);
+		FormatEx(sVelDiff, 16, "%s(%s%.0f)", fVelDiff < 1000.0 ? fVelDiff < 100.0 ? "   ":"  ":"", fVelDiff > 0 ? "+":"", fVelDiff);
+
+		if(keys)
+		{
+			FormatEx(buffer, buflen, "    　%s\n    %s\n",
+			(gF_RampVelocity[target] == -1.0) ? " ": sRampVel,
+			(gF_PrevRampVelocity[target] == -1.0) ? " ": sVelDiff);			
+		}
+		else
+		{
+			FormatEx(buffer, buflen, "     %s\n  %s\n　　　　　　",
+			(gF_RampVelocity[target] == -1.0) ? " ": sRampVel,
+			(gF_PrevRampVelocity[target] == -1.0) ? " ": sVelDiff);		
+		}
 	}
-	else if (gB_AlternateCenterKeys[client])
+	
+	if(keys)
 	{
-		FormatEx(buffer, buflen, " %s　　%s\n%s  %s    %s\n%s　 %s 　%s\n　%s　　%s",
-			(buttons & IN_JUMP) > 0? "J":"_", (buttons & IN_DUCK) > 0? "C":"_",
-			(fAngleDiff > 0) ? "<":"  ", (buttons & IN_FORWARD) > 0 ? "W":" _", (fAngleDiff < 0) ? ">":"",
-			(buttons & IN_MOVELEFT) > 0? "A":"_", (buttons & IN_BACK) > 0? "S":"_", (buttons & IN_MOVERIGHT) > 0? "D":"_",
-			(buttons & IN_LEFT) > 0? "L":" ", (buttons & IN_RIGHT) > 0? "R":" ");
-	}
-	else
-	{
-		FormatEx(buffer, buflen, "        %s\n  %s%s     %s%s\n         %s\n      %s\n      %s\n      %s    %s",
+		FormatEx(buffer, buflen, "%s%s         %s\n   %s%s     %s%s\n          %s\n       %s\n       %s\n       %s    %s",
+			buffer, rampspeed ? "":"\n\n",
 			(buttons & IN_FORWARD) > 0 ? "W":"  ", 
 			(fAngleDiff > 0) ? "←":"   ", (buttons & IN_MOVELEFT) > 0? "A":"  ", (buttons & IN_MOVERIGHT) > 0? "D":"  ", (fAngleDiff < 0) ? "→":"   ",
 			(buttons & IN_BACK) > 0? "S":"  ", (buttons & IN_JUMP) > 0? "JUMP":"", (buttons & IN_DUCK) > 0? "DUCK":"",
 			(buttons & IN_LEFT) > 0? "L":"  ", (buttons & IN_RIGHT) > 0? "R":"");
-	}
 
-	if(!Shavit_GetStyleSettingBool(style, "autobhop") && IsValidClient(target))
-	{
-		Format(buffer, buflen, "%s\n　　%s%d %s%s%d", buffer, gI_ScrollCount[target] < 10 ? " " : "", gI_ScrollCount[target], gI_ScrollCount[target] < 10 ? " " : "", gI_LastScrollCount[target] < 10 ? " " : "", gI_LastScrollCount[target]);
+		if(!Shavit_GetStyleSettingBool(style, "autobhop") && IsValidClient(target))
+		{
+			Format(buffer, buflen, "%s\n　　%s%d %s%s%d", buffer, gI_ScrollCount[target] < 10 ? " " : "", gI_ScrollCount[target], gI_ScrollCount[target] < 10 ? " " : "", gI_LastScrollCount[target] < 10 ? " " : "", gI_LastScrollCount[target]);
+		}
 	}
 }
 

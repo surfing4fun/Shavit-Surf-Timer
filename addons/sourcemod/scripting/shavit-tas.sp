@@ -512,7 +512,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 
 	if (s_iOnGroundCount[client] <= 1)
 	{
-		if (!type || !gB_Autostrafer[client] || IsSurfing(client))
+		if (!type || !gB_Autostrafer[client] || Shavit_BunnyhopStats.IsSurfing(client))
 		{
 			return Plugin_Continue;
 		}

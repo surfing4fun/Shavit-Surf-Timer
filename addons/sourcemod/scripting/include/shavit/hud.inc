@@ -53,7 +53,7 @@
 #define HUD2_RANK               (1 << 6)
 #define HUD2_TRACK              (1 << 7)
 #define HUD2_SPLITPB            (1 << 8)
-#define HUD2_MAPTIER            (1 << 9)
+#define HUD2_RAMPSPEED          (1 << 9)
 #define HUD2_TIMEDIFFERENCE     (1 << 10)
 #define HUD2_STAGEWRPB          (1 << 11)
 #define HUD2_STAGETIME     		(1 << 12)

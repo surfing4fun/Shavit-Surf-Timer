@@ -29,6 +29,8 @@ int gI_Scrolls[MAXPLAYERS+1];
 int gI_Buttons[MAXPLAYERS+1];
 bool gB_JumpHeld[MAXPLAYERS+1];
 
+bool gB_Surfing[MAXPLAYERS+1];
+
 int gI_Jumps[MAXPLAYERS+1];
 int gI_PerfectJumps[MAXPLAYERS+1];
 
@@ -36,6 +38,8 @@ Handle gH_Forwards_OnJumpPressed = null;
 Handle gH_Forwards_OnJumpReleased = null;
 Handle gH_Forwards_OnTouchGround = null;
 Handle gH_Forwards_OnLeaveGround = null;
+Handle gH_Forwards_OnTouchRamp = null;
+Handle gH_Forwards_OnLeaveRamp = null;
 
 public void Bhopstats_CreateNatives()
 {
@@ -44,6 +48,7 @@ public void Bhopstats_CreateNatives()
 	CreateNative("Shavit_Bhopstats_IsHoldingJump", Native_IsHoldingJump);
 	CreateNative("Shavit_Bhopstats_GetPerfectJumps", Native_Bhopstats_GetPerfectJumps);
 	CreateNative("Shavit_Bhopstats_ResetPerfectJumps", Native_ResetPerfectJumps);
+	CreateNative("Shavit_Bhopstats_IsSurfing", Native_IsSurfing);
 }
 
 public void Bhopstats_CreateForwards()
@@ -52,6 +57,8 @@ public void Bhopstats_CreateForwards()
 	gH_Forwards_OnJumpReleased = CreateGlobalForward("Shavit_Bhopstats_OnJumpReleased", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_OnTouchGround = CreateGlobalForward("Shavit_Bhopstats_OnTouchGround", ET_Event, Param_Cell);
 	gH_Forwards_OnLeaveGround = CreateGlobalForward("Shavit_Bhopstats_OnLeaveGround", ET_Event, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_OnTouchRamp = CreateGlobalForward("Shavit_Bhopstats_OnTouchRamp", ET_Event, Param_Cell);
+	gH_Forwards_OnLeaveRamp = CreateGlobalForward("Shavit_Bhopstats_OnLeaveRamp", ET_Event, Param_Cell);
 }
 
 public void Bhopstats_OnClientPutInServer(int client)
@@ -62,6 +69,8 @@ public void Bhopstats_OnClientPutInServer(int client)
 	gI_Scrolls[client] = 0;
 	gI_Buttons[client] = 0;
 	gB_JumpHeld[client] = false;
+	
+	gB_Surfing[client] = false;
 
 	gI_Jumps[client] = 0;
 	gI_PerfectJumps[client] = 0;
@@ -77,6 +86,11 @@ public int Native_GetScrollCount(Handle handler, int numParams)
 public int Native_IsOnGround(Handle handler, int numParams)
 {
 	return view_as<int>(gB_OnGround[GetNativeCell(1)]);
+}
+
+public int Native_IsSurfing(Handle handler, int numParams)
+{
+	return view_as<int>(gB_Surfing[GetNativeCell(1)]);
 }
 
 public int Native_IsHoldingJump(Handle handler, int numParams)
@@ -147,6 +161,23 @@ public void Bhopstats_PostThinkPost(int client)
 		gI_Scrolls[client] = 0;
 	}
 
+	if(!gB_Surfing[client] && IsSurfing(client))
+	{
+		Call_StartForward(gH_Forwards_OnTouchRamp);
+		Call_PushCell(client);
+		Call_Finish();
+
+		gB_Surfing[client] = true;
+	}
+	else if(gB_Surfing[client] && !IsSurfing(client))
+	{
+		Call_StartForward(gH_Forwards_OnLeaveRamp);
+		Call_PushCell(client);
+		Call_Finish();
+
+		gB_Surfing[client] = false;
+	}
+
 	if(gB_JumpHeld[client])
 	{
 		gI_Scrolls[client]++;
@@ -175,4 +206,45 @@ public void Bhopstats_PostThinkPost(int client)
 	}
 
 	gI_Buttons[client] = buttons;
+}
+
+stock bool IsSurfing(int client)
+{
+	float fPosition[3];
+	GetClientAbsOrigin(client, fPosition);
+
+	float fEnd[3];
+	fEnd = fPosition;
+	fEnd[2] -= 64.0;
+
+	float fMins[3];
+	GetEntPropVector(client, Prop_Send, "m_vecMins", fMins);
+
+	float fMaxs[3];
+	GetEntPropVector(client, Prop_Send, "m_vecMaxs", fMaxs);
+
+	Handle hTR = TR_TraceHullFilterEx(fPosition, fEnd, fMins, fMaxs, MASK_PLAYERSOLID, TRFilter_NoPlayers, client);
+
+	if(TR_DidHit(hTR))
+	{
+		float fNormal[3];
+		TR_GetPlaneNormal(hTR, fNormal);
+
+		delete hTR;
+
+		// If the plane normal's Z axis is 0.7 or below (alternatively, -0.7 when upside-down) then it's a surf ramp.
+		// https://github.com/alliedmodders/hl2sdk/blob/92dcf04225a278b75170cc84917f04e98f5d08ec/game/server/physics_main.cpp#L1059
+		// https://github.com/ValveSoftware/source-sdk-2013/blob/0d8dceea4310fde5706b3ce1c70609d72a38efdf/mp/src/game/server/physics_main.cpp#L1065
+
+		return (-0.7 <= fNormal[2] <= 0.7);
+	}
+
+	delete hTR;
+
+	return false;
+}
+
+stock bool TRFilter_NoPlayers(int entity, int mask, any data)
+{
+	return !(1 <= entity <= MaxClients);
 }

@@ -65,6 +65,22 @@ forward void Shavit_Bhopstats_OnTouchGround(int client);
 forward void Shavit_Bhopstats_OnLeaveGround(int client, bool jumped, bool ladder);
 
 /**
+ * Called when the player touches a ramp
+ *
+ * @param client					Client index.
+ * @noreturn
+ */
+forward void Shavit_Bhopstats_OnTouchRamp(int client);
+
+/**
+ * Called when the player leaves a ramp
+ *
+ * @param client					Client index.
+ * @noreturn
+ */
+forward void Shavit_Bhopstats_OnLeaveRamp(int client);
+
+/**
  * Retrieves the amount of separate +jump inputs since the player left the ground.
  *
  * @param client					Client index.
@@ -77,7 +93,7 @@ native int Shavit_Bhopstats_GetScrollCount(int client);
  * The result will be true if the player is on a ladder or in water, as jumping will be functional.
  *
  * @param client					Client index.
- * @return							Boolean value of 'is the player on ground?'
+ * @return							Boolean value of 'is the player on ground?
  */
 native bool Shavit_Bhopstats_IsOnGround(int client);
 
@@ -85,9 +101,17 @@ native bool Shavit_Bhopstats_IsOnGround(int client);
  * Checks if the player is holding his jump key.
  *
  * @param client					Client index.
- * @return							Boolean value of 'is the player holding the jump key?''
+ * @return							Boolean value of 'is the player holding the jump key?
  */
 native bool Shavit_Bhopstats_IsHoldingJump(int client);
+
+/**
+ * Checks if the player is surfing on a ramp.
+ *
+ * @param client					Client index.
+ * @return							Boolean value of 'is the player surfing on a ramp?
+ */
+native bool Shavit_Bhopstats_IsSurfing(int client);
 
 /**
  * Gets a percentage of perfectly timed bunnyhops.
@@ -105,6 +129,7 @@ native float Shavit_Bhopstats_GetPerfectJumps(int client);
  * @noreturn
  */
 native void Shavit_Bhopstats_ResetPerfectJumps(int client);
+
 
 methodmap Shavit_BunnyhopStats __nullable__
 {
@@ -166,6 +191,11 @@ methodmap Shavit_BunnyhopStats __nullable__
 	public static bool IsOnGround(int client)
 	{
 		return Shavit_Bhopstats_IsOnGround(client);
+	}
+
+	public static bool IsSurfing(int client)
+	{
+		return Shavit_Bhopstats_IsSurfing(client);
 	}
 
 	public static bool IsHoldingJump(int client)
