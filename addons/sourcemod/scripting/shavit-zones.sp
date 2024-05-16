@@ -5704,9 +5704,6 @@ public void StartTouchPost(int entity, int other)
 
 						if(stage == iLastStage + 1)
 						{
-							float fSpeed[3];
-							GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
-							// PrintToChatAll("[Debug] End: %.2f u/s", GetVectorLength(fSpeed));
 							Shavit_FinishStage(other, track, iLastStage);
 						}
 
