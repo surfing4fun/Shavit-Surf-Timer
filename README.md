@@ -1,5 +1,5 @@
 # Shavit Surf timer (CS:S ONLY) 
-#### Version 1.0.1 is ready to use, hopefully useful for someone
+#### Version 1.0.2 is ready to use, hopefully useful for someone
 
 ## About this surf timer
 - Sourcemod v1.11 or higher version required.
