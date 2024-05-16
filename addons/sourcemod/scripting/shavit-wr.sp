@@ -2185,11 +2185,10 @@ public void GetRecordDetails_Callback(Database db, DBResultSet results, const ch
 			
 			//Delete stage pb as well
 			FormatEx(sQuery, sizeof(sQuery),
-				//"DELETE FROM `%sstagetimespb` WHERE style = %d AND track = %d AND map = '%s';",
 				"DELETE FROM `%scptimes` WHERE style = %d AND track = %d AND map = '%s';",
 				gS_MySQLPrefix, iStyle, iTrack, gS_Map);
 			
-			QueryLog(gH_SQL, DeleteConfirm_StagePB_Callback, sQuery, 0, DBPrio_High);
+			QueryLog(gH_SQL, DeleteConfirm_DeleteCPPB_Callback, sQuery, 0, DBPrio_High);
 		}
 		else
 		{
@@ -2298,7 +2297,7 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 	}
 }
 
-public void DeleteConfirm_StagePB_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
+public void DeleteConfirm_DeleteCPPB_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
 {
 	if(results == null)
 	{
@@ -2721,13 +2720,13 @@ void StartWRMenu(int client)
 	if(gA_WRCache[client].iLastStage == 0)
 	{
 		FormatEx(sQuery, 512, 
-			"SELECT p.id, u.name, p.time, p.jumps, p.auth FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC;", 
+			"SELECT p.id, u.name, p.time, p.auth FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC;", 
 			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
 	}
 	else
 	{
 		FormatEx(sQuery, 512, 
-			"SELECT p.id, u.name, p.time, p.jumps, p.auth FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d AND stage = %d ORDER BY time ASC, date ASC;", 
+			"SELECT p.id, u.name, p.time, p.auth FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d AND stage = %d ORDER BY time ASC, date ASC;", 
 			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack, gA_WRCache[client].iLastStage);		
 	}
 	QueryLog(gH_SQL, SQL_WR_Callback, sQuery, dp);
@@ -2765,6 +2764,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 
 	int iCount = 0;
 	int iMyRank = 0;
+	float fWR = 0.0;
 
 	while(results.FetchRow())
 	{
@@ -2781,19 +2781,34 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 
 			// 2 - time
 			float time = results.FetchFloat(2);
+			
+			if(iCount == 1)
+			{
+				fWR = time;
+			}
+
 			char sTime[16];
 			FormatSeconds(time, sTime, 16);
 
-			// 3 - jumps
-			int jumps = results.FetchInt(3);
+			// 3 - time diff
+			float diff = time - fWR;
+			char sDiff[32];
+			if (diff < 60.0)
+			{
+				FormatSeconds(diff, sDiff, 32);
+			}
+			else
+			{
+				FormatSeconds(diff, sDiff, 32, false, true);
+			}
 
 			char sDisplay[128];
-			FormatEx(sDisplay, 128, "#%d - %s - %s (%d %T)", iCount, sName, sTime, jumps, "WRJumps", client);
+			FormatEx(sDisplay, 128, "#%d - %s - %s (+%s)", iCount, sName, sTime, sDiff);
 			hMenu.AddItem(sID, sDisplay);
 		}
 
 		// check if record exists in the map's top X
-		int iQuerySteamID = results.FetchInt(4);
+		int iQuerySteamID = results.FetchInt(3);
 
 		if(iQuerySteamID == iSteamID)
 		{
@@ -2813,13 +2828,12 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 	}
 	else
 	{
-		int iStyle = gA_WRCache[client].iLastStyle;
 		int iRecords = results.RowCount;
 
 		// [32] just in case there are 150k records on a map and you're ranked 100k or something
 		char sRanks[32];
 
-		if(gF_PlayerRecord[client][iStyle][track] == 0.0 || iMyRank == 0)
+		if(iMyRank == 0)
 		{
 			FormatEx(sRanks, 32, "(%d %T)", iRecords, "WRRecord", client);
 		}
@@ -3448,7 +3462,7 @@ public void OpenCheckpointRecordsMenu(int client, int id)
 	pack.WriteCell(id);
 
 	FormatEx(sQuery, sizeof(sQuery), 
-		"SELECT a.time, a.stage FROM %scptimes a JOIN %splayertimes b ON a.map = b.map AND a.track = b.track AND a.style = b.style AND a.auth = b.auth AND b.id = %d;",
+		"SELECT a.time, a.checkpoint FROM %scptimes a JOIN %splayertimes b ON a.map = b.map AND a.track = b.track AND a.style = b.style AND a.auth = b.auth AND b.id = %d;",
 		gS_MySQLPrefix, gS_MySQLPrefix, id);
 	QueryLog(gH_SQL, SQL_CheckpointRecordsMenu_Callback, sQuery, pack, DBPrio_High);
 }
@@ -3459,6 +3473,13 @@ public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results,
 	int client = GetClientFromSerial(data.ReadCell());
 	int id = data.ReadCell();
 	delete data;
+
+	if(results == null)
+	{
+		LogError("Timer (WR CheckpointRecordsMenu) SQL query failed. Reason: %s", error);
+
+		return;
+	}
 
 	float fTime;
 	int num;

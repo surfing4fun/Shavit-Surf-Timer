@@ -827,12 +827,6 @@ public int Native_GetCheckpointCount(Handle handler, int numParas)
 	return gB_LinearMap ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack];
 }
 
-
-
-
-
-
-
 public int Native_Zones_DeleteMap(Handle handler, int numParams)
 {
 	char sMap[PLATFORM_MAX_PATH];
@@ -1008,6 +1002,7 @@ public any Native_AddZone(Handle plugin, int numParams)
 		if (cache.iData > gI_HighestStage[cache.iTrack])
 		{
 			gI_HighestStage[cache.iTrack] = cache.iData;
+			gB_LinearMap = gI_HighestStage[Track_Main] < 2;
 		}
 	}
 
@@ -3703,7 +3698,7 @@ Action OpenDeleteMenu(int client, int pos = 0)
 			char sZoneName[32];
 			GetZoneName(client, gA_ZoneCache[i].iType, sZoneName, sizeof(sZoneName));
 
-			if(gA_ZoneCache[i].iType == Zone_CustomSpeedLimit || gA_ZoneCache[i].iType == Zone_Stage || gA_ZoneCache[i].iType == Zone_Airaccelerate)
+			if(gA_ZoneCache[i].iType == Zone_CustomSpeedLimit || gA_ZoneCache[i].iType == Zone_Stage || gA_ZoneCache[i].iType == Zone_Checkpoint || gA_ZoneCache[i].iType == Zone_Airaccelerate)
 			{
 				FormatEx(sDisplay, sizeof(sDisplay), "#%d - %s %d (%s)%s", (i + 1), sZoneName, gA_ZoneCache[i].iData, sTrack, sTarget);
 			}
@@ -3799,7 +3794,7 @@ public void CallOnZoneDeleted(int type, int track, int data, bool all)
 		{
 			for(int i = 0; i < MaxClients; i++)
 			{
-				if(Shavit_GetClientTrack(i) == track)
+				if(IsValidClient(i) && Shavit_GetClientTrack(i) == track)
 				{
 					GetZoneName(i, type, sZoneName, 32);
 					GetTrackName(i, track, sTrack, 32);
@@ -3813,14 +3808,17 @@ public void CallOnZoneDeleted(int type, int track, int data, bool all)
 		{
 			for(int i = 0; i < MaxClients; i++)
 			{
-				int iLastStage = Shavit_GetClientLastStage(i);
-				if(Shavit_GetClientTrack(i) == Track_Main && Shavit_IsOnlyStageMode(i) && (iLastStage == data || iLastStage + 1 == data))
+				if(IsValidClient(i))
 				{
-					GetZoneName(i, type, sZoneName, 32);
-					FormatEx(sTrack, 32, "%T %d", "StageText", i, data);
-					Shavit_PrintToChat(i, "%T", "ZoneDeletedStopTimer", i, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText, sZoneName);
-					
-					Shavit_StopTimer(i, false);						
+					int iLastStage = Shavit_GetClientLastStage(i);
+					if(Shavit_GetClientTrack(i) == Track_Main && Shavit_IsOnlyStageMode(i) && (iLastStage == data || iLastStage + 1 == data))
+					{
+						GetZoneName(i, type, sZoneName, 32);
+						FormatEx(sTrack, 32, "%T %d", "StageText", i, data);
+						Shavit_PrintToChat(i, "%T", "ZoneDeletedStopTimer", i, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText, sZoneName);
+						
+						Shavit_StopTimer(i, false);						
+					}					
 				}
 			}
 		}
@@ -3829,8 +3827,11 @@ public void CallOnZoneDeleted(int type, int track, int data, bool all)
 	{
 		for(int i = 0; i < MaxClients; i++)
 		{
-			Shavit_PrintToChat(i, "%T", "AllZoneDeletedStopTimer", i, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
-			Shavit_StopTimer(i, false);
+			if(IsValidClient(i))
+			{
+				Shavit_PrintToChat(i, "%T", "AllZoneDeletedStopTimer", i, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+				Shavit_StopTimer(i, false);
+			}
 		}
 	}
 }
@@ -5233,8 +5234,6 @@ public void Shavit_OnDatabaseLoaded()
 		RefreshZones();
 	}
 
-	gB_LinearMap = gI_HighestStage[Track_Main] < 2;
-
 	for(int i = 1; i <= MaxClients; i++)
 	{
 		if (IsValidClient(i) && !IsFakeClient(i))
@@ -5705,6 +5704,9 @@ public void StartTouchPost(int entity, int other)
 
 						if(stage == iLastStage + 1)
 						{
+							float fSpeed[3];
+							GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
+							// PrintToChatAll("[Debug] End: %.2f u/s", GetVectorLength(fSpeed));
 							Shavit_FinishStage(other, track, iLastStage);
 						}
 
@@ -5804,37 +5806,59 @@ public void EndTouchPost(int entity, int other)
 	gB_InsideZoneID[other][entityzone] = false;
 	RecalcInsideZone(other);
 
-	if (type == Zone_Speedmod)
+	switch(type)
 	{
-		SetVariantString("1.0");
-		AcceptEntityInput(entity, "ModifySpeed", other, entity, 0);
-	}
-
-	if ((type == Zone_Start || type == Zone_Stage /*|| type = Zone_Checkpoint*/) && Shavit_GetTimerStatus(other) == Timer_Running)
-	{
-		float fSpeed[3];
-		GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
-		float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
-		float speed = GetVectorLength(fSpeed);
-		int style = Shavit_GetBhopStyle(other);
-		int zonestage = (type == Zone_Stage) ? gA_ZoneCache[entityzone].iData : 1;
-		int stage = Shavit_GetClientLastStage(other);
-		float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
-
-		if(stage == zonestage && curVel >= 15.0)
+		case Zone_Speedmod:
 		{
-			bool valid = type == Zone_Stage && Shavit_GetZoneUseSpeedLimit(entityzone) ? (curVel <= limit) : true;
-			Shavit_SetStageTimeValid(other, valid);
+			SetVariantString("1.0");
+			AcceptEntityInput(entity, "ModifySpeed", other, entity, 0);			
+		}
 
-			char sZoneName[32];
-			FormatEx(sZoneName, 32, "%T %s%d%s ", "StageText", other, gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText);
-
-			if (Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0)
+		case Zone_Start:
+		{
+			if(Shavit_GetClientTrack(other) == track && Shavit_GetTimerStatus(other) == Timer_Running)
 			{
-				Shavit_StopChatSound();
-				Shavit_PrintToChat(other, "%sStart: %s%.2f %su/s", 
-				stage == 1 ? "" : sZoneName,
-				valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+				float fSpeed[3];
+				GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
+				float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+				float speed = GetVectorLength(fSpeed);
+
+				bool valid = true;
+				Shavit_SetStageTimeValid(other, valid);
+
+				if ((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0) && curVel >= 15.0 && Shavit_GetClientTime(other) < 1.0)
+				{
+					Shavit_StopChatSound();
+					Shavit_PrintToChat(other, "Start: %s%.2f %su/s", 
+					valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+				}
+			}
+		}
+			
+		case Zone_Stage:
+		{
+			int zonestage = gA_ZoneCache[entityzone].iData;
+			int stage = Shavit_GetClientLastStage(other);
+
+			if(Shavit_GetClientTrack(other) == track && Shavit_GetTimerStatus(other) == Timer_Running && stage == zonestage)
+			{
+				float fSpeed[3];
+				GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
+				float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+				float speed = GetVectorLength(fSpeed);
+				int style = Shavit_GetBhopStyle(other);
+				float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+
+				bool valid = gA_ZoneCache[entityzone].bUseSpeedLimit ? (curVel < limit) : true;
+				Shavit_SetStageTimeValid(other, valid);
+
+				if ((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0) && curVel >= 15.0 && Shavit_GetClientStageTime(other) < 1.0)
+				{
+					Shavit_StopChatSound();
+					Shavit_PrintToChat(other, "Stage %s%d%s Start: %s%.2f %su/s", 
+					gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
+					valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+				}
 			}
 		}
 	}
@@ -5942,9 +5966,7 @@ public void TouchPost(int entity, int other)
 				return;
 			}
 
-			int num = gA_ZoneCache[zone].iData;
-
-			Shavit_StartStageTimer(other, track, num);
+			Shavit_StartStageTimer(other, track, gA_ZoneCache[zone].iData);
 		}
 		case Zone_Respawn:
 		{
