@@ -2222,7 +2222,7 @@ public MRESReturn Hook_UpdateStepSound_Post(int pThis, DHookParam hParams)
 	return MRES_Ignored;
 }
 
-void FormatStyle(const char[] source, int style, bool central, int track, int stage, char dest[MAX_NAME_LENGTH], bool idle, frame_cache_t aCache, int type)
+void FormatStyle(const char[] source, int style, bool central, int track, int stage, int status, char dest[MAX_NAME_LENGTH], bool idle, int tick, frame_cache_t aCache, int type)
 {
 	char sTime[16];
 	char sName[MAX_NAME_LENGTH];
@@ -2261,21 +2261,51 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 		FormatEx(sType, sizeof(sType), "%T", "Replay_Looping", 0);
 	}
 
+	char sProgress[32];
+	if (!idle)
+	{
+		float fProgress = float(tick - aCache.iPreFrames) / float(aCache.iFrameCount) * 100.0;
+		
+		if(status == Replay_Running)
+		{
+			FormatEx(sProgress, sizeof(sProgress), "%.0f％", fProgress < 0.0 ? 0.0: fProgress);
+		}
+		else
+		{
+			FormatEx(sProgress, sizeof(sProgress), "100％", (status == Replay_Start) ? 0.0 : 100.0 );
+		}		
+	}
+	else
+	{
+		FormatEx(sProgress, sizeof(sProgress), "N/A");
+	}
+
+
 	ReplaceString(temp, sizeof(temp), "{type}", sType);
 	ReplaceString(temp, sizeof(temp), "{time}", sTime);
 	ReplaceString(temp, sizeof(temp), "{player}", sName);
+	ReplaceString(temp, sizeof(temp), "{progress}", sProgress);
 
 	char sTrack[32];
+	char sTrackTag[4];
+
 	if(stage == 0)
 	{
 		GetTrackName(LANG_SERVER, track, sTrack, 32);
+
+		if (track >= Track_Bonus)
+		{
+			FormatEx(sTrackTag, 4, "B%d", 0 + track);
+		}
 	}
 	else if (stage > 0)
 	{
 		FormatEx(sTrack, 32, "%T %d", "ReplayStageText", LANG_SERVER, stage);
+		FormatEx(sTrackTag, 4, "S%d", stage);
 	}
 
-	ReplaceString(temp, sizeof(temp), "{track}", sTrack);	
+	ReplaceString(temp, sizeof(temp), "{track}", sTrack);
+	ReplaceString(temp, sizeof(temp), "{tracktag}", sTrackTag);
 	strcopy(dest, MAX_NAME_LENGTH, temp);
 }
 
@@ -2286,11 +2316,11 @@ void FillBotName(bot_info_t info, char sName[MAX_NAME_LENGTH])
 
 	if (central || info.aCache.iFrameCount > 0)
 	{
-		FormatStyle(idle ? gS_ReplayStrings.sCentralName : gS_ReplayStrings.sNameStyle, info.iStyle, central, info.iTrack, info.iStage, sName, idle, info.aCache, info.iType);
+		FormatStyle(idle ? gS_ReplayStrings.sCentralName : gS_ReplayStrings.sNameStyle, info.iStyle, central, info.iTrack, info.iStage, info.iStatus, sName, idle, info.iTick, info.aCache, info.iType);
 	}
 	else
 	{
-		FormatStyle(gS_ReplayStrings.sUnloaded, info.iStyle, central, info.iTrack, info.iStage, sName, idle, info.aCache, info.iType);
+		FormatStyle(gS_ReplayStrings.sUnloaded, info.iStyle, central, info.iTrack, info.iStage, info.iStatus, sName, idle, info.iTick, info.aCache, info.iType);
 	}
 }
 
@@ -2303,7 +2333,7 @@ void UpdateBotScoreboard(bot_info_t info)
 	if (gEV_Type != Engine_TF2)
 	{
 		char sTag[MAX_NAME_LENGTH];
-		FormatStyle(gS_ReplayStrings.sClanTag, info.iStyle, central, info.iTrack, info.iStage, sTag, idle, info.aCache, info.iType);
+		FormatStyle(gS_ReplayStrings.sClanTag, info.iStyle, central, info.iTrack, info.iStage, info.iStatus, sTag, idle, info.iTick, info.aCache, info.iType);
 		CS_SetClientClanTag(client, sTag);
 	}
 

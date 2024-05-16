@@ -1194,13 +1194,13 @@ void UpdateClanTag(int client)
 	int track = Shavit_GetClientTrack(client);
 	char sTrack[4];
 
-	if(track != Track_Main)
+	if(track == Track_Main && Shavit_IsOnlyStageMode(client))
 	{
-		sTrack[0] = 'B';
-		if (track > Track_Bonus)
-		{
-			sTrack[1] = '0' + track;
-		}
+		FormatEx(sTrack, 4, "S%d", Shavit_GetClientLastStage(client));
+	}
+	else if (track >= Track_Bonus)
+	{
+		FormatEx(sTrack, 4, "B%d", 0 + track);
 	}
 
 	char sRank[8];
