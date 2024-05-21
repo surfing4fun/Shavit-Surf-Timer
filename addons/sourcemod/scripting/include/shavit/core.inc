@@ -1042,15 +1042,6 @@ native float Shavit_GetClientStageTime(int client);
 native int Shavit_GetClientTrack(int client);
 
 /**
- * Set the client's track. (Track_Main/Track_Bonus etc..)
- *
- * @param client					Client index.
- * @param track						Track index
- * @return                          Timer track.
- */
-native void Shavit_SetClientTrack(int client, int track);
-
-/**
  * Retrieve the client's current stage number.
  *
  * @param client                    Client index.
@@ -1651,7 +1642,6 @@ public void __pl_shavit_core_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetClientTime");
 	MarkNativeAsOptional("Shavit_GetClientStageTime");
 	MarkNativeAsOptional("Shavit_GetClientTrack");
-	MarkNativeAsOptional("Shavit_SetClientTrack");
 	MarkNativeAsOptional("Shavit_GetClientLastStage");
 	MarkNativeAsOptional("Shavit_SetClientLastStage");
 	MarkNativeAsOptional("Shavit_GetClientCPTimes");

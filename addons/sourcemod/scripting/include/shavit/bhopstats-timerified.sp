@@ -126,13 +126,16 @@ public void Bhopstats_PostThinkPost(int client)
 	bool bOldOnGround = gB_OnGround[client];
 
 	int iGroundEntity;
+	bool bNoclip;
 
 	if (gB_ReplayPlayback && IsFakeClient(client))
 	{
+		bNoclip = false;
 		iGroundEntity = (Shavit_GetReplayEntityFlags(client) & FL_ONGROUND) ? 0 : -1;
 	}
 	else
 	{
+		bNoclip = GetEntityMoveType(client) == MOVETYPE_NOCLIP;
 		iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
 	}
 
@@ -161,7 +164,7 @@ public void Bhopstats_PostThinkPost(int client)
 		gI_Scrolls[client] = 0;
 	}
 
-	if(!gB_Surfing[client] && IsSurfing(client))
+	if(!gB_Surfing[client] && IsSurfing(client) && !bNoclip)
 	{
 		Call_StartForward(gH_Forwards_OnTouchRamp);
 		Call_PushCell(client);
@@ -169,7 +172,7 @@ public void Bhopstats_PostThinkPost(int client)
 
 		gB_Surfing[client] = true;
 	}
-	else if(gB_Surfing[client] && !IsSurfing(client))
+	else if(gB_Surfing[client] && !IsSurfing(client) && !bNoclip)
 	{
 		Call_StartForward(gH_Forwards_OnLeaveRamp);
 		Call_PushCell(client);

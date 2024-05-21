@@ -218,7 +218,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetClientTime", Native_GetClientTime);
 	CreateNative("Shavit_GetClientStageTime", Native_GetClientStageTime);
 	CreateNative("Shavit_GetClientTrack", Native_GetClientTrack);
-	CreateNative("Shavit_SetClientTrack", Native_SetClientTrack);
 	CreateNative("Shavit_GetClientLastStage", Native_GetClientLastStage);
 	CreateNative("Shavit_SetClientLastStage", Native_SetClientLastStage);
 	CreateNative("Shavit_GetClientCPTimes", Native_GetClientCPTimes);
@@ -1811,14 +1810,7 @@ void ChangeClientStyle(int client, int style, bool manual)
 
 public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
 {
-	gA_Timers[client].iLastStage = newstage;
 
-	if(gB_PlayerRepeat[client] && gA_Timers[client].iTimerTrack == Track_Main)
-	{
-		char sStage[32];
-		FormatEx(sStage, 32, "%T %d", "StageText", client, newstage);
-		Shavit_PrintToChat(client, "%T",  "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
-	}
 }
 
 // used as an alternative for games where player_jump isn't a thing, such as TF2
@@ -2048,13 +2040,39 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 		}
 		else if(gA_Timers[client].iLastStage == stage)
 		{
-			gA_Timers[client].aStageStartInfo.fStageStartTime = gA_Timers[client].fCurrentTime;
-			gA_Timers[client].aStageStartInfo.iFractionalTicks = gA_Timers[client].iFractionalTicks;
-			gA_Timers[client].aStageStartInfo.iFullTicks = gA_Timers[client].iFullTicks;
-			gA_Timers[client].aStageStartInfo.iJumps = gA_Timers[client].iJumps;
-			gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
+
+			if(!IsValidClient(client, true) || GetClientTeam(client) < 2 || IsFakeClient(client) || !gB_CookiesRetrieved[client])
+			{
+				return 0;
+			}
+
+			float fSpeed[3];
+			GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+			float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+
+			int nozaxisspeed = GetStyleSettingInt(gA_Timers[client].bsStyle, "nozaxisspeed");
+
+			if (nozaxisspeed < 0)
+			{
+				nozaxisspeed = gCV_NoZAxisSpeed.BoolValue;
+			}
+
+			if (!nozaxisspeed ||
+				GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 1 ||
+				(fSpeed[2] == 0.0 && (GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 2 || curVel <= 50.0 ||
+					((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
+					(gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))))) // beautiful
+			{
+				gA_Timers[client].aStageStartInfo.fStageStartTime = gA_Timers[client].fCurrentTime;
+				gA_Timers[client].aStageStartInfo.iFractionalTicks = gA_Timers[client].iFractionalTicks;
+				gA_Timers[client].aStageStartInfo.iFullTicks = gA_Timers[client].iFullTicks;
+				gA_Timers[client].aStageStartInfo.iJumps = gA_Timers[client].iJumps;
+				gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
+			}
 		}
 	}
+
+	return 0;
 }
 
 public int Native_StopTimer(Handle handler, int numParams)
@@ -2859,8 +2877,21 @@ public void ChangeClientLastStage(int client, int stage)
 		return;
 	}
 	
+	if(gA_Timers[client].iTimerTrack >= Track_Bonus && stage > 1)
+	{
+		gA_Timers[client].iTimerTrack = Track_Main;
+	}
+
 	int oldstage = gA_Timers[client].iLastStage;
 	gA_Timers[client].iLastStage = stage;
+
+	if(gB_PlayerRepeat[client] && gA_Timers[client].iTimerTrack == Track_Main)
+	{
+		char sStage[32];
+		FormatEx(sStage, 32, "%T %d", "StageText", client, stage);
+		Shavit_PrintToChat(client, "%T",  "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
+	}
+
 	Call_StartForward(gH_Forwards_OnStageChanged);
 	Call_PushCell(client);
 	Call_PushCell(oldstage);

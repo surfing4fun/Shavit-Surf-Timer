@@ -1341,7 +1341,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 
 			if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
 			{
-				FormatEx(sLine, 128, "Speed: %d", data.iSpeed);
+				FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
 				AddHUDLine(buffer, maxlen, sLine, iLines);
 			}
 		}
@@ -1424,7 +1424,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 					}
 					else
 					{
-						if(data.bInsideStageZone && data.fStageTime < 0.05)
+						if(data.bInsideStageZone && data.fStageTime < 0.3)
 						{
 							FormatEx(sLine, 128, "%T", "HudInStageStart", client, data.iZoneStage);
 							AddHUDLine(buffer, maxlen, sLine, iLines);
@@ -2056,6 +2056,8 @@ void UpdateKeyOverlay(int client, Panel panel, bool &draw)
 
 public void Shavit_Bhopstats_OnTouchGround(int client)
 {
+	gF_RampVelocity[client] = -1.0;
+	gF_PrevRampVelocity[client] = -1.0;
 	gI_LastScrollCount[client] = Shavit_BunnyhopStats.GetScrollCount(client);
 }
 
@@ -2180,7 +2182,7 @@ void FillCenterText(int client, int target, bool keys, bool rampspeed, int style
 		char sVelDiff[16];
 		float fVelDiff = gF_RampVelocity[target] - gF_PrevRampVelocity[target];
 		FormatEx(sRampVel, 8, "%s%.0f", gF_RampVelocity[target] < 1000.0 ? " ":"", gF_RampVelocity[target]);
-		FormatEx(sVelDiff, 16, "%s(%s%.0f)", fVelDiff < 1000.0 ? fVelDiff < 100.0 ? "   ":"  ":"", fVelDiff > 0 ? "+":"", fVelDiff);
+		FormatEx(sVelDiff, 16, "%s(%s%.0f)", (Abs(fVelDiff) < 1000.0) ? (Abs(fVelDiff) < 100.0) ? "   ":"  ":"", fVelDiff > 0 ? "+":"", fVelDiff);
 
 		if(keys)
 		{
@@ -2602,6 +2604,16 @@ public int PanelHandler_Nothing(Menu m, MenuAction action, int param1, int param
 {
 	// i don't need anything here
 	return 0;
+}
+
+float Abs(float input)
+{
+	if(input < 0.0)
+	{
+		return -input;
+	}
+
+	return input;
 }
 
 public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int track, bool manual)
