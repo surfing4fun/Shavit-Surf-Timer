@@ -2615,7 +2615,6 @@ public Action Command_Stages(int client, int args)
 				{
 					Shavit_StopTimer(client);
 					Shavit_SetOnlyStageMode(client, true);
-					Shavit_SetClientTrack(client, gA_ZoneCache[i].iTrack);
 				}
 
 				Shavit_SetClientLastStage(client, iStage);
@@ -2683,7 +2682,6 @@ public int MenuHandler_SelectStage(Menu menu, MenuAction action, int param1, int
 		Shavit_SetClientLastStage(param1, gA_ZoneCache[iIndex].iData);
 
 		Shavit_StopTimer(param1);
-		Shavit_SetClientTrack(param1, gA_ZoneCache[iIndex].iTrack);
 		Shavit_SetOnlyStageMode(param1, true);
 
 		if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))

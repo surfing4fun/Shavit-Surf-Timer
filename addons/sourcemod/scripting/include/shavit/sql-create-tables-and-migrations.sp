@@ -56,6 +56,12 @@ enum
 	Migration_DeprecateExactTimeInt, // 30
 	Migration_AddPlayertimesAuthFK,
 	Migration_FixSQLiteMapzonesROWID,
+	Migration_AddMaptiersMaxvelocity,
+	// TODO: Add start & end speed of records
+	// Migration_AddPlayertimesStartvelAndEndvel,
+	// Migration_AddCpwrsStartvelAndEndvel,
+	// Migration_AddCptimesStartvelAndEndvel,
+	// Migration_AddStagetimesStartvelAndEndvel,
 	MIGRATIONS_END
 };
 
@@ -93,6 +99,11 @@ char gS_MigrationNames[][] = {
 	"DeprecateExactTimeInt",
 	"AddPlayertimesAuthFK",
 	"FixSQLiteMapzonesROWID",
+	"AddMaptiersMaxvelocity",
+	// "AddPlayertimesStartvelAndEndvel",
+	// "AddCpwrsStartvelAndEndvel",
+	// "AddCptimesStartvelAndEndvel",
+	// "AddStagetimesStartvelAndEndvel",
 };
 
 static Database gH_SQL;
@@ -180,7 +191,7 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	//
 
 	FormatEx(sQuery, sizeof(sQuery),
-		"CREATE TABLE IF NOT EXISTS `%smaptiers` (`map` VARCHAR(255) NOT NULL, `tier` INT NOT NULL DEFAULT 1, PRIMARY KEY (`map`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%smaptiers` (`map` VARCHAR(255) NOT NULL, `tier` INT NOT NULL DEFAULT 1, `maxvelocity` FLOAT NOT NULL DEFAULT 3500.0, PRIMARY KEY (`map`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
@@ -418,6 +429,11 @@ void ApplyMigration(int migration)
 		case Migration_DeprecateExactTimeInt: ApplyMigration_DeprecateExactTimeInt();
 		case Migration_AddPlayertimesAuthFK: ApplyMigration_AddPlayertimesAuthFK();
 		case Migration_FixSQLiteMapzonesROWID: ApplyMigration_FixSQLiteMapzonesROWID();
+		case Migration_AddMaptiersMaxvelocity: ApplyMigration_AddMaptiersMaxvelocity();
+		// case Migration_AddPlayertimesStartvelAndEndvel: ApplyMigration_AddPlayertimesStartvelAndEndvel();
+		// case Migration_AddCpwrsStartvelAndEndvel: ApplyMigration_AddCpwrsStartvelAndEndvel();
+		// case Migration_AddCptimesStartvelAndEndvel: ApplyMigration_AddCptimesStartvelAndEndvel();
+		// case Migration_AddStagetimesStartvelAndEndvel: ApplyMigration_AddStagetimesStartvelAndEndvel();
 	}
 }
 
@@ -736,6 +752,13 @@ public void Trans_FixSQLiteMapzonesROWID_Success(Database db, any data, int numQ
 public void Trans_FixSQLiteMapzonesROWID_Error(Database db, any data, int numQueries, const char[] error, int failIndex, any[] queryData)
 {
 	LogError("Timer error! SQLiteMapzonesROWID migration transaction failed. Reason: %s", error);
+}
+
+void ApplyMigration_AddMaptiersMaxvelocity()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smaptiers` ADD COLUMN `maxvelocity` FLOAT NOT NULL DEFAULT 3500.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddMaptiersMaxvelocity, DBPrio_High);
 }
 
 public void SQL_TableMigrationSingleQuery_Callback(Database db, DBResultSet results, const char[] error, any data)

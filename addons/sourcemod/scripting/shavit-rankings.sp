@@ -94,6 +94,10 @@ Convar gCV_MVPRankOnes_Slow = null;
 Convar gCV_MVPRankOnes = null;
 Convar gCV_MVPRankOnes_Main = null;
 Convar gCV_DefaultTier = null;
+Convar gCV_DefaultMaxVelocity = null;
+Convar gCV_MinMaxVelocity = null;
+
+ConVar sv_maxvelocity = null;
 
 ranking_t gA_Rankings[MAXPLAYERS+1];
 
@@ -106,6 +110,7 @@ Handle gH_Forwards_OnRankAssigned = null;
 // Timer settings.
 chatstrings_t gS_ChatStrings;
 int gI_Styles = 0;
+float gF_MaxVelocity;
 
 bool gB_WorldRecordsCached = false;
 bool gB_WRHolderTablesMade = false;
@@ -160,6 +165,9 @@ public void OnPluginStart()
 	RegAdminCmd("sm_settier", Command_SetTier, ADMFLAG_RCON, "Change the map's tier. Usage: sm_settier <tier> [map]");
 	RegAdminCmd("sm_setmaptier", Command_SetTier, ADMFLAG_RCON, "Change the map's tier. Usage: sm_setmaptier <tier> [map] (sm_settier alias)");
 
+	RegAdminCmd("sm_setmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvelocity <value> [map]");
+	RegAdminCmd("sm_setmapmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmapmaxvelocity <value> [map] (sm_setmaxvelocity alias)");
+
 	RegAdminCmd("sm_recalcmap", Command_RecalcMap, ADMFLAG_RCON, "Recalculate the current map's records' points.");
 
 	RegAdminCmd("sm_recalcall", Command_RecalcAll, ADMFLAG_ROOT, "Recalculate the points for every map on the server. Run this after you change the ranking multiplier for a style or after you install the plugin.");
@@ -172,6 +180,10 @@ public void OnPluginStart()
 	gCV_MVPRankOnes = new Convar("shavit_rankings_mvprankones", "2", "Set the players' amount of MVPs to the amount of #1 times they have.\n0 - Disabled\n1 - Enabled, for all styles.\n2 - Enabled, for default style only.\n(CS:S/CS:GO only)", 0, true, 0.0, true, 2.0);
 	gCV_MVPRankOnes_Main = new Convar("shavit_rankings_mvprankones_maintrack", "1", "If set to 0, all tracks will be counted for the MVP stars.\nOtherwise, only the main track will be checked.\n\nRequires \"shavit_stats_mvprankones\" set to 1 or above.\n(CS:S/CS:GO only)", 0, true, 0.0, true, 1.0);
 	gCV_DefaultTier = new Convar("shavit_rankings_default_tier", "1", "Sets the default tier for new maps added.", 0, true, 0.0, true, 10.0);
+	gCV_DefaultMaxVelocity = new Convar("shavit_rankings_default_maxvelocity", "3500.0", "Sets the default sv_maxvelocity for new maps added.", 0, true, 0.0, false, 0.0);
+	gCV_MinMaxVelocity = new Convar("shavit_rankings_min_maxvelocity", "3499.9", "Sets the minimum sv_maxvelocity value.", 0, true, 0.0, false, 0.0);
+
+	sv_maxvelocity = FindConVar("sv_maxvelocity");
 
 	Convar.AutoExecConfig();
 
@@ -238,6 +250,11 @@ public void Shavit_OnDatabaseLoaded()
 		gI_Driver == Driver_sqlite
 		? "WITH p AS (SELECT COUNT(*) FROM pragma_function_list WHERE name = 'pow') SELECT sqlite_version(), * FROM p;"
 		: "SELECT VERSION();");
+
+	if(!gB_TierQueried)
+	{
+		OnMapStart();
+	}
 }
 
 void CreateGetWeightedPointsFunction()
@@ -353,18 +370,25 @@ public void OnMapStart()
 		UpdateTop100();
 	}
 
+	RefreshMapSettings();
+}
+
+public void RefreshMapSettings()
+{
 	// Default tier.
 	// I won't repeat the same mistake blacky has done with tier 3 being default..
 	gI_Tier = gCV_DefaultTier.IntValue;
+	gF_MaxVelocity = gCV_DefaultMaxVelocity.FloatValue;
+	sv_maxvelocity.FloatValue = gF_MaxVelocity;
 
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "SELECT map, tier FROM %smaptiers ORDER BY map ASC;", gS_MySQLPrefix);
-	QueryLog(gH_SQL, SQL_FillTierCache_Callback, sQuery, 0, DBPrio_High);
+	FormatEx(sQuery, sizeof(sQuery), "SELECT map, tier, maxvelocity FROM %smaptiers ORDER BY map ASC;", gS_MySQLPrefix);
+	QueryLog(gH_SQL, SQL_FillMapSettingCache_Callback, sQuery, 0, DBPrio_High);
 
 	gB_TierQueried = true;
 }
 
-public void SQL_FillTierCache_Callback(Database db, DBResultSet results, const char[] error, any data)
+public void SQL_FillMapSettingCache_Callback(Database db, DBResultSet results, const char[] error, any data)
 {
 	if(results == null)
 	{
@@ -387,6 +411,12 @@ public void SQL_FillTierCache_Callback(Database db, DBResultSet results, const c
 		gA_MapTiers.SetValue(sMap, tier);
 		gA_ValidMaps.PushString(sMap);
 
+		if(StrEqual(sMap, gS_Map))
+		{
+			gF_MaxVelocity = results.FetchFloat(2);
+			sv_maxvelocity.FloatValue = gF_MaxVelocity;
+		}
+
 		Call_StartForward(gH_Forwards_OnTierAssigned);
 		Call_PushString(sMap);
 		Call_PushCell(tier);
@@ -401,7 +431,7 @@ public void SQL_FillTierCache_Callback(Database db, DBResultSet results, const c
 		Call_Finish();
 
 		char sQuery[512];
-		FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, tier) VALUES ('%s', %d);", gS_MySQLPrefix, gS_Map, gI_Tier);
+		FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, tier, maxvelocity) VALUES ('%s', %d, %f);", gS_MySQLPrefix, gS_Map, gI_Tier, gCV_DefaultMaxVelocity.FloatValue);
 		QueryLog(gH_SQL, SQL_SetMapTier_Callback, sQuery, 0, DBPrio_High);
 	}
 }
@@ -613,6 +643,64 @@ public int MenuHandler_Top(Menu menu, MenuAction action, int param1, int param2)
 	}
 
 	return 0;
+}
+
+public Action Command_SetMaxVelocity(int client, int args)
+{
+	char sArg[8];
+	GetCmdArg(1, sArg, 8);
+
+	float fMaxVelocity = StringToFloat(sArg);
+
+	if(args == 0 || fMaxVelocity < gCV_MinMaxVelocity.FloatValue)
+	{
+		char sMessage[64];
+		Format(sMessage, 64, "sm_setmaxvelocity <value> (%.0f or greater) [map]", gCV_MinMaxVelocity.FloatValue);
+		ReplyToCommand(client, "%T", "ArgumentsMissing", client, sMessage);
+
+		return Plugin_Handled;
+	}
+
+	char map[PLATFORM_MAX_PATH];
+
+	if (args < 2)
+	{
+		gF_MaxVelocity = fMaxVelocity;
+		map = gS_Map;
+		sv_maxvelocity.FloatValue = gF_MaxVelocity;
+	}
+	else
+	{
+		GetCmdArg(2, map, sizeof(map));
+		TrimString(map);
+		LowercaseString(map);
+
+		if (!map[0])
+		{
+			Shavit_PrintToChat(client, "Invalid map name");
+			return Plugin_Handled;
+		}
+	}
+
+	Shavit_PrintToChat(client, "%T", "SetMaxVelocity", client, gS_ChatStrings.sVariable2, fMaxVelocity, gS_ChatStrings.sText);
+	Shavit_LogMessage("%L - set sv_maxvelocity of `%s` to %f", client, gS_Map, fMaxVelocity);
+
+	char sQuery[512];
+	FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, maxvelocity) VALUES ('%s', %f);", gS_MySQLPrefix, map, fMaxVelocity);
+
+	QueryLog(gH_SQL, SQL_SetMapMaxVelocity_Callback, sQuery, fMaxVelocity);
+
+	return Plugin_Handled;
+}
+
+public void SQL_SetMapMaxVelocity_Callback(Database db, DBResultSet results, const char[] error, any data)
+{
+	if(results == null)
+	{
+		LogError("Timer (rankings, set map maxvelocity) error! Reason: %s", error);
+
+		return;
+	}
 }
 
 public Action Command_SetTier(int client, int args)

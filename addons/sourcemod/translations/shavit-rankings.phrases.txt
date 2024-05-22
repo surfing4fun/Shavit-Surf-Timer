@@ -11,6 +11,11 @@
 		"#format"	"{1:s},{2:d},{3:s}"
 		"en"		"Tier changed to {1}{2}{3}."
 	}
+	"SetMaxVelocity"
+	{
+		"#format"	"{1:s},{2:.0f},{3:s}"
+		"en"		"sv_maxvelocity changed to {1}{2}{3}."
+	}
 	"Rank"
 	{
 		"#format"	"{1:s},{2:N},{3:s},{4:s},{5:d},{6:s},{7:d},{8:s},{9:.1f},{10:s}"
