@@ -155,10 +155,10 @@ chatstrings_t gS_ChatStrings;
 
 public Plugin myinfo =
 {
-	name = "[shavit] Miscellaneous",
+	name = "[shavit-surf] Miscellaneous",
 	author = "shavit, Technoblazed, strafe, EvanIMK, Nickelony, rtldg, ofirgall",
-	description = "Miscellaneous features for shavit's bhop timer.",
-	version = SHAVIT_VERSION,
+	description = "Miscellaneous features for shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 

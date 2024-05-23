@@ -272,10 +272,10 @@ ClosestPos gH_ClosestPos[STYLE_LIMIT][TRACKS_SIZE][MAX_STAGES];//[STYLE_LIMIT][T
 
 public Plugin myinfo =
 {
-	name = "[shavit] Replay Bot",
+	name = "[shavit-surf] Replay Bot",
 	author = "shavit, rtldg, carnifex, KiD Fearless",
-	description = "A replay bot for shavit's bhop timer.",
-	version = SHAVIT_VERSION,
+	description = "A replay bot for shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 

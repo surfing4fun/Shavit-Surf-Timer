@@ -131,10 +131,10 @@ int gI_PBMenuPos[MAXPLAYERS+1];
 
 public Plugin myinfo =
 {
-	name = "[shavit] World Records",
+	name = "[shavit-surf] World Records",
 	author = "shavit, SaengerItsWar, KiD Fearless, rtldg, BoomShotKapow, Nuko",
-	description = "World records for shavit's bhop timer.",
-	version = SHAVIT_VERSION,
+	description = "World records shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 

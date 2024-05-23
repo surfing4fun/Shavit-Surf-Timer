@@ -122,10 +122,10 @@ int gI_WRHoldersCvar;
 
 public Plugin myinfo =
 {
-	name = "[shavit] Rankings",
+	name = "[shavit-surf] Rankings",
 	author = "shavit, rtldg",
-	description = "A fair and competitive ranking system for shavit's bhoptimer.",
-	version = SHAVIT_VERSION,
+	description = "A fair and competitive ranking system shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 
@@ -173,7 +173,7 @@ public void OnPluginStart()
 	RegAdminCmd("sm_recalcall", Command_RecalcAll, ADMFLAG_ROOT, "Recalculate the points for every map on the server. Run this after you change the ranking multiplier for a style or after you install the plugin.");
 
 	gCV_PointsPerTier = new Convar("shavit_rankings_pointspertier", "50.0", "Base points to use for per-tier scaling.\nRead the design idea to see how it works: https://github.com/shavitush/bhoptimer/issues/465", 0, true, 1.0);
-	gCV_WeightingMultiplier = new Convar("shavit_rankings_weighting", "0.975", "Weighting multiplier. 1.0 to disable weighting.\nFormula: p[0] * this^0 + p[1] * this^1 + p[2] * this^2 + ... + p[n] * this^n\nRestart server to apply.", 0, true, 0.01, true, 1.0);
+	gCV_WeightingMultiplier = new Convar("shavit_rankings_weighting", "1.0", "Weighting multiplier. 1.0 to disable weighting.\nFormula: p[0] * this^0 + p[1] * this^1 + p[2] * this^2 + ... + p[n] * this^n\nRestart server to apply.", 0, true, 0.01, true, 1.0);
 	gCV_WeightingLimit = new Convar("shavit_rankings_weighting_limit", "0", "Limit the number of times retrieved for calculating a player's weighted points to this number.\n0 = no limit\nFor reference, a weighting of 0.975 to the power of 300 is 0.00050278777 and results in pretty much nil points for any further weighted times.\nUnused when shavit_rankings_weighting is 1.0.\nYou probably won't need to change this unless you have hundreds of thousands of player times in your database.", 0, true, 0.0, false);
 	gCV_LastLoginRecalculate = new Convar("shavit_rankings_llrecalc", "0", "Maximum amount of time (in minutes) since last login to recalculate points for a player.\nsm_recalcall does not respect this setting.\n0 - disabled, don't filter anyone", 0, true, 0.0);
 	gCV_MVPRankOnes_Slow = new Convar("shavit_rankings_mvprankones_slow", "1", "Uses a slower but more featureful MVP counting system.\nEnables the WR Holder ranks & counts for every style & track.\nYou probably won't need to change this unless you have hundreds of thousands of player times in your database.", 0, true, 0.0, true, 1.0);
@@ -360,6 +360,8 @@ public void OnMapStart()
 		return;
 	}
 
+	RefreshMapSettings();
+
 	if (gB_SqliteHatesPOW && gCV_WeightingMultiplier.FloatValue < 1.0)
 	{
 		LogError("Rankings Weighting multiplier set but sqlite extension isn't supported. Try using db.sqlite.ext from Sourcemod 1.12 or higher.");
@@ -369,8 +371,6 @@ public void OnMapStart()
 	{
 		UpdateTop100();
 	}
-
-	RefreshMapSettings();
 }
 
 public void RefreshMapSettings()

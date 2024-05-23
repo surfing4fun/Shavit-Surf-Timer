@@ -70,9 +70,9 @@ bool gB_ReplayRecorder = false;
 
 public Plugin myinfo =
 {
-	name = "[shavit] TAS",
+	name = "[shavit-surf] TAS",
 	author = "xutaxkamay, oblivious, KiD Fearless, rtldg",
-	description = "TAS module for shavit's bhop timer featuring xutaxkamay's autostrafer and oblivious's autogain.",
+	description = "TAS module for shavit's surf timer. featuring xutaxkamay's autostrafer and oblivious's autogain. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 };

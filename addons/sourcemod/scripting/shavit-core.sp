@@ -193,10 +193,10 @@ bool gB_KZMap[TRACKS_SIZE];
 
 public Plugin myinfo =
 {
-	name = "[shavit] Core",
+	name = "[shavit-surf] Core",
 	author = "shavit, rtldg, KiD Fearless, GAMMA CASE, Technoblazed, carnifex, ofirgall, Nairda, Extan, rumour, OliviaMourning, Nickelony, sh4hrazad, BoomShotKapow, strafe",
-	description = "The core for shavit's bhop timer.",
-	version = SHAVIT_VERSION,
+	description = "The core for shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 
@@ -414,6 +414,7 @@ public void OnPluginStart()
 	BuildPath(Path_SM, gS_LogPath, PLATFORM_MAX_PATH, "logs/shavit.log");
 
 	CreateConVar("shavit_version", SHAVIT_VERSION, "Plugin version.", (FCVAR_NOTIFY | FCVAR_DONTRECORD));
+	CreateConVar("shavit_surf_version", SHAVIT_SURF_VERSION, "Plugin version.", (FCVAR_NOTIFY | FCVAR_DONTRECORD));
 
 	gCV_Restart = new Convar("shavit_core_restart", "1", "Allow commands that restart the timer?", 0, true, 0.0, true, 1.0);
 	gCV_Pause = new Convar("shavit_core_pause", "1", "Allow pausing?", 0, true, 0.0, true, 1.0);
@@ -2372,6 +2373,14 @@ public int Native_FinishStage(Handle handler, int numParams)
 	if(gA_Timers[client].bOnlyStageMode)
 	{
 		Shavit_StopTimer(client);
+	}
+	else
+	{
+		gA_Timers[client].aStageStartInfo.fStageStartTime = gA_Timers[client].fCurrentTime;
+		gA_Timers[client].aStageStartInfo.iFractionalTicks = gA_Timers[client].iFractionalTicks;
+		gA_Timers[client].aStageStartInfo.iFullTicks = gA_Timers[client].iFullTicks;
+		gA_Timers[client].aStageStartInfo.iJumps = gA_Timers[client].iJumps;
+		gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
 	}
 
 	return 1;

@@ -36,10 +36,10 @@
 
 public Plugin myinfo =
 {
-	name = "[shavit] Replay Recorder",
+	name = "[shavit-surf] Replay Recorder",
 	author = "shavit, rtldg, KiD Fearless, Ciallo-Ani, BoomShotKapow",
-	description = "A replay recorder for shavit's bhop timer.",
-	version = SHAVIT_VERSION,
+	description = "A replay recorder for shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 

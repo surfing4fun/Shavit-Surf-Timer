@@ -125,10 +125,10 @@ chatstrings_t gS_ChatStrings;
 
 public Plugin myinfo =
 {
-	name = "[shavit] HUD",
+	name = "[shavit-surf] HUD",
 	author = "shavit, strafe, KiD Fearless, rtldg, Technoblazed, Nairda, Nuko, GAMMA CASE",
-	description = "HUD for shavit's bhop timer.",
-	version = SHAVIT_VERSION,
+	description = "HUD for shavit surf timer. (This plugin is base on shavit's bhop timer)",
+	version = SHAVIT_SURF_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
 
