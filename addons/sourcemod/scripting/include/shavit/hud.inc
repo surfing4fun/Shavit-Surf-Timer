@@ -144,11 +144,12 @@ forward Action Shavit_OnTopLeftHUD(int client, int target, char[] topleft, int t
  * @param keyhint                   Reference to the HUD buffer.
  * @param keyhintlength             Max length of the keyhint buffer.
  * @param track                     Target's track.
+ * @param stage						Target's stage.
  * @param style                     Target's style.
  *
  * @return                          Plugin_Handled or Plugin_Stop to block the HUD message from appearing. Anything else to pass along new values.
  */
-forward Action Shavit_OnKeyHintHUD(int client, int target, char[] keyhint, int keyhintlength, int track, int style);
+forward Action Shavit_OnKeyHintHUD(int client, int target, char[] keyhint, int keyhintlength, int track, int stage, int style);
 
 /**
  * Called before the key hint HUD (bottom left) updates and used to build the string for shavit-hud (Source 2013 only).
@@ -158,11 +159,12 @@ forward Action Shavit_OnKeyHintHUD(int client, int target, char[] keyhint, int k
  * @param keyhint                   Reference to the HUD buffer.
  * @param keyhintlength             Max length of the keyhint buffer.
  * @param track                     Target's track.
+ * @param stage						Target's stage.
  * @param style                     Target's style.
  *
  * @return                          Plugin_Handled or Plugin_Stop to block the HUD message from appearing. Plugin_Changed to use own keyhint string instead of shavit-hud building it.
  */
-forward Action Shavit_PreOnKeyHintHUD(int client, int target, char[] keyhint, int keyhintlength, int track, int style);
+forward Action Shavit_PreOnKeyHintHUD(int client, int target, char[] keyhint, int keyhintlength, int track, int stage, int style);
 
 /**
  * Called before the top left HUD updates and used to build the string for shavit-hud.

@@ -37,6 +37,7 @@
 #include <shavit/replay-playback>
 #include <shavit/wr>
 #include <shavit/zones>
+#include <shavit/wrsh>
 #include <DynamicChannels>
 
 #undef REQUIRE_EXTENSIONS
@@ -75,6 +76,8 @@ bool gB_Zones = false;
 bool gB_Sounds = false;
 bool gB_Rankings = false;
 bool gB_DynamicChannels = false;
+
+bool gB_WRSH = false;
 
 // cache
 int gI_Cycle = 0;
@@ -136,8 +139,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	// forwards
 	gH_Forwards_OnTopLeftHUD = CreateGlobalForward("Shavit_OnTopLeftHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell);
-	gH_Forwards_OnKeyHintHUD = CreateGlobalForward("Shavit_OnKeyHintHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell);
-	gH_Forwards_PreOnKeyHintHUD = CreateGlobalForward("Shavit_PreOnKeyHintHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_CellByRef);
+	gH_Forwards_OnKeyHintHUD = CreateGlobalForward("Shavit_OnKeyHintHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_PreOnKeyHintHUD = CreateGlobalForward("Shavit_PreOnKeyHintHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_PreOnTopLeftHUD = CreateGlobalForward("Shavit_PreOnTopLeftHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_PreOnDrawCenterHUD = CreateGlobalForward("Shavit_PreOnDrawCenterHUD", ET_Event, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Array);
 	gH_Forwards_PreOnDrawKeysHUD = CreateGlobalForward("Shavit_PreOnDrawKeysHUD", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
@@ -181,6 +184,7 @@ public void OnPluginStart()
 	gB_Zones = LibraryExists("shavit-zones");
 	gB_Sounds = LibraryExists("shavit-sounds");
 	gB_Rankings = LibraryExists("shavit-rankings");
+	gB_WRSH = LibraryExists("shavit-wrsh");	
 	gB_DynamicChannels = LibraryExists("DynamicChannels");
 
 	// HUD handle
@@ -247,6 +251,7 @@ public void OnPluginStart()
 	// commands
 	RegConsoleCmd("sm_hud", Command_HUD, "Opens the HUD settings menu.");
 	RegConsoleCmd("sm_options", Command_HUD, "Opens the HUD settings menu. (alias for sm_hud)");
+	RegConsoleCmd("sm_ht", Command_HT);
 
 	// hud togglers
 	RegConsoleCmd("sm_keys", Command_Keys, "Toggles key display.");
@@ -318,6 +323,10 @@ public void OnLibraryAdded(const char[] name)
 	{
 		gB_Rankings = true;
 	}
+	else if(StrEqual(name, "shavit-wrsh"))
+	{
+		gB_WRSH = true;
+	}
 	else if(StrEqual(name, "DynamicChannels"))
 	{
 		gB_DynamicChannels = true;
@@ -341,6 +350,10 @@ public void OnLibraryRemoved(const char[] name)
 	else if(StrEqual(name, "shavit-rankings"))
 	{
 		gB_Rankings = false;
+	}
+	else if(StrEqual(name, "shavit-wrsh"))
+	{
+		gB_WRSH = false;
 	}
 	else if(StrEqual(name, "DynamicChannels"))
 	{
@@ -686,6 +699,12 @@ public Action Command_Keys(int client, int args)
 public Action Command_HUD(int client, int args)
 {
 	return ShowHUDMenu(client, 0);
+}
+
+public Action Command_HT(int client, int args)
+{
+	PrintToChatAll("[DEBUG] WRSH: %s", gB_WRSH ? "T":"F");
+	return Plugin_Handled;
 }
 
 Action ShowHUDMenu(int client, int item)
@@ -2409,6 +2428,7 @@ void UpdateKeyHint(int client)
 	Call_PushStringEx(sMessage, sizeof(sMessage), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	Call_PushCell(sizeof(sMessage));
 	Call_PushCell(track);
+	Call_PushCell(stage);
 	Call_PushCell(style);
 	Call_Finish(aPreresult);
 
@@ -2443,15 +2463,47 @@ void UpdateKeyHint(int client)
 			{
 				float fWRTime = Shavit_GetWorldRecord(style, track);
 
-				if (fWRTime != 0.0)
+				if(gB_WRSH)
 				{
-					char sWRTime[16];
-					FormatSeconds(fWRTime, sWRTime, 16);
+					float fSHWRTime = Shavit_GetSHMapRecordTime(track);
+					if(fSHWRTime > 0.0)
+					{
+						char sSHWRTime[16];
+						FormatSeconds(fSHWRTime, sSHWRTime, 16);
 
-					char sWRName[MAX_NAME_LENGTH];
-					Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
+						char sSHWRName[32];
+						Shavit_GetSHMapRecordName(track, sSHWRName, 32);
 
-					Format(sMessage, sizeof(sMessage), "%s%sSR: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sWRTime, sWRName);
+						Format(sMessage, sizeof(sMessage), "%s%sSH: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sSHWRTime, sSHWRName);
+					}
+					else if(fSHWRTime == -1.0)
+					{
+						Format(sMessage, sizeof(sMessage), "%s%sSH: Loading...", sMessage, (strlen(sMessage) > 0)? "\n\n":"");
+					}
+
+					if (fWRTime != 0.0)
+					{
+						char sWRTime[16];
+						FormatSeconds(fWRTime, sWRTime, 16);
+
+						char sWRName[MAX_NAME_LENGTH];
+						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
+
+						Format(sMessage, sizeof(sMessage), "%s%sSR: %s (%s)", sMessage, ((strlen(sMessage) > 0) && fSHWRTime == 0.0)? "\n\n":"\n", sWRTime, sWRName);
+					}
+				}
+				else
+				{
+					if (fWRTime != 0.0)
+					{
+						char sWRTime[16];
+						FormatSeconds(fWRTime, sWRTime, 16);
+
+						char sWRName[MAX_NAME_LENGTH];
+						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
+
+						Format(sMessage, sizeof(sMessage), "%s%sSR: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sWRTime, sWRName);
+					}
 				}
 
 				char sTargetPB[64];
@@ -2487,16 +2539,57 @@ void UpdateKeyHint(int client)
 			if ((gI_HUD2Settings[client] & HUD2_STAGEWRPB) == 0 && track == Track_Main)
 			{
 				float fStageWR = Shavit_GetStageWorldRecord(style, stage);
-				if (fStageWR != 0.0)
+				
+				if(gB_WRSH)
 				{
-					Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
-					char sStageWRName[MAX_NAME_LENGTH];
-					Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
+					float fSHStageWRTime = Shavit_GetSHStageRecordTime(stage);
+					if(fSHStageWRTime > 0.0)
+					{
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
+						
+						char sSHStageWRTime[16];
+						FormatSeconds(fSHStageWRTime, sSHStageWRTime, 16);
 
-					char sStageWR[16];
-					FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
+						char sSHStageWRName[32];
+						Shavit_GetSHStageRecordName(stage, sSHStageWRName, 32);
 
-					Format(sMessage, sizeof(sMessage), "%s\nSR: %s (%s)", sMessage, sStageWR, sStageWRName);
+						Format(sMessage, sizeof(sMessage), "%s\nSH: %s (%s)", sMessage, sSHStageWRTime, sSHStageWRName);
+					}
+					else if(fSHStageWRTime == -1.0)
+					{
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s\nSH: Loading...", sMessage);
+					}
+
+					if (fStageWR != 0.0)
+					{
+						if(fSHStageWRTime == 0.0)
+						{
+							Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);							
+						}
+						
+						char sStageWRName[MAX_NAME_LENGTH];
+						Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
+
+						char sStageWR[16];
+						FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
+
+						Format(sMessage, sizeof(sMessage), "%s\nSR: %s (%s)", sMessage, sStageWR, sStageWRName);
+					}	
+				}
+				else
+				{
+					if (fStageWR != 0.0)
+					{
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
+						char sStageWRName[MAX_NAME_LENGTH];
+						Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
+
+						char sStageWR[16];
+						FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
+
+						Format(sMessage, sizeof(sMessage), "%s\nSR: %s (%s)", sMessage, sStageWR, sStageWRName);
+					}					
 				}
 
 				char sTargetStagePB[64];
@@ -2583,6 +2676,7 @@ void UpdateKeyHint(int client)
 	Call_PushStringEx(sMessage, sizeof(sMessage), SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 	Call_PushCell(sizeof(sMessage));
 	Call_PushCell(track);
+	Call_PushCell(stage);
 	Call_PushCell(style);
 	Call_Finish(aPostresult);
 
