@@ -11,6 +11,11 @@
 		"#format"	"{1:s},{2:d},{3:s}"
 		"en"		"Tier changed to {1}{2}{3}."
 	}
+	"SetSHTierFail"
+	{
+		"#format"	"{1:s},{2:d},{3:s}"
+		"en"		"Set map tier to surf heaven failed."
+	}
 	"SetMaxVelocity"
 	{
 		"#format"	"{1:s},{2:.0f},{3:s}"
