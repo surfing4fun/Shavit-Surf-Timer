@@ -17,12 +17,15 @@ wrinfo_t gA_StageWorldRecord[MAX_STAGES];
 chatstrings_t gS_ChatStrings;
 
 char gS_Map[PLATFORM_MAX_PATH];
+char gS_PreviousMap[PLATFORM_MAX_PATH];
+
 int gI_RequestTimes;
 bool gB_Fetching = false;
 bool gB_MapWRCached = false;
 bool gB_StageWRCached = false;
 bool gB_CacheFail = false;
 
+float gF_ReadyTime[MAXPLAYERS + 1];
 bool gB_CoolDown[MAXPLAYERS + 1];
 Handle gH_CoolDown[MAXPLAYERS + 1];
 
@@ -62,11 +65,27 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_shstagerank", Command_SHStageRank, "Print client's rank of stage time in SurfHeaven");
 	RegConsoleCmd("sm_shsrank", Command_SHStageRank, "Print client's rank of stage time in SurfHeaven");
 
+	RegAdminCmd("sm_reloadshrecord", Command_ReloadSHRecord, ADMFLAG_CHANGEMAP, "Reload SH record.")
+
 	gCV_MaxRequest = new Convar("shavit_wrsh_maxrequest", "10", "Maximum number of requests with no response sent.", 0, true, 1.0, false, 0.0);
 	gCV_RetryInterval = new Convar("shavit_wrsh_retryinterval", "10.0", "The interval between sending requests if records are not cached.", 0, true, 10.0, false, 0.0);
 	gCV_RankingCoolDown = new Convar("shavit_wrsh_rankingcooldown", "30.0", "The interval (in seconds) allow client use rank command again.", 0, true, 30.0, false, 0.0);
 	// gCV_RefreshRecordInterval = new Convar("shavit_wrsh_refreshinterval", "30", "How often (in minutes) should refresh records.", 0, true, -1, false, 0);
 	Convar.AutoExecConfig();
+
+	if(gB_Late)
+	{
+		Shavit_OnChatConfigLoaded();
+		OnMapStart();
+
+		for(int i = 1; i <= MaxClients; i++)
+		{
+			if(IsValidClient(i))
+			{
+				OnClientPutInServer(i);
+			}
+		}
+	}
 }
 
 public void Shavit_OnChatConfigLoaded()
@@ -74,11 +93,27 @@ public void Shavit_OnChatConfigLoaded()
 	Shavit_GetChatStringsStruct(gS_ChatStrings);
 }
 
+public Action Command_ReloadSHRecord(int client, int args)
+{
+	if(gB_Fetching)
+	{
+		Shavit_PrintToChat(client, "Plugin is fetching data currently, please try again later.");
+		return Plugin_Handled;
+    }
+
+	Shavit_LogMessage("%L - Reload sh records for %s", client, gS_Map);
+	ResetWRCache();
+	CacheWorldRecord(gS_Map);
+
+	return Plugin_Handled;
+}
+
 public Action Command_SHMapRank(int client, int args)
 {
 	if(gB_CoolDown[client])
 	{
-		Shavit_PrintToChat(client, "You just ranking few seconds ago, please try again later.");
+		Shavit_PrintToChat(client, "You just ranking few seconds ago, please wait %s%.1f %sseconds before using this command.",
+		gS_ChatStrings.sVariable2, gF_ReadyTime[client] - GetEngineTime(), gS_ChatStrings.sText);
 		return Plugin_Handled;
 	}
 	
@@ -115,7 +150,8 @@ public Action Command_SHStageRank(int client, int args)
 {
 	if(gB_CoolDown[client])
 	{
-		Shavit_PrintToChat(client, "You just ranking few seconds ago, please try again later.");
+		Shavit_PrintToChat(client, "You just ranking few seconds ago, please wait %s%.1f%s seconds before using this command.",
+		gS_ChatStrings.sVariable2, gF_ReadyTime[client] - GetEngineTime(), gS_ChatStrings.sText);
 		return Plugin_Handled;
 	}
 
@@ -186,18 +222,35 @@ public Action Timer_CacheWorldRecord(Handle timer)
 public void OnMapStart()
 {
 	GetLowercaseMapName(gS_Map);
-	CreateTimer(gCV_RetryInterval.FloatValue, Timer_CacheWorldRecord, 0, TIMER_REPEAT);
-	CacheWorldRecord(gS_Map)
+	gB_Fetching = false;
+	gI_RequestTimes = 0;
+	
+	if (!StrEqual(gS_Map, gS_PreviousMap))
+	{
+		ResetWRCache();
+		CreateTimer(gCV_RetryInterval.FloatValue, Timer_CacheWorldRecord, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	}
 }
 
 public void OnMapEnd()
 {
-	gB_Fetching = false;
-	gB_MapWRCached = false;
-	gB_StageWRCached = false;
-	gB_CacheFail = false;
-	gI_RequestTimes = 0;
-	ResetWRCache();
+	gS_PreviousMap = gS_Map;
+}
+
+public void OnClientPutInServer(int client)
+{
+	float cd = gF_ReadyTime[client] - GetEngineTime();
+	gB_CoolDown[client] = cd > 0.1;
+
+	if(IsValidHandle(gH_CoolDown[client]))
+	{
+		delete gH_CoolDown[client];
+	}
+
+	if(gB_CoolDown[client])
+	{
+		CreateTimer(cd, Timer_CoolDown, client, TIMER_FLAG_NO_MAPCHANGE);
+	}
 }
 
 public void ResetWRCache()
@@ -212,6 +265,10 @@ public void ResetWRCache()
 	{
 		gA_StageWorldRecord[j] = empty_cache;
 	}
+
+	gB_MapWRCached = false;
+	gB_StageWRCached = false;
+	gB_CacheFail = false;
 }
 
 public void CacheStageWorldRecord(const char[] map)
@@ -220,7 +277,7 @@ public void CacheStageWorldRecord(const char[] map)
 	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_STAGERECORD_URL, map);
 	gB_Fetching = true;
 	HTTPRequest request = new HTTPRequest(sUrl);
-	request.Timeout = 3600;
+	request.Timeout = 60; // in seconds
 	request.Get(CacheStageWorldRecord_Callback);
 }
 
@@ -230,7 +287,7 @@ public void CacheWorldRecord(const char[] map)
 	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_MAPRECORD_URL, map);
 	gB_Fetching = true;
 	HTTPRequest request = new HTTPRequest(sUrl);
-	request.Timeout = 3600;
+	request.Timeout = 60; // in seconds
 	request.Get(CacheMapWorldRecord_Callback);
 }
 
@@ -277,7 +334,6 @@ public void CacheStageWorldRecord_Callback(HTTPResponse response, any data, cons
 	if(response.Status != HTTPStatus_OK)
 	{
 		LogError("Fail to fetch stage records from surf heaven. Reason: %s", error);
-        
 		gB_Fetching = false;
 		return;
 	}
@@ -417,7 +473,7 @@ public void GetSHSMapRank(int client, float time, int track)
 	pack.WriteCell(track);
 
 	HTTPRequest request = new HTTPRequest(sUrl);
-	request.Timeout = 3600;
+	request.Timeout = 60; 
 	request.Get(GetSHMapRank_Callback, pack);
 }
 
@@ -512,7 +568,7 @@ public void GetSHStageRank(int client, float time, int stage)
 	pack.WriteCell(stage);
 
 	HTTPRequest request = new HTTPRequest(sUrl);
-	request.Timeout = 3600;
+	request.Timeout = 60;
 	request.Get(GetSHStageRank_Callback, pack);
 }
 
@@ -603,6 +659,7 @@ public void CallOnFinishRanking(int client, int track, int stage, int rank, floa
 		delete gH_CoolDown[client];			
 	}
 
+	gF_ReadyTime[client] = gCV_RankingCoolDown.FloatValue + GetEngineTime();
 	gH_CoolDown[client] = CreateTimer(gCV_RankingCoolDown.FloatValue, Timer_CoolDown, client, TIMER_FLAG_NO_MAPCHANGE);
 
 	char sTrack[32];
@@ -633,4 +690,6 @@ public Action Timer_CoolDown(Handle timer, int client)
 {
 	gH_CoolDown[client] = null;
 	gB_CoolDown[client] = false;
+
+	return Plugin_Stop;
 }

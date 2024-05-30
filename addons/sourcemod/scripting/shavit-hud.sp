@@ -251,7 +251,6 @@ public void OnPluginStart()
 	// commands
 	RegConsoleCmd("sm_hud", Command_HUD, "Opens the HUD settings menu.");
 	RegConsoleCmd("sm_options", Command_HUD, "Opens the HUD settings menu. (alias for sm_hud)");
-	RegConsoleCmd("sm_ht", Command_HT);
 
 	// hud togglers
 	RegConsoleCmd("sm_keys", Command_Keys, "Toggles key display.");
@@ -699,12 +698,6 @@ public Action Command_Keys(int client, int args)
 public Action Command_HUD(int client, int args)
 {
 	return ShowHUDMenu(client, 0);
-}
-
-public Action Command_HT(int client, int args)
-{
-	PrintToChatAll("[DEBUG] WRSH: %s", gB_WRSH ? "T":"F");
-	return Plugin_Handled;
 }
 
 Action ShowHUDMenu(int client, int item)
