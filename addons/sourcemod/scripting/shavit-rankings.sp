@@ -169,8 +169,9 @@ public void OnPluginStart()
 
 	RegAdminCmd("sm_settier", Command_SetTier, ADMFLAG_RCON, "Change the map's tier. Usage: sm_settier <tier> [map]");
 	RegAdminCmd("sm_setmaptier", Command_SetTier, ADMFLAG_RCON, "Change the map's tier. Usage: sm_setmaptier <tier> [map] (sm_settier alias)");
+
 #if USE_SHMAPTIERS	
-	RegAdminCmd("sm_useshtier", Command_UserSHTier, ADMFLAG_RCON, "Change the current map's tier to which Surf Heaven has assigned");
+	RegAdminCmd("sm_useshtier", Command_UseSHTier, ADMFLAG_RCON, "Change the current map's tier to which Surf Heaven has assigned");
 #endif
 
 	RegAdminCmd("sm_setmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvelocity <value> [map]");
@@ -459,7 +460,7 @@ public void OnMapEnd()
 }
 
 #if USE_SHMAPTIERS	
-public Action Command_UserSHTier(int client, int args)
+public Action Command_UseSHTier(int client, int args)
 {
 	Shavit_PrintToChat(client, "Getting map tiers from Surf Heaven.");
 	GetMapInfoFromSurfHeaven(gS_Map);

@@ -37,7 +37,12 @@
 #include <shavit/replay-playback>
 #include <shavit/wr>
 #include <shavit/zones>
-#include <shavit/wrsh>
+
+#define USE_WRSH 1
+#if USE_WRSH
+#include <shavit/wrsh>	
+#endif
+
 #include <DynamicChannels>
 
 #undef REQUIRE_EXTENSIONS
@@ -77,7 +82,10 @@ bool gB_Sounds = false;
 bool gB_Rankings = false;
 bool gB_DynamicChannels = false;
 
+#if USE_WRSH
 bool gB_WRSH = false;
+#endif
+
 
 // cache
 int gI_Cycle = 0;
@@ -184,7 +192,9 @@ public void OnPluginStart()
 	gB_Zones = LibraryExists("shavit-zones");
 	gB_Sounds = LibraryExists("shavit-sounds");
 	gB_Rankings = LibraryExists("shavit-rankings");
+	#if USE_WRSH
 	gB_WRSH = LibraryExists("shavit-wrsh");	
+	#endif
 	gB_DynamicChannels = LibraryExists("DynamicChannels");
 
 	// HUD handle
@@ -322,10 +332,12 @@ public void OnLibraryAdded(const char[] name)
 	{
 		gB_Rankings = true;
 	}
+	#if USE_WRSH
 	else if(StrEqual(name, "shavit-wrsh"))
 	{
 		gB_WRSH = true;
 	}
+	#endif
 	else if(StrEqual(name, "DynamicChannels"))
 	{
 		gB_DynamicChannels = true;
@@ -350,10 +362,12 @@ public void OnLibraryRemoved(const char[] name)
 	{
 		gB_Rankings = false;
 	}
+	#if USE_WRSH
 	else if(StrEqual(name, "shavit-wrsh"))
 	{
 		gB_WRSH = false;
 	}
+	#endif
 	else if(StrEqual(name, "DynamicChannels"))
 	{
 		gB_DynamicChannels = false;
@@ -2455,7 +2469,7 @@ void UpdateKeyHint(int client)
 			if ((gI_HUDSettings[client] & HUD_WRPB) > 0 && !bOnlyStageMode)
 			{
 				float fWRTime = Shavit_GetWorldRecord(style, track);
-
+			#if USE_WRSH
 				if(gB_WRSH)
 				{
 					float fSHWRTime = Shavit_GetSHMapRecordTime(track);
@@ -2486,6 +2500,7 @@ void UpdateKeyHint(int client)
 					}
 				}
 				else
+				#endif
 				{
 					if (fWRTime != 0.0)
 					{
@@ -2532,7 +2547,7 @@ void UpdateKeyHint(int client)
 			if ((gI_HUD2Settings[client] & HUD2_STAGEWRPB) == 0 && track == Track_Main)
 			{
 				float fStageWR = Shavit_GetStageWorldRecord(style, stage);
-				
+				#if USE_WRSH
 				if(gB_WRSH)
 				{
 					float fSHStageWRTime = Shavit_GetSHStageRecordTime(stage);
@@ -2571,6 +2586,7 @@ void UpdateKeyHint(int client)
 					}	
 				}
 				else
+				#endif				
 				{
 					if (fStageWR != 0.0)
 					{

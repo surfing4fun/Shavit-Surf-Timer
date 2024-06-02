@@ -10,6 +10,7 @@ enum struct wrinfo_t
 {
 	float fTime;
 	char sName[32];
+	char sDate[16];
 	int iRankCount;
 }
 
