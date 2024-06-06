@@ -106,7 +106,7 @@ stock Action ObliviousOnPlayerRunCmd(int client, int& buttons, int& impulse, flo
 	float air_accelerate, float surface_friction, float flAirSpeedCap, float flMaxMove,
 	bool no_speed_loss)
 {
-	float flMaxSpeed = GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
+	float flMaxSpeed = Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "runspeed");
 
 	bool set_back = true;
 	if (vel[0] != 0.0 || vel[1] != 0.0)
