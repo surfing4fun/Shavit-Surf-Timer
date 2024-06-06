@@ -5942,16 +5942,16 @@ public void TouchPost(int entity, int other)
 			else if (track == Track_Main)
 			{
 				Shavit_StartTimer(other, Track_Main);
+				
+				if(Shavit_IsOnlyStageMode(other) && !Shavit_IsClientRepeat(other))
+				{
+					Shavit_SetOnlyStageMode(other, false);
+				}
 			}
 
 			if(Shavit_GetStageCount(track) > 1)
 			{
 				Shavit_StartStageTimer(other, track, 1);
-			}
-
-			if(Shavit_IsOnlyStageMode(other) && !Shavit_IsClientRepeat(other))
-			{
-				Shavit_SetOnlyStageMode(other, false);
 			}
 		}
 		case Zone_Stage:
