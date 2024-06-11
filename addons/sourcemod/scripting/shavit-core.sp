@@ -3025,7 +3025,7 @@ void StartTimer(int client, int track)
 			}
 			else
 			{
-				gA_Timers[client].iLastStage = Shavit_GetStageCount(track) > 2 ? 1 : 0; // i use it as last checkpoint number when the map is linear.
+				gA_Timers[client].iLastStage = Shavit_GetStageCount(track) > 1 ? 1 : 0; // i use it as last checkpoint number when the map is linear.
 				
 				//set it -1.0 to make cptime dont need to reset of often
 				if(gA_Timers[client].fCPTimes[1] != -1.0)	

@@ -2249,7 +2249,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 		}
 		else
 		{
-			GetReplayName(style, track, sName, sizeof(sName));
+			GetReplayName(style, track, stage, sName, sizeof(sName));
 		}
 		
 		ReplaceString(temp, sizeof(temp), "{style}", gS_StyleStrings[style].sStyleName);
