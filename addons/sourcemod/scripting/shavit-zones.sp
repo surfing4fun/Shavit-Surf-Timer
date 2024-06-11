@@ -59,8 +59,6 @@ int gI_Driver = Driver_unknown;
 
 bool gB_YouCanLoadZonesNow = false;
 
-bool gB_LinearMap;
-
 char gS_Map[PLATFORM_MAX_PATH];
 
 enum struct zone_settings_t
@@ -824,7 +822,7 @@ public int Native_GetCheckpointCount(Handle handler, int numParas)
 		return 0;
 	}
 
-	return gB_LinearMap ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack];
+	return gI_HighestStage[iTrack] < 2 ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack];
 }
 
 public int Native_Zones_DeleteMap(Handle handler, int numParams)
@@ -1002,7 +1000,6 @@ public any Native_AddZone(Handle plugin, int numParams)
 		if (cache.iData > gI_HighestStage[cache.iTrack])
 		{
 			gI_HighestStage[cache.iTrack] = cache.iData;
-			gB_LinearMap = gI_HighestStage[Track_Main] < 2;
 		}
 	}
 
@@ -1069,7 +1066,6 @@ public any Native_RemoveZone(Handle plugin, int numParams)
 	if (cache.iType == Zone_Stage && cache.iData == gI_HighestStage[cache.iTrack])
 	{
 		RecalcHighestStage();
-		gB_LinearMap = gI_HighestStage[cache.iTrack] < 2;		
 	}
 
 	if (cache.iType == Zone_Checkpoint && cache.iData == gI_HighestCheckpoint[cache.iTrack])
@@ -5729,10 +5725,12 @@ public void StartTouchPost(int entity, int other)
 			// There are conflict between checkpoint zone and stage zone 
 			// Because stage zone are used as checkpoint as well
 			// So i decided to block checkpoint zone if there are stage zone exist
-			if(gB_LinearMap && !bReplay && status == Timer_Running && Shavit_GetClientTrack(other) == track && !Shavit_IsOnlyStageMode(other))
+			if(gI_HighestStage[track] < 2 && !bReplay && status == Timer_Running && Shavit_GetClientTrack(other) == track && !Shavit_IsOnlyStageMode(other))
 			{
+				PrintToChatAll("[Debug] 2");
 				if (checkpoint > iLastCP)
 				{
+					PrintToChatAll("[Debug] 3");
 					Call_StartForward(gH_Forwards_ReachNextCP);
 					Call_PushCell(other);
 					Call_PushCell(track);
