@@ -5727,10 +5727,8 @@ public void StartTouchPost(int entity, int other)
 			// So i decided to block checkpoint zone if there are stage zone exist
 			if(gI_HighestStage[track] < 2 && !bReplay && status == Timer_Running && Shavit_GetClientTrack(other) == track && !Shavit_IsOnlyStageMode(other))
 			{
-				PrintToChatAll("[Debug] 2");
 				if (checkpoint > iLastCP)
 				{
-					PrintToChatAll("[Debug] 3");
 					Call_StartForward(gH_Forwards_ReachNextCP);
 					Call_PushCell(other);
 					Call_PushCell(track);

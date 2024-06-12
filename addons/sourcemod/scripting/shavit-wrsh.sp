@@ -369,6 +369,19 @@ public void CacheMapWorldRecord_Callback(HTTPResponse response, any data, const 
 
 	JSONArray array = view_as<JSONArray>(response.Data);
 
+	char sMap[PLATFORM_MAX_PATH];
+	JSONObject temp = view_as<JSONObject>(array.Get(0));
+	temp.GetString("map", sMap, sizeof(sMap));
+
+	delete temp;
+
+	if(!StrEqual(sMap, gS_Map, true))
+	{
+		delete array;
+		gB_Fetching = false;
+		return;
+	}
+
 	for (int i = 0; i < array.Length; i++)
 	{
 		JSONObject record = view_as<JSONObject>(array.Get(i))
@@ -382,6 +395,7 @@ public void CacheMapWorldRecord_Callback(HTTPResponse response, any data, const 
 			if(iTrack <= TRACKS_SIZE)
 			{
 				gA_MapWorldRecord[iTrack].fTime = record.GetFloat("time");
+				
 				if(gA_MapWorldRecord[iTrack].fTime == 0.0)
 				{
 					gA_MapWorldRecord[iTrack].fTime = float(record.GetInt("time"));
@@ -424,6 +438,19 @@ public void CacheStageWorldRecord_Callback(HTTPResponse response, any data, cons
 
 	JSONArray array = view_as<JSONArray>(response.Data);
 
+	char sMap[PLATFORM_MAX_PATH];
+	JSONObject temp = view_as<JSONObject>(array.Get(0));
+	temp.GetString("map", sMap, sizeof(sMap));
+
+	delete temp;
+
+	if(!StrEqual(sMap, gS_Map, true))
+	{
+		delete array;
+		gB_Fetching = false;
+		return;
+	}
+
 	for (int i = 0; i < array.Length; i++)
 	{
 		JSONObject record = view_as<JSONObject>(array.Get(i))
@@ -437,6 +464,12 @@ public void CacheStageWorldRecord_Callback(HTTPResponse response, any data, cons
 			if(iStage <= MAX_STAGES)
 			{
 				gA_StageWorldRecord[iStage].fTime = record.GetFloat("time");
+
+				if(gA_StageWorldRecord[iStage].fTime == 0.0)
+				{
+					gA_StageWorldRecord[iStage].fTime = float(record.GetInt("time"));
+				}
+
 				record.GetString("name", gA_StageWorldRecord[iStage].sName, sizeof(wrinfo_t::sName));
 
 				char sDate[32];
