@@ -1,7 +1,7 @@
 # Shavit Surf timer (CS:S ONLY) 
 
-#### 　[Version 1.0.2](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.2/Shavit_SurfTimer_v1.0.2.zip)　 is ready to use, hopefully useful for someone
-[(click to download)](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.2/Shavit_SurfTimer_v1.0.2.zip)
+#### 　[Version 1.0.3](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.3/Shavit-SurfTimer-v1.0.3.zip)　 is ready to use, hopefully useful for someone
+[(click to download)](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.3/Shavit-SurfTimer-v1.0.3.zip)
 
 ## About this surf timer
 - This timer is based on [Shavit BhopTimer](https://github.com/shavitush/bhoptimer).
@@ -27,7 +27,7 @@
 - Ramp speed HUD: Show speed when player touch / leave a ramp
 - Teleport player back to stage start zone: Use command `!back` to back to stage start
 - Customize noclip speed: Use `!noclipspeed` to change noclip speed
-
+- Allow to set max velocity for each map
 
 ### - Better zone creation style
 - Create zone in 3 point (xyz) instead using default zone height
