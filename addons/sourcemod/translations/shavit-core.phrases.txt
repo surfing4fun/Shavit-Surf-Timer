@@ -91,12 +91,17 @@
 	"UnrankedWarning"
 	{
 		"#format"	"{1:s},{2:s}"
-		"en"		"{1}WARNING: {2}This style is unranked. Your times WILL NOT be saved and will be only displayed to you!"
+		"en"		"{1}WARNING: {2}This style is unranked. Your times WILL NOT be saved."
 	}
 	"PracticeModeAlert"
 	{
 		"#format"	"{1:s},{2:s}"
-		"en"		"{1}WARNING: {2}You're now in practice mode. Your times WILL NOT be saved and will be only displayed to you!"
+		"en"		"{1}WARNING: {2}You're now in practice mode. Your times WILL NOT be saved."
+	}
+	"PracticeModeTips"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"Use {1}!r{2} restart your timer to disable practice mode."
 	}
 	"SHSWCombination0"
 	{
@@ -215,7 +220,7 @@
 	}
 	"TrackChangeFromMain"
 	{
-		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s},{6:s}"
-		"en"		"Use {1}!m{2}/{3}!main{4} go to back to the main track. Or {5}!ihate!main{6}."
+		"#format"	"{1:s},{2:s},{3:s},{4:s}"
+		"en"		"Use {1}!m{2}/{3}!main{4} go to back to the main track."
 	}
 }

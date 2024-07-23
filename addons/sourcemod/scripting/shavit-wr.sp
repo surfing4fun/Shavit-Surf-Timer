@@ -128,6 +128,9 @@ ArrayList gA_StageCP_PB[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE]; // player's bes
 
 Menu gH_PBMenu[MAXPLAYERS+1];
 int gI_PBMenuPos[MAXPLAYERS+1];
+bool gB_RRSelectMain[MAXPLAYERS+1];
+bool gB_RRSelectBonus[MAXPLAYERS+1];
+bool gB_RRSelectStage[MAXPLAYERS+1];
 
 public Plugin myinfo =
 {
@@ -209,6 +212,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_stagewr", Command_WorldRecord);
 	RegConsoleCmd("sm_stageworldrecord", Command_WorldRecord);
 	RegConsoleCmd("sm_sworldrecord", Command_WorldRecord);
+
+	RegConsoleCmd("sm_wrcp", Command_WorldRecord);
 
 	RegConsoleCmd("sm_bwr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_bwr [map] [bonus number]");
 	RegConsoleCmd("sm_bworldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_bworldrecord [map] [bonus number]");
@@ -593,6 +598,10 @@ public void OnClientConnected(int client)
 	gB_LoadedCache[client] = false;
 	gB_LoadedStageCache[client] = false;
 
+	gB_RRSelectMain[client] = true;
+	gB_RRSelectBonus[client] = true;
+	gB_RRSelectStage[client] = true;
+
 	any empty_cells[TRACKS_SIZE];
 	any stage_empty_cells[MAX_STAGES];
 
@@ -614,8 +623,6 @@ public void OnClientConnected(int client)
 			gA_StageCP_PB[client][i][j] = new ArrayList();
 		}
 	}
-
-
 }
 
 public void OnClientAuthorized(int client, const char[] auth)
@@ -2387,7 +2394,7 @@ public Action Command_WorldRecord(int client, int args)
 			track = Track_Bonus;
 		}
 	}
-	else if(StrContains(sCommand, "sm_cp", false) == 0 || StrContains(sCommand, "sm_s", false) == 0)
+	else if(StrEqual(sCommand, "sm_wrcp", false) || StrContains(sCommand, "sm_cp", false) == 0 || StrContains(sCommand, "sm_s", false) == 0)
 	{
 		if (args >= 1)
 		{
@@ -2896,18 +2903,142 @@ public Action Command_RecentRecords(int client, int args)
 		return Plugin_Handled;
 	}
 
-	char sQuery[512];
+	Menu menu = new Menu(RRFirstMenu_Handler);
+	menu.SetTitle("%T\n ", "RecentRecordsFirstMenuTitle", client);
 
-	FormatEx(sQuery, sizeof(sQuery),
-		"SELECT a.id, a.map, u.name, a.time, a.style, a.track FROM %swrs a JOIN %susers u on a.auth = u.auth ORDER BY a.date DESC LIMIT %d;",
-		gS_MySQLPrefix, gS_MySQLPrefix, gCV_RecentLimit.IntValue);
+	char display[256];
+	FormatEx(display, sizeof(display), "%T", "RecentRecordsAll", client);
+	menu.AddItem("all", display, (gB_RRSelectMain[client] || gB_RRSelectBonus[client] || gB_RRSelectStage[client]) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+	FormatEx(display, sizeof(display), "%T\n ", "RecentRecordsByStyle", client);
+	menu.AddItem("style", display, (gB_RRSelectMain[client] || gB_RRSelectBonus[client] || gB_RRSelectStage[client]) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+	FormatEx(display, sizeof(display), "%T", "RecentRecordsSelectMain", client, gB_RRSelectMain[client] ? "＋":"－");
+	menu.AddItem("selectmain", display);
+	FormatEx(display, sizeof(display), "%T", "RecentRecordsSelectBonus", client, gB_RRSelectBonus[client] ? "＋":"－");
+	menu.AddItem("selectbonus", display);
+	FormatEx(display, sizeof(display), "%T", "RecentRecordsSelectStage", client, gB_RRSelectStage[client] ? "＋":"－");
+	menu.AddItem("selectstage", display);
+
+	menu.ExitButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+
+	return Plugin_Handled;
+}
+
+int RRFirstMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		int client = param1;
+		char info[16];
+		menu.GetItem(param2, info, sizeof(info));
+
+		if (StrEqual(info, "all"))
+		{
+			RecentRecords_DoQuery(client, "");
+		}
+		else if (StrEqual(info, "style"))
+		{
+			RecentRecords_StyleMenu(client);
+		}
+		else if (StrEqual(info, "selectmain"))
+		{
+			gB_RRSelectMain[client] = !gB_RRSelectMain[client];
+			Command_RecentRecords(client, 0); // remake menu...
+		}
+		else if (StrEqual(info, "selectbonus"))
+		{
+			gB_RRSelectBonus[client] = !gB_RRSelectBonus[client];
+			Command_RecentRecords(client, 0); // remake menu...
+		}
+		else if (StrEqual(info, "selectstage"))
+		{
+			gB_RRSelectStage[client] = !gB_RRSelectStage[client];
+			Command_RecentRecords(client, 0); // remake menu...
+		}
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+void RecentRecords_StyleMenu(int client)
+{
+	Menu menu = new Menu(RRStyleSelectionMenu_Handler);
+	menu.SetTitle("%T\n ", "RecentRecordsStyleSelectionMenuTitle", client);
+
+	int[] styles = new int[gI_Styles];
+	Shavit_GetOrderedStyles(styles, gI_Styles);
+
+	for (int i = 0; i < gI_Styles; i++)
+	{
+		int style = styles[i];
+
+		if (Shavit_GetStyleSettingInt(style, "enabled") == -1)
+		{
+			continue;
+		}
+
+		char info[8];
+		IntToString(style, info, sizeof(info));
+
+		menu.AddItem(info, gS_StyleStrings[style].sStyleName);
+	}
+
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+int RRStyleSelectionMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char info[16];
+		menu.GetItem(param2, info, sizeof(info));
+		RecentRecords_DoQuery(param1, info);
+	}
+	else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
+	{
+		Command_RecentRecords(param1, 0);
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+void RecentRecords_DoQuery(int client, char[] style)
+{
+	char sQuery[2048];
+
+	char sQuery1[512];
+	FormatEx(sQuery1, sizeof(sQuery1), "SELECT a.id, a.map, u.name, a.time, a.style, a.track, 0 as stage, a.date FROM %swrs a JOIN %susers u on a.auth = u.auth WHERE a.track %s %s %s %s",
+		gS_MySQLPrefix, gS_MySQLPrefix,
+		(gB_RRSelectMain[client] && gB_RRSelectBonus[client]) ? "> -1" : (!gB_RRSelectMain[client]) ? "> 0":"= 0", 
+		(style[0] != '\0') ? "AND" : "",
+		(style[0] != '\0') ? "a.style = " : "",
+		(style[0] != '\0') ? style : "");
+
+	char sQuery2[512];
+	FormatEx(sQuery2, sizeof(sQuery2), " %s SELECT b.id, b.map, u.name, b.time, b.style, b.track, b.stage, b.date FROM %sstagewrs b JOIN %susers u on b.auth = u.auth %s %s",
+		(gB_RRSelectMain[client] || gB_RRSelectBonus[client]) ? "UNION":"",
+		gS_MySQLPrefix, gS_MySQLPrefix,
+		(style[0] != '\0') ? "WHERE b.style = " : "",
+		(style[0] != '\0') ? style : "");
+
+	FormatEx(sQuery, sizeof(sQuery2), "SELECT * FROM ( %s %s ) c ORDER BY c.date DESC LIMIT %d;",
+	(gB_RRSelectMain[client] || gB_RRSelectBonus[client]) ? sQuery1:"", gB_RRSelectStage[client] ? sQuery2:"",
+	gCV_RecentLimit.IntValue);
 
 	QueryLog(gH_SQL, SQL_RR_Callback, sQuery, GetClientSerial(client), DBPrio_Low);
 
 	gA_WRCache[client].bPendingMenu = true;
-
-	return Plugin_Handled;
 }
+
 
 public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error, any data)
 {
@@ -2949,14 +3080,25 @@ public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error
 			continue;
 		}
 
+		int track = results.FetchInt(5);
+		int stage = results.FetchInt(6);
+
 		char sTrack[32];
-		GetTrackName(client, results.FetchInt(5), sTrack, 32);
+
+		if(stage == 0)
+		{
+			GetTrackName(client, track, sTrack, 32);
+		}
+		else
+		{
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
+		}
 
 		char sDisplay[192];
-		FormatEx(sDisplay, 192, "[%s/%c] %s - %s @ %s", gS_StyleStrings[iStyle].sShortName, sTrack[0], sMap, sName, sTime);
+		FormatEx(sDisplay, 192, "[%s/%s] %s - %s @ %s", gS_StyleStrings[iStyle].sShortName, sTrack, sMap, sName, sTime);
 
 		char sInfo[192];
-		FormatEx(sInfo, 192, "%d;%s", results.FetchInt(0), sMap);
+		FormatEx(sInfo, 192, "%d;%d;%s", stage, results.FetchInt(0), sMap);
 
 		menu.AddItem(sInfo, sDisplay);
 	}
@@ -2968,8 +3110,8 @@ public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error
 		menu.AddItem("-1", sMenuItem);
 	}
 
-	menu.ExitButton = true;
-	menu.Display(client, 300);
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
 public int RRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
@@ -2981,12 +3123,12 @@ public int RRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 
 		if(StringToInt(sInfo) != -1)
 		{
-			char sExploded[2][128];
-			ExplodeString(sInfo, ";", sExploded, 2, 128, true);
+			char sExploded[3][128];
+			ExplodeString(sInfo, ";", sExploded, 3, 128, true);
 
 			strcopy(gA_WRCache[param1].sClientMap, 128, sExploded[1]);
 
-			OpenSubMenu(param1, StringToInt(sExploded[0]));
+			OpenSubMenu(param1, StringToInt(sExploded[1]), StringToInt(sExploded[0]));
 		}
 		else
 		{
@@ -2995,7 +3137,7 @@ public int RRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
 	{
-		RetrieveWRMenu(param1, gA_WRCache[param1].iLastTrack);
+		Command_RecentRecords(param1, 0);
 	}
 	else if(action == MenuAction_End)
 	{

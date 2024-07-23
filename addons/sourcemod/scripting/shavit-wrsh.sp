@@ -80,6 +80,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_shstop", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
 	RegConsoleCmd("sm_shcptop", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
 	RegConsoleCmd("sm_shcpwr", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
+	RegConsoleCmd("sm_shwrcp", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
 
 	RegAdminCmd("sm_reloadshrecord", Command_ReloadSHRecord, ADMFLAG_RCON, "Reload SH record.")
 
@@ -324,6 +325,13 @@ public void ResetWRCache()
 // cache stuffs on map start
 public void CacheStageWorldRecord(const char[] map)
 {
+	if(Shavit_GetStageCount(Track_Main) < 2)
+	{
+		gB_Fetching = false;
+		gB_StageWRCached = true;
+		return;
+	}
+
 	char sUrl[256];
 	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_STAGERECORD_URL, map);
 	gB_Fetching = true;
@@ -368,6 +376,20 @@ public void CacheMapWorldRecord_Callback(HTTPResponse response, any data, const 
 	}
 
 	JSONArray array = view_as<JSONArray>(response.Data);
+
+	if(array.Length < 1)
+	{
+		gB_Fetching = false;
+		gB_MapWRCached = true;
+		gB_StageWRCached = true;
+		delete array;
+
+		if(IsValidHandle(gH_FetchTimer))
+		{
+			delete gH_FetchTimer;
+		}
+		return;
+	}
 
 	char sMap[PLATFORM_MAX_PATH];
 	JSONObject temp = view_as<JSONObject>(array.Get(0));
@@ -437,6 +459,19 @@ public void CacheStageWorldRecord_Callback(HTTPResponse response, any data, cons
 	}
 
 	JSONArray array = view_as<JSONArray>(response.Data);
+
+	if(array.Length < 1)
+	{
+		gB_Fetching = false;
+		gB_StageWRCached = true;
+		delete array;
+
+		if(IsValidHandle(gH_FetchTimer))
+		{
+			delete gH_FetchTimer;
+		}
+		return;
+	}
 
 	char sMap[PLATFORM_MAX_PATH];
 	JSONObject temp = view_as<JSONObject>(array.Get(0));
@@ -856,7 +891,7 @@ public void BuildSHMapTopMenu(int client, int track, int item)
 
 	if(gB_MapWRCached)
 	{
-		menu.SetTitle("Top records in SurfHeaven\nMap: %s\n ", gS_Map);
+		menu.SetTitle("Top records from SurfHeaven\nMap: %s\n ", gS_Map);
 
 		for (int i = 0; i < TRACKS_SIZE; i++)
 		{
@@ -895,7 +930,7 @@ public void BuildSHMapTopMenu(int client, int track, int item)
 						FormatEx(sTimeDiff, 32, "%s | PB %s%s", sTimeDiff, fDiffPB > 0 ? "+":"", sDiff);
 					}
 
-					FormatEx(sMenu, sizeof(sMenu), "%s\n  || Time difference: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d", 
+					FormatEx(sMenu, sizeof(sMenu), "%s\n  || Gap: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d", 
 					sMenu, sTimeDiff, gS_StyleStrings[iStyle], gA_MapWorldRecord[i].sName, gA_MapWorldRecord[i].sDate, gA_MapWorldRecord[i].iRankCount);
 				}
 			}
@@ -914,12 +949,12 @@ public void BuildSHMapTopMenu(int client, int track, int item)
 	}
 	else if(!gB_CacheFail)
 	{
-		menu.SetTitle("Top records in SurfHeaven\nMap: %s\n \nLoading...\n ", gS_Map);
+		menu.SetTitle("Top records from SurfHeaven\nMap: %s\n \nLoading...\n ", gS_Map);
 		menu.AddItem("-1", "Refresh");
 	}
 	else
 	{
-		menu.SetTitle("Top records in SurfHeaven\nMap: %s\n ", gS_Map);
+		menu.SetTitle("Top records from SurfHeaven\nMap: %s\n ", gS_Map);
 		menu.AddItem("-1", "Fail to fetch records from SurfHeaven");
 	}
 
@@ -949,7 +984,7 @@ public void BuildSHStageTopMenu(int client, int stage, int item)
 
 	if(gB_StageWRCached)
 	{
-		menu.SetTitle("Top stage records in SurfHeaven\nMap: %s\n ", gS_Map);
+		menu.SetTitle("Top stage records from SurfHeaven\nMap: %s\n ", gS_Map);
 
 		for (int i = 0; i < MAX_STAGES; i++)
 		{
@@ -989,7 +1024,7 @@ public void BuildSHStageTopMenu(int client, int stage, int item)
 					FormatEx(sTimeDiff, 32, "%s | PB %s%s", sTimeDiff, fDiffPB > 0 ? "+":"", sDiff);
 				}
 
-				FormatEx(sMenu, sizeof(sMenu), "%s\n  || Time difference: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d",
+				FormatEx(sMenu, sizeof(sMenu), "%s\n  || Gap: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d",
 				sMenu, sTimeDiff, gS_StyleStrings[iStyle], gA_StageWorldRecord[i].sName, gA_StageWorldRecord[i].sDate, gA_StageWorldRecord[i].iRankCount);
 			}
 
@@ -1003,12 +1038,12 @@ public void BuildSHStageTopMenu(int client, int stage, int item)
 	}
 	else if(!gB_CacheFail)
 	{
-		menu.SetTitle("Top stage records in SurfHeaven\nMap: %s\nLoading... \n ", gS_Map);
+		menu.SetTitle("Top stage records from SurfHeaven\nMap: %s\nLoading... \n ", gS_Map);
 		menu.AddItem("-1", "Refresh");
 	}
 	else
 	{
-		menu.SetTitle("Top stage records in SurfHeaven\nMap: %s\n ", gS_Map);
+		menu.SetTitle("Top stage records from SurfHeaven\nMap: %s\n ", gS_Map);
 		menu.AddItem("-1", "Fail to fetch records from SurfHeaven", ITEMDRAW_DISABLED);
 	}
 

@@ -1381,6 +1381,12 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 	}
 	else
 	{
+		if(data.bPractice || data.iTimerStatus == Timer_Paused)
+		{
+			FormatEx(sLine, 128, "%T", (data.iTimerStatus == Timer_Paused)? "HudPaused":"HudPracticeMode", client);
+			AddHUDLine(buffer, maxlen, sLine, iLines);
+		}
+
 		char sTrack[32];
 		if((gI_HUDSettings[client] & HUD_ZONEHUD) > 0 && data.iZoneHUD != ZoneHUD_None)
 		{
@@ -1404,12 +1410,6 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 		}
 		else if(data.iTimerStatus != Timer_Stopped)
 		{
-			if(data.bPractice || data.iTimerStatus == Timer_Paused)
-			{
-				FormatEx(sLine, 128, "%T", (data.iTimerStatus == Timer_Paused)? "HudPaused":"HudPracticeMode", client);
-				AddHUDLine(buffer, maxlen, sLine, iLines);
-			}
-
 			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
 			{
 				char sTime[32];
@@ -2080,6 +2080,12 @@ void UpdateKeyOverlay(int client, Panel panel, bool &draw)
 	draw = true;
 }
 
+public void Shavit_OnReStart(int client, int track, int tostartzone)
+{
+	gF_RampVelocity[client] = -1.0;
+	gF_PrevRampVelocity[client] = -1.0;
+}
+
 public void Shavit_Bhopstats_OnTouchGround(int client)
 {
 	gF_RampVelocity[client] = -1.0;
@@ -2384,11 +2390,11 @@ void UpdateTopLeftHUD(int client, bool wait)
 }
 
 
-void UpdateKeyHint(int client)
+void UpdateKeyHint(int client, bool force = false)
 {
-	if ((gI_Cycle % 20) != 0)
+	if ((gI_Cycle % 20) != 0 && !force)
 	{
-		return;
+		return;			
 	}
 
 	char sMessage[256];
@@ -2723,7 +2729,7 @@ public void Shavit_OnStyleChanged(int client, int oldstyle, int newstyle, int tr
 {
 	if(IsClientInGame(client))
 	{
-		UpdateKeyHint(client);
+		UpdateKeyHint(client, true);
 	}
 }
 
@@ -2731,7 +2737,7 @@ public void Shavit_OnTrackChanged(int client, int oldtrack, int newtrack)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateKeyHint(client);
+		UpdateKeyHint(client, true);
 	}
 }
 
@@ -2739,7 +2745,7 @@ public void Shavit_OnStageChanged(int client, int oldstage, int newstage)
 {
 	if (IsClientInGame(client))
 	{
-		UpdateKeyHint(client);
+		UpdateKeyHint(client, true);
 	}
 }
 

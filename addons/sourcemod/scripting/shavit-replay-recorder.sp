@@ -147,7 +147,7 @@ public void OnPluginStart()
 	gCV_Enabled = new Convar("shavit_replay_recording_enabled", "1", "Enable replay bot functionality?", 0, true, 0.0, true, 1.0);
 	gCV_PlaybackPostRunTime = new Convar("shavit_replay_postruntime", "0.1", "Time (in seconds) to record after a player enters the end zone.", 0, true, 0.0, true, 2.0);
 	gCV_PreRunAlways = new Convar("shavit_replay_prerun_always", "1", "Record prerun frames outside the start zone?", 0, true, 0.0, true, 1.0);
-	gCV_PlaybackPreRunTime = new Convar("shavit_replay_preruntime", "1.5", "Time (in seconds) to record before a player leaves start zone.", 0, true, 0.0, true, 2.0);
+	gCV_PlaybackPreRunTime = new Convar("shavit_replay_preruntime", "1.5", "Time (in seconds) to record before a player leaves start zone.", 0, true, 0.0, true, 3.0);
 	gCV_TimeLimit = new Convar("shavit_replay_timelimit", "7200.0", "Maximum amount of time (in seconds) to allow saving to disk.\nDefault is 7200 (2 hours)\n0 - Disabled", 0, true, 0.0);
 	gCV_ClearFrameDelay = new Convar("shavit_replay_clearframedelay", "0.2", "Time of delay before call ClearFrames(),\nin order to avoid cleaning frame before replay edit finish.", 0, true, 0.1, true, 0.5);
 
@@ -378,7 +378,7 @@ void FinishGrabbingPostFrames(int client, finished_run_info info, int index = 0)
 
 float ExistingWrReplayLength(int style, int track, int stage)
 {
-	if (gB_ReplayPlayback && stage == 0)
+	if (gB_ReplayPlayback)
 	{
 		return Shavit_GetReplayLength(style, track, stage);
 	}
@@ -453,7 +453,7 @@ void DoReplaySaverCallbacks(int iSteamID, int client, int style, float time, int
 	if (bShouldEdit) // need edit replay
 	{
 		ArrayList aOriginalFrames = view_as<ArrayList>(CloneHandle(gA_PlayerFrames[client]));
-		iPreFrames = CaculateStageStartPreFrames(client, gA_StageStartInfo[client].iFullTicks + gI_PlayerPrerunFrames[client], stage);
+		iPreFrames = CaculateStagePreFrames(client, gA_StageStartInfo[client].iFullTicks + gI_PlayerPrerunFrames[client], stage);
 		iStartFrame = gA_StageStartInfo[client].iFullTicks + gI_PlayerPrerunFrames[client] - iPreFrames;
 		iEndFrame = gI_PlayerFrames[client];
 		iFrameCount = iEndFrame - iStartFrame;
@@ -724,7 +724,7 @@ public ArrayList EditReplayFrames(int start, int end, ArrayList frames, bool pre
 	return copy;
 }
 
-public int CaculateStageStartPreFrames(int client, int start, int stage)
+public int CaculateStagePreFrames(int client, int start, int stage)
 {
 	int iMaxPreFrames = RoundToFloor(gCV_PlaybackPreRunTime.FloatValue * (1.0 / GetTickInterval()));
 
@@ -752,6 +752,7 @@ public int CaculateStageStartPreFrames(int client, int start, int stage)
 		int mid = (left + (right - left) / 2);
 
 		gA_PlayerFrames[client].GetArray(mid, aStartFrame, 11);
+		
 		if(aStartFrame.stage == stage)
 		{
 			gA_PlayerFrames[client].GetArray(mid - 1, aFrame2, 11);

@@ -1382,6 +1382,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 	if(GetEntityFlags(client) & FL_BASEVELOCITY) // they are on booster, dont limit them
 	{
 		bInStart = false;
+		Shavit_SetStageTimeValid(client, true);
 	}
 
 	// prespeed
@@ -2149,6 +2150,7 @@ public Action Command_Noclip(int client, int args)
 		}
 		else if(bInStart)//(iFlags & CPR_InStartZone) > 0)
 		{
+			Shavit_SetPracticeMode(client, true, true);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			return Plugin_Handled;
 		}
@@ -2156,6 +2158,7 @@ public Action Command_Noclip(int client, int args)
 		{
 			if(bPractice || bSegmented)
 			{
+				Shavit_SetPracticeMode(client, true, true);
 				Shavit_StopTimer(client);
 				SetEntityMoveType(client, MOVETYPE_NOCLIP);
 				return Plugin_Handled;
@@ -2191,19 +2194,10 @@ public Action Command_Noclip(int client, int args)
 		}
 		else
 		{
+			Shavit_SetPracticeMode(client, true, true);
 			Shavit_StopTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 		}
-
-		// if(!ShouldDisplayStopWarning(client))
-		// {
-		// 	Shavit_StopTimer(client);
-		// 	SetEntityMoveType(client, MOVETYPE_NOCLIP);
-		// }
-		// else
-		// {
-		// 	OpenStopWarningMenu(client, DoNoclip);
-		// }
 	}
 	else
 	{
@@ -2229,28 +2223,33 @@ public Action CommandListener_Noclip(int client, const char[] command, int args)
 
 	if((gCV_NoclipMe.IntValue == 1 || (gCV_NoclipMe.IntValue == 2 && CheckCommandAccess(client, "noclipme", ADMFLAG_CHEATS))) && command[0] == '+')
 	{
-		// if(!ShouldDisplayStopWarning(client))
-		// {
-		// 	Shavit_StopTimer(client);
-		// 	SetEntityMoveType(client, MOVETYPE_NOCLIP);
-		// }
-		// else
-		// {
-		// 	OpenStopWarningMenu(client, DoNoclip);
-		// }
+		int iFlags = Shavit_CanPause(client);
+		int target = GetSpectatorTarget(client, client);
+		int iZoneStage;
+		int iTrack = Shavit_GetClientTrack(client);
+		
+		bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+		bool bPractice = Shavit_IsPracticeMode(target);
+		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
+		bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
+								(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+		
 		if (Shavit_IsPaused(client))
 		{
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			return Plugin_Handled;
 		}
+		else if(bInStart)//(iFlags & CPR_InStartZone) > 0)
+		{
+			Shavit_SetPracticeMode(client, true, true);
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			return Plugin_Handled;
+		}
 		else if(Shavit_GetTimerStatus(client) == Timer_Running)
 		{
-			int iFlags = Shavit_CanPause(client);
-			int target = GetSpectatorTarget(client, client);
-			bool bPractice = Shavit_IsPracticeMode(target);
-
-			if(bPractice)
+			if(bPractice || bSegmented)
 			{
+				Shavit_SetPracticeMode(client, true, true);
 				Shavit_StopTimer(client);
 				SetEntityMoveType(client, MOVETYPE_NOCLIP);
 				return Plugin_Handled;
@@ -2283,9 +2282,10 @@ public Action CommandListener_Noclip(int client, const char[] command, int args)
 			Shavit_PauseTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			Shavit_PrintToChat(client, "%T", "MessagePause", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
-		}		
+		}
 		else
 		{
+			Shavit_SetPracticeMode(client, true, true);
 			Shavit_StopTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 		}
@@ -2318,29 +2318,38 @@ public Action CommandListener_Real_Noclip(int client, const char[] command, int 
 			return Plugin_Stop;
 		}
 
-		// if (ShouldDisplayStopWarning(client))
-		// {
-		// 	OpenStopWarningMenu(client, DoNoclip);
-		// 	return Plugin_Stop;
-		// }
+		int iFlags = Shavit_CanPause(client);
+		int target = GetSpectatorTarget(client, client);
+		int iZoneStage;
+		int iTrack = Shavit_GetClientTrack(client);
+		
+		bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+		bool bPractice = Shavit_IsPracticeMode(target);
+		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
+		bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
+								(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+
 		if (Shavit_IsPaused(client))
 		{
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			return Plugin_Handled;
 		}
+		else if(bInStart)//(iFlags & CPR_InStartZone) > 0)
+		{
+			Shavit_SetPracticeMode(client, true, true);
+			SetEntityMoveType(client, MOVETYPE_NOCLIP);
+			return Plugin_Handled;
+		}
 		else if(Shavit_GetTimerStatus(client) == Timer_Running)
 		{
-			int iFlags = Shavit_CanPause(client);
-			int target = GetSpectatorTarget(client, client);
-			bool bPractice = Shavit_IsPracticeMode(target);
-
-			if(bPractice)
+			if(bPractice || bSegmented)
 			{
+				Shavit_SetPracticeMode(client, true, true);
 				Shavit_StopTimer(client);
 				SetEntityMoveType(client, MOVETYPE_NOCLIP);
 				return Plugin_Handled;
 			}
-			
+
 			if((iFlags & CPR_NotOnGround) > 0)
 			{
 				Shavit_PrintToChat(client, "%T", "PauseNotOnGround", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
@@ -2368,12 +2377,13 @@ public Action CommandListener_Real_Noclip(int client, const char[] command, int 
 			Shavit_PauseTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
 			Shavit_PrintToChat(client, "%T", "MessagePause", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
-		}		
+		}
 		else
 		{
+			Shavit_SetPracticeMode(client, true, true);
 			Shavit_StopTimer(client);
 			SetEntityMoveType(client, MOVETYPE_NOCLIP);
-		}
+		}		
 
 		gI_LastNoclipTick[client] = GetGameTickCount();
 	}

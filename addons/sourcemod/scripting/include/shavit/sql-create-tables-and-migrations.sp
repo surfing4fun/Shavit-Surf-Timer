@@ -57,6 +57,7 @@ enum
 	Migration_AddPlayertimesAuthFK,
 	Migration_FixSQLiteMapzonesROWID,
 	Migration_AddMaptiersMaxvelocity,
+	Migration_AddStartpositionsStage, // 34
 	// TODO: Add start & end speed of records
 	// Migration_AddPlayertimesStartvelAndEndvel,
 	// Migration_AddCpwrsStartvelAndEndvel,
@@ -100,6 +101,7 @@ char gS_MigrationNames[][] = {
 	"AddPlayertimesAuthFK",
 	"FixSQLiteMapzonesROWID",
 	"AddMaptiersMaxvelocity",
+	"AddStartpositionsStage",
 	// "AddPlayertimesStartvelAndEndvel",
 	// "AddCpwrsStartvelAndEndvel",
 	// "AddCptimesStartvelAndEndvel",
@@ -315,7 +317,7 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	}
 
 	FormatEx(sQuery, sizeof(sQuery),
-		"CREATE TABLE IF NOT EXISTS `%sstartpositions` (`auth` INTEGER NOT NULL, `track` TINYINT NOT NULL, `map` VARCHAR(255) NOT NULL, `pos_x` FLOAT, `pos_y` FLOAT, `pos_z` FLOAT, `ang_x` FLOAT, `ang_y` FLOAT, `ang_z` FLOAT, `angles_only` BOOL, PRIMARY KEY (`auth`, `track`, `map`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%sstartpositions` (`auth` INTEGER NOT NULL, `track` TINYINT NOT NULL, `stage` TINYINT NOT NULL, `map` VARCHAR(255) NOT NULL, `pos_x` FLOAT, `pos_y` FLOAT, `pos_z` FLOAT, `ang_x` FLOAT, `ang_y` FLOAT, `ang_z` FLOAT, `angles_only` BOOL, PRIMARY KEY (`auth`, `track`, `map`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
@@ -332,8 +334,10 @@ public void Trans_CreateTables_Error(Database db, any data, int numQueries, cons
 		"styleplaytime",
 		"playertimes",
 		"stagetimes",
-		"stagecpwr",
-		"stagecppb",
+		"cpwrs",
+		"cptimes",
+		"stagewrs",
+		"stagewrs_min",
 		"wrs_min",
 		"wrs",
 		"mapzones",
@@ -430,6 +434,7 @@ void ApplyMigration(int migration)
 		case Migration_AddPlayertimesAuthFK: ApplyMigration_AddPlayertimesAuthFK();
 		case Migration_FixSQLiteMapzonesROWID: ApplyMigration_FixSQLiteMapzonesROWID();
 		case Migration_AddMaptiersMaxvelocity: ApplyMigration_AddMaptiersMaxvelocity();
+		case Migration_AddStartpositionsStage: ApplyMigration_AddStartpositionsStage();
 		// case Migration_AddPlayertimesStartvelAndEndvel: ApplyMigration_AddPlayertimesStartvelAndEndvel();
 		// case Migration_AddCpwrsStartvelAndEndvel: ApplyMigration_AddCpwrsStartvelAndEndvel();
 		// case Migration_AddCptimesStartvelAndEndvel: ApplyMigration_AddCptimesStartvelAndEndvel();
@@ -759,6 +764,13 @@ void ApplyMigration_AddMaptiersMaxvelocity()
 	char sQuery[192];
 	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smaptiers` ADD COLUMN `maxvelocity` FLOAT NOT NULL DEFAULT 3500.0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddMaptiersMaxvelocity, DBPrio_High);
+}
+
+void ApplyMigration_AddStartpositionsStage()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstartpositions` ADD COLUMN `stage` TINYINT NOT NULL DEFAULT 1 AFTER `track`;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStartpositionsStage, DBPrio_High);
 }
 
 public void SQL_TableMigrationSingleQuery_Callback(Database db, DBResultSet results, const char[] error, any data)

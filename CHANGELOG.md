@@ -1,6 +1,38 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+# Shavit SurfTimer - Change log - 2024-7-22 -
+* Update [`v1.0.2...v1.0.3`]
+
+## New features
+* New plugin shavit-ghost2! which can draw WR route for clients in 3 different ways, use `sm_ghost` to display menu.
+* New plugin shavit-wrsh, fetch top records from SurfHeaven, and allow player to check their rank of map times in SurfHeaven
+* Players can set start for each stages
+* Admins can set map maxvelocity to each maps by using command `sm_setmaxvelocity`
+* Shows player's stage completions AND stage WRs in player's profile
+* Show players Records of map / bonus / stage in map stats
+* Show recent stage records in Recent records and allow to select map / bonus / stage records separately
+* Allow to create zone by hooking a trigger but create it as box form (for multiple_trigger only)
+* Draw multiple_trigger zone as trigger instead a box (added an option to draw it as a box too) 
+* Add new translations for new features
+
+## Change to practice mode
+* To prevent player from getting advantage from using noclip, the plugins will put player in practice mode in any situation when a player uses noclip.
+* Practice mode *WILL NOT* disable when player in start zones (also stage start zone), player can only disable practice mode by using `sm_restart` (or alias command) to disable practice mode 
+* Block player use `sm_setstart` (or alias command) if they are in practice mode or timer paused
+
+## Bug fixes
+* Fix few menu display erros in TpToZone Menu
+* Fix bugs of touching Checkpoint Zone
+* Fix bug of noclip command listener
+
+## Merge stuffs from shavit bhoptimer
+* [Allow updating replay bot name without being a WR](https://github.com/shavitush/bhoptimer/commit/44ac27a41dbc86e5712efaf49114bdcf549da626)
+* [use style runspeed instead of m_flMaxspeed for tas (and autoprestrafe)](https://github.com/shavitush/bhoptimer/commit/3609adf2aa76fa84209d6f53d69eb067d554d3df)
+* [allow the !recentrecords menu to be sorted by style *Modified in Shavit-SurfTimer*](https://github.com/shavitush/bhoptimer/commit/4652e36cc66b5296d91f6d4e2a22aff7c1459016)
+* [shavit-replay-playback: hook triggers on late-load](https://github.com/shavitush/bhoptimer/commit/e35e83584190bc63acc8e3a8edb175946c71375e)
+
+
 
 # Shavit SurfTimer - Change log - 2024-5-9 -
 

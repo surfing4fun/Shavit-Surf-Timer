@@ -58,9 +58,17 @@
 	{
 		"en"		"Forcibly stopped replay."
 	}
-	"CentralReplayTrack"
+	"CentralReplay"
 	{
-		"en"		"Select a track to play:"
+		"en"		"Select a replay:"
+	}
+	"CentralReplayBonus"
+	{
+		"en"		"Select a bonus to play:"
+	}
+	"CentralReplayStage"
+	{
+		"en"		"Select a stage to play:"
 	}
 	"Replay_Central"
 	{

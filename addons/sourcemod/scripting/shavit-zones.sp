@@ -122,6 +122,8 @@ char gS_BeamSprite[PLATFORM_MAX_PATH];
 char gS_BeamSpriteIgnoreZ[PLATFORM_MAX_PATH];
 int gI_BeamSpriteIgnoreZ;
 
+int gI_OffsetMFEffects = -1;
+
 // admin menu
 TopMenu gH_AdminMenu = null;
 TopMenuObject gH_TimerCommands = INVALID_TOPMENUOBJECT;
@@ -187,10 +189,10 @@ DynamicHook gH_TeleportDhook = null;
 float gF_ClimbButtonCache[MAXPLAYERS+1][TRACKS_SIZE][2][3]; // 0 - location, 1 - angles
 
 // set start
-bool gB_HasSetStart[MAXPLAYERS+1][TRACKS_SIZE];
-bool gB_StartAnglesOnly[MAXPLAYERS+1][TRACKS_SIZE];
-float gF_StartPos[MAXPLAYERS+1][TRACKS_SIZE][3];
-float gF_StartAng[MAXPLAYERS+1][TRACKS_SIZE][3];
+bool gB_HasSetStart[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES];
+bool gB_StartAnglesOnly[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES];
+float gF_StartPos[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES][3];
+float gF_StartAng[MAXPLAYERS+1][TRACKS_SIZE][MAX_STAGES][3];
 
 // modules
 bool gB_Eventqueuefix = false;
@@ -331,6 +333,13 @@ public void OnPluginStart()
 
 	HookEvent("player_spawn", Player_Spawn);
 
+	gI_OffsetMFEffects = FindSendPropInfo("CBaseEntity", "m_fEffects");
+
+	if(gI_OffsetMFEffects == -1)
+	{
+		SetFailState("Could not find CBaseEntity:m_fEffects");
+	}
+
 	// forwards
 	gH_Forwards_EnterZone = CreateGlobalForward("Shavit_OnEnterZone", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_LeaveZone = CreateGlobalForward("Shavit_OnLeaveZone", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
@@ -351,9 +360,9 @@ public void OnPluginStart()
 	gCV_MinHeight = new Convar("shavit_zones_minheight", "32.0", "The minimum height to use for the creation of start zone / end zone / stage zone.", 0, true, 0.0, true, 180.0);
 	gCV_Offset = new Convar("shavit_zones_offset", "1.0", "When calculating a zone's *VISUAL* box, by how many units, should we scale it to the center?\n0.0 - no downscaling. Values above 0 will scale it inward and negative numbers will scale it outwards.\nAdjust this value if the zones clip into walls.");
 	gCV_EnforceTracks = new Convar("shavit_zones_enforcetracks", "1", "Enforce zone tracks upon entry?\n0 - allow every zone except for start/end to affect users on every zone.\n1 - require the user's track to match the zone's track.", 0, true, 0.0, true, 1.0);
-	gCV_BoxOffset = new Convar("shavit_zones_box_offset", "16", "Offset zone trigger boxes by this many unit\n0 - matches players bounding box\n16 - matches players center");
+	gCV_BoxOffset = new Convar("shavit_zones_box_offset", "0", "Offset zone trigger boxes by this many unit\n0 - matches players bounding box\n16 - matches players center");
 	gCV_ExtraSpawnHeight = new Convar("shavit_zones_extra_spawn_height", "0.0", "YOU DONT NEED TO TOUCH THIS USUALLY. FIX YOUR ACTUAL ZONES.\nUsed to fix some shit prebuilt zones that are in the ground like bhop_strafecontrol");
-	gCV_PrebuiltVisualOffset = new Convar("shavit_zones_prebuilt_visual_offset", "0", "YOU DONT NEED TO TOUCH THIS USUALLY.\nUsed to fix the VISUAL beam offset for prebuilt zones on a map.\nExample maps you'd want to use 16 on: bhop_tranquility and bhop_amaranthglow");
+	gCV_PrebuiltVisualOffset = new Convar("shavit_zones_prebuilt_visual_offset", "-1.0", "YOU DONT NEED TO TOUCH THIS USUALLY.\nUsed to fix the VISUAL beam offset for prebuilt zones on a map.\nExample maps you'd want to use 16 on: bhop_tranquility and bhop_amaranthglow");
 
 	gCV_ForceTargetnameReset = new Convar("shavit_zones_forcetargetnamereset", "0", "Reset the player's targetname upon timer start?\nRecommended to leave disabled. Enable via per-map configs when necessary.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_ResetTargetnameMain = new Convar("shavit_zones_resettargetname_main", "", "What targetname to use when resetting the player.\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
@@ -878,13 +887,13 @@ public int Native_IsClientCreatingZone(Handle handler, int numParams)
 
 public int Native_SetStart(Handle handler, int numParams)
 {
-	SetStart(GetNativeCell(1), GetNativeCell(2), view_as<bool>(GetNativeCell(3)));
+	SetStart(GetNativeCell(1), GetNativeCell(2), GetNativeCell(3), view_as<bool>(GetNativeCell(3)));
 	return 1;
 }
 
 public int Native_DeleteSetStart(Handle handler, int numParams)
 {
-	DeleteSetStart(GetNativeCell(1), GetNativeCell(2));
+	DeleteSetStart(GetNativeCell(1), GetNativeCell(2), GetNativeCell(3));
 	return 1;
 }
 
@@ -1027,6 +1036,14 @@ public any Native_RemoveZone(Handle plugin, int numParams)
 
 	int ent = gA_ZoneCache[index].iEntity;
 	ClearZoneEntity(index, true);
+
+	if(gA_ZoneCache[index].iForm == ZoneForm_trigger_multiple)
+	{
+		SetEntData(ent, gI_OffsetMFEffects, GetEntData(ent, gI_OffsetMFEffects) | EF_NODRAW);
+		ChangeEdictState(ent, gI_OffsetMFEffects);
+		SetEdictFlags(ent, GetEdictFlags(ent) | FL_EDICT_DONTSEND);
+		SDKUnhook(ent, SDKHook_SetTransmit, Hook_SetTransmit);
+	}
 
 	if (ent > MaxClients && gA_ZoneCache[index].iForm == ZoneForm_Box) // created by shavit-zones
 	{
@@ -1555,7 +1572,7 @@ void UnhookZone(zone_cache_t cache)
 	{
 		SDKUnhook(entity, SDKHook_UsePost, UsePost_HookedButton);
 	}
-	else if (cache.iForm == ZoneForm_Box)
+	else if (cache.iForm == ZoneForm_Box)//|| cache.iForm == ZoneForm_trigger_multiple)
 	{
 		SDKUnhook(entity, SDKHook_StartTouchPost, StartTouchPost);
 		SDKUnhook(entity, SDKHook_EndTouchPost, EndTouchPost);
@@ -1868,16 +1885,15 @@ public void OnClientConnected(int client)
 	}
 
 	bool empty_InsideZoneID[MAX_ZONES];
+	bool empty_HasSetStart[MAX_STAGES];
 	gB_InsideZoneID[client] = empty_InsideZoneID;
 
 	for (int i = 0; i < TRACKS_SIZE; i++)
 	{
 		gF_ClimbButtonCache[client][i][0] = ZERO_VECTOR;
 		gF_ClimbButtonCache[client][i][1] = ZERO_VECTOR;
+		gB_HasSetStart[client][i] = empty_HasSetStart;
 	}
-
-	bool empty_HasSetStart[TRACKS_SIZE];
-	gB_HasSetStart[client] = empty_HasSetStart;
 
 	Reset(client);
 
@@ -1969,7 +1985,7 @@ void GetStartPosition(int client)
 	char query[512];
 
 	FormatEx(query, 512,
-		"SELECT track, pos_x, pos_y, pos_z, ang_x, ang_y, ang_z, angles_only FROM %sstartpositions WHERE auth = %d AND map = '%s'",
+		"SELECT track, stage, pos_x, pos_y, pos_z, ang_x, ang_y, ang_z, angles_only FROM %sstartpositions WHERE auth = %d AND map = '%s'",
 		gS_MySQLPrefix, steamID, gS_Map);
 
 	QueryLog(gH_SQL, SQL_GetStartPosition_Callback, query, GetClientSerial(client));
@@ -1993,17 +2009,18 @@ public void SQL_GetStartPosition_Callback(Database db, DBResultSet results, cons
 	while(results.FetchRow())
 	{
 		int track = results.FetchInt(0);
+		int stage = results.FetchInt(1);
 
-		gF_StartPos[client][track][0] = results.FetchFloat(1);
-		gF_StartPos[client][track][1] = results.FetchFloat(2);
-		gF_StartPos[client][track][2] = results.FetchFloat(3);
+		gF_StartPos[client][track][stage][0] = results.FetchFloat(2);
+		gF_StartPos[client][track][stage][1] = results.FetchFloat(3);
+		gF_StartPos[client][track][stage][2] = results.FetchFloat(4);
 
-		gF_StartAng[client][track][0] = results.FetchFloat(4);
-		gF_StartAng[client][track][1] = results.FetchFloat(5);
-		gF_StartAng[client][track][2] = results.FetchFloat(6);
+		gF_StartAng[client][track][stage][0] = results.FetchFloat(5);
+		gF_StartAng[client][track][stage][1] = results.FetchFloat(6);
+		gF_StartAng[client][track][stage][2] = results.FetchFloat(7);
 
-		gB_StartAnglesOnly[client][track] = results.FetchInt(7) > 0;
-		gB_HasSetStart[client][track] = true;
+		gB_StartAnglesOnly[client][track][stage] = results.FetchInt(8) > 0;
+		gB_HasSetStart[client][track][stage] = true;
 	}
 }
 
@@ -2016,38 +2033,63 @@ public Action Command_SetStart(int client, int args)
 		return Plugin_Handled;
 	}
 
+	if(Shavit_IsPracticeMode(client))
+	{
+		Shavit_PrintToChat(client, "%T", "SetStartCommandPractice", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+		return Plugin_Handled;
+	}
+
+	if(Shavit_IsPaused(client))
+	{
+		Shavit_PrintToChat(client, "%T", "SetStartCommandTimerPaused", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+
+		return Plugin_Handled;
+	}	
+
 	int track = Shavit_GetClientTrack(client);
+	int stage = Shavit_IsOnlyStageMode(client) ? Shavit_GetClientLastStage(client) : 1;
 
-	Shavit_PrintToChat(client, "%T", "SetStart", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+	char sTrack[32];
+	if(stage == 1)
+	{
+		GetTrackName(client, track, sTrack, sizeof(sTrack));
+	}
+	else
+	{
+		FormatEx(sTrack, sizeof(sTrack), "%T %d", "StageText", client, stage);
+	}
 
-	SetStart(client, track, GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") == -1);
+	Shavit_PrintToChat(client, "%T", "SetStart", client, gS_ChatStrings.sVariable2, gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
+
+	SetStart(client, track, stage, GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") == -1);
 
 	return Plugin_Handled;
 }
 
-void SetStart(int client, int track, bool anglesonly)
+void SetStart(int client, int track, int stage, bool anglesonly)
 {
-	gB_HasSetStart[client][track] = true;
-	gB_StartAnglesOnly[client][track] = anglesonly;
+	gB_HasSetStart[client][track][stage] = true;
+	gB_StartAnglesOnly[client][track][stage] = anglesonly;
 
 	if (anglesonly)
 	{
-		gF_StartPos[client][track] = ZERO_VECTOR;
+		gF_StartPos[client][track][stage] = ZERO_VECTOR;
 	}
 	else
 	{
-		GetClientAbsOrigin(client, gF_StartPos[client][track]);
+		GetClientAbsOrigin(client, gF_StartPos[client][track][stage]);
 	}
 
-	GetClientEyeAngles(client, gF_StartAng[client][track]);
+	GetClientEyeAngles(client, gF_StartAng[client][track][stage]);
 
 	char query[1024];
 
 	FormatEx(query, sizeof(query),
-		"REPLACE INTO %sstartpositions (auth, track, map, pos_x, pos_y, pos_z, ang_x, ang_y, ang_z, angles_only) VALUES (%d, %d, '%s', %.03f, %.03f, %.03f, %.03f, %.03f, %.03f, %d);",
-		gS_MySQLPrefix, GetSteamAccountID(client), track, gS_Map,
-		gF_StartPos[client][track][0], gF_StartPos[client][track][1], gF_StartPos[client][track][2],
-		gF_StartAng[client][track][0], gF_StartAng[client][track][1], gF_StartAng[client][track][2], anglesonly);
+		"REPLACE INTO %sstartpositions (auth, track, stage, map, pos_x, pos_y, pos_z, ang_x, ang_y, ang_z, angles_only) VALUES (%d, %d, %d, '%s', %.03f, %.03f, %.03f, %.03f, %.03f, %.03f, %d);",
+		gS_MySQLPrefix, GetSteamAccountID(client), track, stage, gS_Map,
+		gF_StartPos[client][track][stage][0], gF_StartPos[client][track][stage][1], gF_StartPos[client][track][stage][2],
+		gF_StartAng[client][track][stage][0], gF_StartAng[client][track][stage][1], gF_StartAng[client][track][stage][2], anglesonly);
 
 	QueryLog(gH_SQL, SQL_InsertStartPosition_Callback, query);
 }
@@ -2074,12 +2116,23 @@ public Action Command_DeleteSetStart(int client, int args)
 
 	for (int i = 0; i < TRACKS_SIZE; i++)
 	{
-		if (gB_HasSetStart[client][i])
+		if (gB_HasSetStart[client][i][1])
 		{
 			char info[8], sTrack[32];
 			IntToString(i, info, sizeof(info));
 			GetTrackName(client, i, sTrack, sizeof(sTrack));
 			menu.AddItem(info, sTrack);
+		}
+	}
+
+	for (int j = 2; j < MAX_STAGES; j++)
+	{
+		if (gB_HasSetStart[client][Track_Main][j])
+		{
+			char info[8], sStage[32];
+			FormatEx(info, sizeof(info), "s%d", j);
+			FormatEx(sStage, sizeof(sStage), "%T %d", "StageText", client, j);
+			menu.AddItem(info, sStage);
 		}
 	}
 
@@ -2099,10 +2152,27 @@ public int MenuHandler_DeleteSetStart(Menu menu, MenuAction action, int param1, 
 	if(action == MenuAction_Select)
 	{
 		char info[8];
+		int track = 0;
+		int stage = 1;
+
 		menu.GetItem(param2, info, sizeof(info));
-		int track = StringToInt(info);
-		Shavit_PrintToChat(param1, "%T", "DeleteSetStart", param1, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
-		DeleteSetStart(param1, track);
+		char sTrack[32];
+
+		if(StrContains(info, "s", false) == 0)
+		{
+			ReplaceString(info, sizeof(info), "s", "");
+			stage = StringToInt(info);
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "StageText", param1, stage);
+		}
+		else
+		{
+			track = StringToInt(info);
+			GetTrackName(param1, track, sTrack, sizeof(sTrack));
+		}
+		
+		Shavit_PrintToChat(param1, "%T", "DeleteSetStart", param1, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		
+		DeleteSetStart(param1, track, stage);
 	}
 	else if(action == MenuAction_End)
 	{
@@ -2112,11 +2182,11 @@ public int MenuHandler_DeleteSetStart(Menu menu, MenuAction action, int param1, 
 	return 0;
 }
 
-void DeleteSetStart(int client, int track)
+void DeleteSetStart(int client, int track, int stage)
 {
-	gB_HasSetStart[client][track] = false;
-	gF_StartPos[client][track] = ZERO_VECTOR;
-	gF_StartAng[client][track] = ZERO_VECTOR;
+	gB_HasSetStart[client][track][stage] = false;
+	gF_StartPos[client][track][stage] = ZERO_VECTOR;
+	gF_StartAng[client][track][stage] = ZERO_VECTOR;
 
 	char query[512];
 
@@ -2187,11 +2257,11 @@ public Action Command_DrawAllZones(int client, int args)
 		gB_DrawAllZones[client] = !gB_DrawAllZones[client];
 		if(gB_DrawAllZones[client])
 		{
-			Shavit_PrintToChat(client, "%T", "ZoneDrawAllZoneEnabled", client, gS_ChatStrings.sVariable2, gS_ChatStrings.sText);			
+			Shavit_PrintToChat(client, "%T", "ZoneDrawAllZoneEnabled", client, gS_ChatStrings.sVariable2, gS_ChatStrings.sText);
 		}
 		else
 		{
-			Shavit_PrintToChat(client, "%T", "ZoneDrawAllZoneDisabled", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);			
+			Shavit_PrintToChat(client, "%T", "ZoneDrawAllZoneDisabled", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);	
 		}
 
 		gH_DrawAllZonesCookie.Set(client, gB_DrawAllZones[client] ? "1" : "0");
@@ -2597,33 +2667,36 @@ public Action Command_Stages(int client, int args)
 
 	if (iStage > -1)
 	{
-		if(iStage == 1)
+		if(iStage > gI_HighestStage[Track_Main])
 		{
-			Shavit_RestartTimer(client, Track_Main, true, false);
+			Shavit_PrintToChat(client, "%T", "StageCommandNoStage", client, gS_ChatStrings.sVariable, iStage, gS_ChatStrings.sText);
 			return Plugin_Handled;
 		}
 
-		for(int i = 0; i < gI_MapZones; i++)
+		if(!bBack || iStage == 1)
 		{
-			if (gA_ZoneCache[i].iType == Zone_Stage && gA_ZoneCache[i].iData == iStage)
+			Shavit_StopTimer(client);
+			Shavit_SetClientLastStage(client, iStage);
+			Shavit_SetOnlyStageMode(client, true);
+			Shavit_RestartTimer(client, Track_Main, (iStage == 1), false);
+			
+			return Plugin_Handled;			
+		}
+		else
+		{
+			int iIndex = GetStageZoneIndex(Track_Main, iStage);
+
+			if(iIndex != -1)
 			{
-				if(!bBack)
+				if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))
 				{
-					Shavit_StopTimer(client);
-					Shavit_SetOnlyStageMode(client, true);
-				}
-
-				Shavit_SetClientLastStage(client, iStage);
-
-				if (!EmptyVector(gA_ZoneCache[i].fDestination))
-				{
-					TeleportEntity(client, gA_ZoneCache[i].fDestination, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
-					break;
+					TeleportEntity(client, gA_ZoneCache[iIndex].fDestination, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+					return Plugin_Handled;	
 				}
 				else
 				{
-					TeleportEntity(client, gV_ZoneCenter[i], NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
-					break;
+					TeleportEntity(client, gV_ZoneCenter[iIndex], NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+					return Plugin_Handled;	
 				}
 			}
 		}
@@ -2678,6 +2751,7 @@ public int MenuHandler_SelectStage(Menu menu, MenuAction action, int param1, int
 		Shavit_SetClientLastStage(param1, gA_ZoneCache[iIndex].iData);
 
 		Shavit_StopTimer(param1);
+		Shavit_SetPracticeMode(param1, false, false);
 		Shavit_SetOnlyStageMode(param1, true);
 
 		if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))
@@ -2825,7 +2899,7 @@ Action OpenTpToZoneMenu(int client, int pagepos=0)
 		char sZoneName[32];
 		GetZoneName(client, gA_ZoneCache[i].iType, sZoneName, sizeof(sZoneName));
 
-		if (gA_ZoneCache[i].iType == Zone_CustomSpeedLimit || gA_ZoneCache[i].iType == Zone_Stage || gA_ZoneCache[i].iType == Zone_Airaccelerate)
+		if (gA_ZoneCache[i].iType == Zone_CustomSpeedLimit || gA_ZoneCache[i].iType == Zone_Stage || gA_ZoneCache[i].iType == Zone_Checkpoint || gA_ZoneCache[i].iType == Zone_Airaccelerate)
 		{
 			FormatEx(sDisplay, sizeof(sDisplay), "#%d - %s %d (%s)%s", (i + 1), sZoneName, gA_ZoneCache[i].iData, sTrack, sTarget);
 		}
@@ -2979,6 +3053,33 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 			else
 				gA_EditCache[param1].iFlags |= ZF_Hammerid;
 		}
+		else if (StrEqual(info, "asbox"))
+		{
+			if(gA_EditCache[param1].iForm == ZoneForm_trigger_multiple)
+			{
+				gA_EditCache[param1].iForm = ZoneForm_Box;
+			}
+			else if(gA_EditCache[param1].iForm == ZoneForm_Box)
+			{
+				gA_EditCache[param1].iForm = ZoneForm_trigger_multiple;	
+			}
+
+			for(int i = 0; i < 2; i++)
+			{
+				float offset = gA_EditCache[param1].fCorner1[i] > gA_EditCache[param1].fCorner2[i] ? -1.0:1.0;
+
+				if(gA_EditCache[param1].iForm == ZoneForm_trigger_multiple)
+				{
+					gA_EditCache[param1].fCorner1[i] -= offset;
+					gA_EditCache[param1].fCorner2[i] += offset;
+				}
+				else if(gA_EditCache[param1].iForm == ZoneForm_Box)
+				{
+					gA_EditCache[param1].fCorner1[i] += offset;
+					gA_EditCache[param1].fCorner2[i] -= offset;
+				}
+			}
+		}
 		else if (StrEqual(info, "hook"))
 		{
 			if (gA_EditCache[param1].iFlags & ZF_Hammerid)
@@ -3034,15 +3135,21 @@ void OpenHookMenu_Editor(int client)
 	GetZoneName(client, zonetype, buf, sizeof(buf));
 	FormatEx(display, sizeof(display), "%T", "ZoneHook_Zonetype", client, buf);
 	menu.AddItem("ztype", display);
-	FormatEx(display, sizeof(display), "%T\n ", "ZoneHook_Hooktype", client,
+	FormatEx(display, sizeof(display), "%T%s", "ZoneHook_Hooktype", client,
 		(hooktype == -1) ? "UNKNOWN" :
 			(hooktype & ZF_Hammerid) ? "hammerid" :
 				((hooktype & ZF_Origin) ? "origin" : (form == ZoneForm_trigger_teleport ? "target" : "targetname")),
 		(hooktype == -1) ? "":
 			(hooktype & ZF_Hammerid) ? hammerid :
-				((hooktype & ZF_Origin) ? sOrigin : targetname)
+				((hooktype & ZF_Origin) ? sOrigin : targetname), form == ZoneForm_trigger_multiple || form == ZoneForm_Box ? "":"\n "
 	);
 	menu.AddItem("htype", display);
+
+	if(form == ZoneForm_trigger_multiple || form == ZoneForm_Box)
+	{
+		FormatEx(display, sizeof(display), "%T\n ", "ZoneHook_Asboxform", client, form == ZoneForm_Box ? "＋":"－");
+		menu.AddItem("asbox", display);
+	}
 
 	FormatEx(display, sizeof(display), "%T", "ZoneHook_Confirm", client);
 	menu.AddItem(
@@ -4320,7 +4427,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 
 				if(gI_MapStep[client] == 1)
 				{
-					origin[2] = vPlayerOrigin[2] + 1.0;
+					origin[2] = vPlayerOrigin[2];
 
 					if (!InStartOrEndZone(origin, NULL_VECTOR, gA_EditCache[client].iTrack, gA_EditCache[client].iType))
 					{
@@ -4442,6 +4549,10 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 		else if(StrEqual(sInfo, "forcerender"))
 		{
 			gA_EditCache[param1].iFlags ^= ZF_ForceRender;
+		}
+		else if(StrEqual(sInfo, "drawasbox"))
+		{
+			gA_EditCache[param1].iFlags ^= ZF_DrawAsBox;
 		}
 
 		CreateEditMenu(param1);
@@ -4595,12 +4706,20 @@ void CreateEditMenu(int client, bool autostage=false)
 	FormatEx(sMenuItem, 64, "%T", "ZoneSetNo", client);
 	menu.AddItem("no", sMenuItem);
 
-	FormatEx(sMenuItem, 64, "%T", "ZoneSetAdjust", client);
-	menu.AddItem("adjust", sMenuItem,
-		(hookmenu || gA_EditCache[client].iForm != ZoneForm_Box) ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT);
+	if(gA_EditCache[client].iForm == ZoneForm_Box)
+	{
+		FormatEx(sMenuItem, 64, "%T", "ZoneSetAdjust", client);
+		menu.AddItem("adjust", sMenuItem, ITEMDRAW_DEFAULT);		
+	}
 
 	FormatEx(sMenuItem, 64, "%T", "ZoneForceRender", client, ((gA_EditCache[client].iFlags & ZF_ForceRender) > 0)? "＋":"－");
 	menu.AddItem("forcerender", sMenuItem);
+
+	if(gA_EditCache[client].iForm == ZoneForm_trigger_multiple)
+	{
+		FormatEx(sMenuItem, 64, "%T", "ZoneDrawAsBox", client, ((gA_EditCache[client].iFlags & ZF_DrawAsBox) > 0)? "＋":"－");
+		menu.AddItem("drawasbox", sMenuItem);
+	}
 
 	if (gA_EditCache[client].iType == Zone_Stage)
 	{
@@ -4931,7 +5050,7 @@ public Action Timer_DrawZones(Handle Timer, any drawAll)
 
 		if (drawAll || gA_ZoneSettings[type][track].bVisible || (gA_ZoneCache[i].iFlags & ZF_ForceRender) > 0)
 		{
-			if ((form == ZoneForm_trigger_teleport || form == ZoneForm_func_button) && !(drawAll || (gA_ZoneCache[i].iFlags & ZF_ForceRender) > 0))
+			if ((gA_ZoneCache[i].iEntity == -1) || (form == ZoneForm_trigger_teleport || form == ZoneForm_func_button) && !(drawAll || (gA_ZoneCache[i].iFlags & ZF_ForceRender) > 0))
 			{
 				continue;
 			}
@@ -4939,22 +5058,43 @@ public Action Timer_DrawZones(Handle Timer, any drawAll)
 			int colors[4];
 			GetZoneColors(colors, type, track);
 
-			DrawZone(
-				gV_MapZones_Visual[i],
-				colors,
-				RoundToCeil(float(gI_MapZones) / iMaxZonesPerFrame + 2.0) * gCV_Interval.FloatValue,
-				gA_ZoneSettings[type][track].fWidth,
-				gA_ZoneSettings[type][track].bFlatZone,
-				gV_ZoneCenter[i],
-				gA_ZoneSettings[type][track].iBeam,
-				gA_ZoneSettings[type][track].iHalo,
-				track,
-				type,
-				gA_ZoneSettings[type][track].iSpeed,
-				!!drawAll,
-				0
-			);
+			if(form == ZoneForm_Box || (form == ZoneForm_trigger_multiple && (gA_ZoneCache[i].iFlags & ZF_DrawAsBox) > 0))
+			{
+				DrawZone(
+					gV_MapZones_Visual[i],
+					colors,
+					RoundToCeil(float(gI_MapZones) / iMaxZonesPerFrame + 2.0) * gCV_Interval.FloatValue,
+					gA_ZoneSettings[type][track].fWidth,
+					gA_ZoneSettings[type][track].bFlatZone,
+					gV_ZoneCenter[i],
+					gA_ZoneSettings[type][track].iBeam,
+					gA_ZoneSettings[type][track].iHalo,
+					track,
+					type,
+					gA_ZoneSettings[type][track].iSpeed,
+					!!drawAll,
+					0
+				);				
+			}
 
+			if (gA_ZoneCache[i].iForm == ZoneForm_trigger_multiple)
+			{
+				if((gA_ZoneCache[i].iFlags & ZF_DrawAsBox) == 0)
+				{
+					SetEntData(gA_ZoneCache[i].iEntity, gI_OffsetMFEffects, GetEntData(gA_ZoneCache[i].iEntity, gI_OffsetMFEffects) & ~EF_NODRAW);
+					ChangeEdictState(gA_ZoneCache[i].iEntity, gI_OffsetMFEffects);
+					SetEdictFlags(gA_ZoneCache[i].iEntity, GetEdictFlags(gA_ZoneCache[i].iEntity) & ~FL_EDICT_DONTSEND);
+					SDKHook(gA_ZoneCache[i].iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
+				}
+				else
+				{
+					SetEntData(gA_ZoneCache[i].iEntity, gI_OffsetMFEffects, GetEntData(gA_ZoneCache[i].iEntity, gI_OffsetMFEffects) | EF_NODRAW);
+					ChangeEdictState(gA_ZoneCache[i].iEntity, gI_OffsetMFEffects);
+					SetEdictFlags(gA_ZoneCache[i].iEntity, GetEdictFlags(gA_ZoneCache[i].iEntity) | FL_EDICT_DONTSEND);
+					SDKUnhook(gA_ZoneCache[i].iEntity, SDKHook_SetTransmit, Hook_SetTransmit);
+				}
+			}
+			
 			if (++iDrawn % iMaxZonesPerFrame == 0)
 			{
 				return Plugin_Continue;
@@ -4965,6 +5105,16 @@ public Action Timer_DrawZones(Handle Timer, any drawAll)
 	iCycle[drawAll] = 0;
 
 	return Plugin_Continue;
+}
+
+public Action Hook_SetTransmit(int entity, int other)
+{
+	if(gB_DrawAllZones[other])
+	{
+		return Plugin_Continue;
+	}
+
+	return Plugin_Handled;
 }
 
 void GetZoneColors(int colors[4], int type, int track, int customalpha = 0)
@@ -5269,6 +5419,8 @@ public Action Shavit_OnStart(int client, int track)
 	{
 		ResetClientTargetNameAndClassName(client, track);
 	}
+
+	return Plugin_Continue;
 }
 
 public void Shavit_OnRestart(int client, int track, bool tostartzone)
@@ -5282,26 +5434,41 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 	if(gCV_TeleportToStart.BoolValue)
 	{
-		bool bCustomStart = gB_HasSetStart[client][track] && !gB_StartAnglesOnly[client][track];
+		int stage = Shavit_IsOnlyStageMode(client) && !tostartzone ? Shavit_GetClientLastStage(client) : 1;
+		bool bCustomStart = gB_HasSetStart[client][track][stage] && !gB_StartAnglesOnly[client][track][stage];
 		bool use_CustomStart_over_CustomSpawn = (iIndex != -1) && bCustomStart;
 
-		if (Shavit_IsOnlyStageMode(client) && !tostartzone)
+		float fCenter[3];
+
+		if (Shavit_IsOnlyStageMode(client) && !tostartzone && stage > 1)
 		{
 			iIndex = GetStageZoneIndex(track, Shavit_GetClientLastStage(client));
-			
-			if(iIndex != -1)
+
+			if(bCustomStart || iIndex != -1)
 			{
-				if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))
+				if (bCustomStart)
 				{
-					TeleportEntity(client, gA_ZoneCache[iIndex].fDestination, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
-					return;
+					fCenter = gF_StartPos[client][track][stage];
 				}
 				else
 				{
-					TeleportEntity(client, gV_ZoneCenter[iIndex], NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
-					return;
+					if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))
+					{
+						fCenter = gA_ZoneCache[iIndex].fDestination;
+					}
+					else
+					{
+						fCenter[0] = gV_ZoneCenter[iIndex][0];
+						fCenter[1] = gV_ZoneCenter[iIndex][1];
+						fCenter[2] = gA_ZoneCache[iIndex].fCorner1[2] + gCV_ExtraSpawnHeight.FloatValue;					
+					}
 				}
+
+				fCenter[2] += 1.0;
 			}
+
+			TeleportEntity(client, fCenter, gB_HasSetStart[client][track][stage] ? gF_StartAng[client][track][stage] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+			return;
 		}
 
 		iIndex = GetZoneIndex(Zone_Start, track);
@@ -5315,11 +5482,9 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 		// standard zoning
 		else if (bCustomStart || iIndex != -1)
 		{
-			float fCenter[3];
-
 			if (bCustomStart)
 			{
-				fCenter = gF_StartPos[client][track];
+				fCenter = gF_StartPos[client][track][stage];
 			}
 			else
 			{
@@ -5330,11 +5495,11 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 			fCenter[2] += 1.0;
 
-			TeleportEntity(client, fCenter, gB_HasSetStart[client][track] ? gF_StartAng[client][track] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+			TeleportEntity(client, fCenter, gB_HasSetStart[client][track][1] ? gF_StartAng[client][track][1] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
 
 			if (gB_ReplayRecorder && gB_HasSetStart[client][track])
 			{
-				Shavit_HijackAngles(client, gF_StartAng[client][track][0], gF_StartAng[client][track][1], -1, true);
+				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][0], gF_StartAng[client][track][stage][1], -1, true);
 			}
 
 			if (!gB_HasSetStart[client][track] || gB_StartAnglesOnly[client][track])
@@ -5358,27 +5523,27 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 		}
 	}
 
-	if (iIndex != -1)
-	{
-		int colors[4];
-		GetZoneColors(colors, Zone_Start, track);
+	// if (iIndex != -1)
+	// {
+	// 	int colors[4];
+	// 	GetZoneColors(colors, Zone_Start, track);
 
-		DrawZone(
-			gV_MapZones_Visual[iIndex],
-			colors,
-			gCV_Interval.FloatValue,
-			gA_ZoneSettings[Zone_Start][track].fWidth,
-			gA_ZoneSettings[Zone_Start][track].bFlatZone,
-			gV_ZoneCenter[iIndex],
-			gA_ZoneSettings[Zone_Start][track].iBeam,
-			gA_ZoneSettings[Zone_Start][track].iHalo,
-			track,
-			Zone_Start,
-			gA_ZoneSettings[Zone_Start][track].iSpeed,
-			false,
-			client
-		);
-	}
+	// 	DrawZone(
+	// 		gV_MapZones_Visual[iIndex],
+	// 		colors,
+	// 		gCV_Interval.FloatValue,
+	// 		gA_ZoneSettings[Zone_Start][track].fWidth,
+	// 		gA_ZoneSettings[Zone_Start][track].bFlatZone,
+	// 		gV_ZoneCenter[iIndex],
+	// 		gA_ZoneSettings[Zone_Start][track].iBeam,
+	// 		gA_ZoneSettings[Zone_Start][track].iHalo,
+	// 		track,
+	// 		Zone_Start,
+	// 		gA_ZoneSettings[Zone_Start][track].iSpeed,
+	// 		false,
+	// 		client
+	// 	);
+	// }
 }
 
 // This function just use to teleport a client to start zone. not for custom spawn or client who has set start.
@@ -5440,27 +5605,27 @@ public void Shavit_OnEnd(int client, int track)
 		}
 	}
 
-	if (iIndex != -1)
-	{
-		int colors[4];
-		GetZoneColors(colors, Zone_End, track);
+	// if (iIndex != -1)
+	// {
+	// 	int colors[4];
+	// 	GetZoneColors(colors, Zone_End, track);
 
-		DrawZone(
-			gV_MapZones_Visual[iIndex],
-			colors,
-			gCV_Interval.FloatValue,
-			gA_ZoneSettings[Zone_End][track].fWidth,
-			gA_ZoneSettings[Zone_End][track].bFlatZone,
-			gV_ZoneCenter[iIndex],
-			gA_ZoneSettings[Zone_End][track].iBeam,
-			gA_ZoneSettings[Zone_End][track].iHalo,
-			track,
-			Zone_End,
-			gA_ZoneSettings[Zone_End][track].iSpeed,
-			false,
-			client
-		);
-	}
+	// 	DrawZone(
+	// 		gV_MapZones_Visual[iIndex],
+	// 		colors,
+	// 		gCV_Interval.FloatValue,
+	// 		gA_ZoneSettings[Zone_End][track].fWidth,
+	// 		gA_ZoneSettings[Zone_End][track].bFlatZone,
+	// 		gV_ZoneCenter[iIndex],
+	// 		gA_ZoneSettings[Zone_End][track].iBeam,
+	// 		gA_ZoneSettings[Zone_End][track].iHalo,
+	// 		track,
+	// 		Zone_End,
+	// 		gA_ZoneSettings[Zone_End][track].iSpeed,
+	// 		false,
+	// 		client
+	// 	);
+	// }
 }
 
 bool EmptyVector(float vec[3])
@@ -5550,14 +5715,14 @@ void SetZoneMinsMaxs(int zone)
 
 	if (distance_x > offset)
 	{
-		mins[0] += offset;
-		maxs[0] -= offset;
+		mins[0] -= offset;
+		maxs[0] += offset;
 	}
 
 	if (distance_y > offset)
 	{
-		mins[1] += offset;
-		maxs[1] -= offset;
+		mins[1] -= offset;
+		maxs[1] += offset;
 	}
 
 	SetEntPropVector(gA_ZoneCache[zone].iEntity, Prop_Send, "m_vecMins", mins);
@@ -5840,7 +6005,7 @@ public void EndTouchPost(int entity, int other)
 				int style = Shavit_GetBhopStyle(other);
 				float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
 
-				bool valid = gA_ZoneCache[entityzone].bUseSpeedLimit ? (curVel < limit) : true;
+				bool valid = gA_ZoneCache[entityzone].bUseSpeedLimit ? curVel < limit : true;
 				Shavit_SetStageTimeValid(other, valid);
 
 				if ((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0) && curVel >= 15.0 && Shavit_GetClientStageTime(other) < 1.0)
@@ -5891,6 +6056,15 @@ public void TouchPost(int entity, int other)
 	// do precise stuff here, this will be called *A LOT*
 	switch (type)
 	{
+		case Zone_Stage:
+		{
+			if (GetEntPropEnt(other, Prop_Send, "m_hGroundEntity") == -1 && !Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(other), "startinair"))
+			{
+				return;
+			}
+
+			Shavit_StartStageTimer(other, track, gA_ZoneCache[zone].iData);
+		}
 		case Zone_Start:
 		{
 			if (gB_Eventqueuefix)
@@ -5945,19 +6119,10 @@ public void TouchPost(int entity, int other)
 				}
 			}
 
-			if(Shavit_GetStageCount(track) > 1)
+			if(gI_HighestStage[track] > 1)
 			{
 				Shavit_StartStageTimer(other, track, 1);
 			}
-		}
-		case Zone_Stage:
-		{
-			if (GetEntPropEnt(other, Prop_Send, "m_hGroundEntity") == -1 && !Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(other), "startinair"))
-			{
-				return;
-			}
-
-			Shavit_StartStageTimer(other, track, gA_ZoneCache[zone].iData);
 		}
 		case Zone_Respawn:
 		{

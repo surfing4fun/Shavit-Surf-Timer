@@ -637,7 +637,17 @@ forward Action Shavit_OnStartPre(int client, int track);
  * @param track                     Timer track.
  * @return                          Unused.
  */
-forward Action Shavit_OnStart(int client, int track);
+forward Action Shavit_OnStart(int client, int stage);
+
+/**
+ * Called when a player's timer starts.
+ * (WARNING: Will be called every tick when the player stands at the stage start zone!)
+ *
+ * @param client                    Client index.
+ * @param stage                     Zone stage.
+ * @return                          Unused.
+ */
+forward Action Shavit_OnStageStart(int client, int stage);
 
 /**
  * Called when a player uses the restart command.

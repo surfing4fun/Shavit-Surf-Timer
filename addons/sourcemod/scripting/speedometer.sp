@@ -36,12 +36,12 @@ int Colors[11][3] =
 {255, 0, 0},		//Red
 {0, 255, 0},		//Green
 {150, 255, 0},		//Lime
-{10, 55, 105},		//Blue
-{0, 111, 224},	//{36, 183, 239},		//Cyan
+{40, 150, 255},		//Blue
+{0, 255, 255},		//Cyan
 {255, 215, 0},		//Yellow
 {219, 72, 16},		//Orange
 {128, 0, 128},		//Purple
-{182, 27, 27}};	//LightRed
+{255, 70, 60}};		//LightRed
 
 
 bool gB_ReplayPlayback = false;

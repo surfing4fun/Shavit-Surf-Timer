@@ -481,9 +481,9 @@ public void OnPluginStart()
 
 	// commands
 	RegAdminCmd("sm_deletereplay", Command_DeleteReplay, ADMFLAG_RCON, "Open replay deletion menu.");
+	
 	RegConsoleCmd("sm_replay", Command_Replay, "Opens the central bot menu. For admins: 'sm_replay stop' to stop the playback.");
-
-	// RegConsoleCmd("sm_pbt", Command_PlayBackTest);
+	RegConsoleCmd("sm_specbot", Command_Replay, "Opens the central bot menu. For admins: 'sm_replay stop' to stop the playback.");
 
 	// database
 	GetTimerSQLPrefix(gS_MySQLPrefix, 32);
@@ -503,6 +503,16 @@ public void OnPluginStart()
 		if (gB_AdminMenu && (gH_AdminMenu = GetAdminTopMenu()) != null)
 		{
 			OnAdminMenuReady(gH_AdminMenu);
+		}
+	}
+
+	for (int entity = MaxClients+1, last = GetMaxEntities(); entity <= last; ++entity)
+	{
+		if (IsValidEntity(entity))
+		{
+			char classname[64];
+			GetEntityClassname(entity, classname, sizeof(classname));
+			OnEntityCreated(entity, classname);
 		}
 	}
 
@@ -3484,7 +3494,7 @@ public int MenuHandler_ReplayType(Menu menu, MenuAction action, int param1, int 
 void OpenTrackTypeMenu(int client)
 {
 	Menu menu = new Menu(MenuHandler_TrackType);
-	menu.SetTitle("%T\n ", "CentralReplayTrack", client);
+	menu.SetTitle("%T\n ", "CentralReplay", client);
 
 	bool records = false;
 
@@ -3512,7 +3522,6 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 		menu.GetItem(param2, sInfo, 8);
 
 		Menu submenu = new Menu(MenuHandler_ReplayTrack);
-		submenu.SetTitle("%T\n ", "CentralReplayTrack", param1);
 
 		gI_MenuTrack[param1] = 0;
 		gI_MenuStage[param1] = 0;
@@ -3527,6 +3536,8 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 
 			if(StrEqual("s", sInfo, false))
 			{
+				submenu.SetTitle("%T\n ", "CentralReplayStage", param1);
+
 				for (int i = 1; i < MAX_STAGES; i++)
 				{
 					records = false;
@@ -3550,6 +3561,8 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 			}
 			else if(StrEqual("b", sInfo, false))
 			{
+				submenu.SetTitle("%T\n ", "CentralReplayBonus", param1);
+
 				for(int i = 1; i < TRACKS_SIZE; i++)
 				{
 					records = false;

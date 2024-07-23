@@ -14,7 +14,7 @@
 	"HudInStartZone"
 	{
 		"#format"	"{1:s}"
-		"en"		"In {1} Start"	
+		"en"		"In {1} Start Zone"	
 	}
 	"HudInStartZoneCSGO"
 	{
@@ -29,12 +29,12 @@
 	{
 
 		"#format"	"{1:s}"
-		"en"		"In {1} End"
+		"en"		"In {1} End Zone"
 	}
 	"HudInStageStart"
 	{
 		"#format"	"{1:d}"
-		"en"		"In Stage {1} Start"
+		"en"		"In Stage {1} Start Zone"
 	}
 	"HudInEndZoneCSGO"
 	{

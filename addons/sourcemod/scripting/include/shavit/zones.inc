@@ -54,6 +54,7 @@ enum
 	ZF_ForceRender = (1 << 0),
 	ZF_Hammerid    = (1 << 1), // used by ZoneForm_{trigger_{multiple, teleport}, func_button} sometimes
 	ZF_Solid       = (1 << 2), // forces the zone to block people...
+	ZF_DrawAsBox   = (1 << 3), // Draw trigger_multiple as box	
 	ZF_Origin      = (1 << 4), // sTarget is the entity's origin formatted as "%X %X %X"
 };
 
@@ -448,19 +449,21 @@ native bool Shavit_GetZoneUseSpeedLimit(int zoneid);
  *
  * @param client                    Client index.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @param anglesonly                Whether to save angles only.
  * @noreturn
  */
-native void Shavit_SetStart(int client, int track, bool anglesonly);
+native void Shavit_SetStart(int client, int track, int stage, bool anglesonly);
 
 /**
  * Deletes the player's current set start position for the specified track.
  *
  * @param client                    Client index.
  * @param track                     Timer track.
+ * @param stage						Stage number.
  * @noreturn
  */
-native void Shavit_DeleteSetStart(int client, int track);
+native void Shavit_DeleteSetStart(int client, int track, int stage);
 
 /**
  * Removes all zones from memory and then reloads zones from the database & any plugins.

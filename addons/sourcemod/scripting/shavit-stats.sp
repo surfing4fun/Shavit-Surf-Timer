@@ -41,6 +41,7 @@
 // macros
 #define MAPSDONE 0
 #define MAPSLEFT 1
+#define MAPSRECORD 2
 
 // modules
 bool gB_Mapchooser = false;
@@ -113,8 +114,9 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_p", Command_Profile, "Show the player's profile. Usage: sm_p [target]");
 	RegConsoleCmd("sm_profile", Command_Profile, "Show the player's profile. Usage: sm_profile [target]");
 	RegConsoleCmd("sm_stats", Command_Profile, "Show the player's profile. Usage: sm_stats [target]");
-	RegConsoleCmd("sm_mapsdone", Command_MapsDoneLeft, "Show maps that the player has finished. Usage: sm_mapsdone [target]");
-	RegConsoleCmd("sm_mapsleft", Command_MapsDoneLeft, "Show maps that the player has not finished yet. Usage: sm_mapsleft [target]");
+	RegConsoleCmd("sm_mapsstats", Command_MapsStats, "Show maps that the player has finished. Usage: sm_mapstats [target]");
+	RegConsoleCmd("sm_mapsdone", Command_MapsStats, "Show maps that the player has finished. Usage: sm_mapsdone [target]");
+	RegConsoleCmd("sm_mapsleft", Command_MapsStats, "Show maps that the player has not finished yet. Usage: sm_mapsleft [target]");
 	RegConsoleCmd("sm_playtime", Command_Playtime, "Show the top playtime list.");
 
 	// translations
@@ -638,7 +640,7 @@ public int PlaytimeMenu_Handler(Menu menu, MenuAction action, int param1, int pa
 	return 0;
 }
 
-public Action Command_MapsDoneLeft(int client, int args)
+public Action Command_MapsStats(int client, int args)
 {
 	if(client == 0)
 	{
@@ -685,16 +687,8 @@ public Action Command_MapsDoneLeft(int client, int args)
 
 	Menu menu = new Menu(MenuHandler_MapsDoneLeft);
 
-	if(StrEqual(sCommand, "sm_mapsdone"))
-	{
-		gI_MapType[client] = MAPSDONE;
-		menu.SetTitle("%T\n ", "MapsDoneOnStyle", client, gS_TargetName[client]);
-	}
-	else
-	{
-		gI_MapType[client] = MAPSLEFT;
-		menu.SetTitle("%T\n ", "MapsLeftOnStyle", client, gS_TargetName[client]);
-	}
+	gI_MapType[client] = MAPSDONE;
+	menu.SetTitle("%T\n ", "MapsStatsOnStyle", client, gS_TargetName[client]);
 
 	int[] styles = new int[gI_Styles];
 	Shavit_GetOrderedStyles(styles, gI_Styles);
@@ -726,19 +720,7 @@ public int MenuHandler_MapsDoneLeft(Menu menu, MenuAction action, int param1, in
 		menu.GetItem(param2, sInfo, 8);
 		gI_Style[param1] = StringToInt(sInfo);
 
-		Menu submenu = new Menu(MenuHandler_MapsDoneLeft_Track);
-		submenu.SetTitle("%T\n ", "SelectTrack", param1);
-
-		for(int i = 0; i < TRACKS_SIZE; i++)
-		{
-			IntToString(i, sInfo, 8);
-
-			char sTrack[32];
-			GetTrackName(param1, i, sTrack, 32);
-			submenu.AddItem(sInfo, sTrack);
-		}
-
-		submenu.Display(param1, MENU_TIME_FOREVER);
+		ShowTypeMenu(param1);
 	}
 	else if(action == MenuAction_End)
 	{
@@ -819,10 +801,9 @@ Action OpenStatsMenu(int client, int steamid, int style = 0, int item = 0)
 	{
 		char sQuery[2048];
 		FormatEx(sQuery, sizeof(sQuery),
-			// Note the `GROUP BY track>0` for now
-			"SELECT 0 as blah, map, track>0 FROM %splayertimes WHERE auth = %d AND style = %d GROUP BY map, track>0 " ...
-			"UNION SELECT 1 as blah, map, track>0 FROM %smapzones WHERE type = 0 GROUP BY map, track>0 " ...
-			"UNION SELECT 2 as blah, map, track FROM %swrs WHERE auth = %d AND style = %d GROUP BY map, track;",
+			"SELECT 0 as blah, map, track FROM %splayertimes WHERE auth = %d AND style = %d " ...
+			"UNION SELECT DISTINCT 1 as blah, map, track FROM %smapzones WHERE type = 0 " ...
+			"UNION SELECT 2 as blah, map, track FROM %swrs WHERE auth = %d AND style = %d;",
 			gS_MySQLPrefix, steamid, style, gS_MySQLPrefix, gS_MySQLPrefix, steamid, style
 		);
 
@@ -843,7 +824,7 @@ public void OpenStatsMenu_Mapchooser_Callback(Database db, DBResultSet results, 
 	if (results == null)
 	{
 		delete data;
-		LogError("Timer (statsmenu-mapchooser) SQL query failed. Reason: %s", error);
+		LogError("Timer (statsmenu-maps-mapchooser) SQL query failed. Reason: %s", error);
 		return;
 	}
 
@@ -881,6 +862,74 @@ public void OpenStatsMenu_Mapchooser_Callback(Database db, DBResultSet results, 
 	data.WriteCell(maps_and_completions[2][0], true);
 	data.WriteCell(maps_and_completions[2][1], true);
 
+	char sQuery[2048];
+	FormatEx(sQuery, sizeof(sQuery),
+	"SELECT 0 as type, map, MAX(data) AS stage FROM %smapzones WHERE type = 2 GROUP BY map " ...
+	"UNION SELECT 1 as type, map, stage FROM %sstagetimes WHERE auth = %d AND style = %d " ...
+	"UNION SELECT 2 as type, map, stage FROM %sstagewrs WHERE auth = %d AND style = %d;",
+	gS_MySQLPrefix, gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client], gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client]
+	);
+
+	delete mapchooser_maps;
+
+	QueryLog(gH_SQL, OpenStatsMenu_Stages_Mapchooser_Callback, sQuery, data, DBPrio_Low);
+}
+
+public void OpenStatsMenu_Stages_Mapchooser_Callback(Database db, DBResultSet results, const char[] error, DataPack data)
+{
+	data.Reset();
+	int client = GetClientFromSerial(data.ReadCell());
+	data.ReadCell(); // item
+	
+	data.ReadCell();
+	data.ReadCell();
+	data.ReadCell();
+	data.ReadCell();
+	data.ReadCell();
+	data.ReadCell();
+
+	if (results == null)
+	{
+		delete data;
+		LogError("Timer (statsmenu-stages-mapchooser) SQL query failed. Reason: %s", error);
+		return;
+	}
+
+	StringMap mapchooser_maps = Shavit_GetMapsStringMap();
+
+	int stages_and_completions[3];
+
+	while (results.FetchRow())
+	{
+		int type = results.FetchInt(0);
+
+		char map[PLATFORM_MAX_PATH];
+		results.FetchString(1, map, sizeof(map));
+
+		bool x;
+		if (!mapchooser_maps.GetValue(map, x))
+		{
+			continue;
+		}
+
+		int stage = results.FetchInt(2);
+
+		if(type == 0)
+		{
+			stages_and_completions[type] += stage;
+		}
+		else
+		{
+			stages_and_completions[type] += 1;			
+		}
+	}
+
+	data.WriteCell(stages_and_completions[0], true);
+	data.WriteCell(stages_and_completions[1], true);
+	data.WriteCell(stages_and_completions[2], true);
+
+	delete mapchooser_maps;
+
 	OpenStatsMenu_Main(gI_TargetSteamID[client], gI_Style[client], data);
 }
 
@@ -903,15 +952,19 @@ Action OpenStatsMenu_Main(int steamid, int style, DataPack data)
 	{
 		Format(sQuery, sizeof(sQuery),
 			"%s\n" ...
-			"UNION ALL SELECT 3, COUNT(*), x.bonus, 0, 0, '' FROM\n"...
-			"    (SELECT map, track>0 as bonus FROM %splayertimes WHERE auth = %d AND style = %d GROUP BY map, track>0) x GROUP BY x.bonus\n"...
-			"UNION ALL SELECT 4, COUNT(*), track>0, 0, 0, '' FROM %swrs WHERE auth = %d AND style = %d GROUP BY track>0\n"...
-			"UNION ALL SELECT 5, COUNT(*), x.bonus, 0, 0, '' FROM\n"...
-			"    (SELECT map, track>0 as bonus FROM %smapzones WHERE type = 0 GROUP BY map, track>0) x GROUP BY x.bonus",
+			"UNION ALL SELECT 3, COUNT(*), x.bonus, 0, 0, '' FROM (SELECT map, track>0 as bonus FROM %splayertimes WHERE auth = %d AND style = %d) x GROUP BY x.bonus "...
+			"UNION ALL SELECT 4, COUNT(*), track>0, 0, 0, '' FROM %swrs WHERE auth = %d AND style = %d GROUP BY track>0 "...
+			"UNION ALL SELECT 5, COUNT(*), x.bonus, 0, 0, '' FROM (SELECT DISTINCT map, track>0 as bonus, track FROM %smapzones WHERE type = 0) x GROUP BY x.bonus "...
+			"UNION ALL SELECT 6, COUNT(*), 0, 0, 0, '' FROM %sstagetimes WHERE auth = %d AND style = %d "...
+			"UNION ALL SELECT 7, COUNT(*), 0, 0, 0, '' FROM %sstagewrs WHERE auth = %d AND style = %d "...
+			"UNION ALL SELECT 8, COUNT(*), 0, 0, 0, '' FROM (SELECT DISTINCT map, data FROM %smapzones WHERE type = 2) ",
 			sQuery,
-			gS_MySQLPrefix, steamid, style,
-			gS_MySQLPrefix, steamid, style,
-			gS_MySQLPrefix
+			gS_MySQLPrefix, steamid, style,	//3
+			gS_MySQLPrefix, steamid, style,	//4
+			gS_MySQLPrefix,					//5
+			gS_MySQLPrefix, steamid, style,	//6
+			gS_MySQLPrefix, steamid, style,	//7
+			gS_MySQLPrefix					//8
 		);
 	}
 
@@ -932,14 +985,22 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 	int iWRs[2];
 	int iMaps[2];
 
+	int iStageCompletions;
+	int iStages;
+	int iStageWRs;
+
 	if (gB_Mapchooser && gCV_UseMapchooser.BoolValue)
 	{
-		iCompletions[0] = data.ReadCell();
-		iCompletions[1] = data.ReadCell();
+		iCompletions[0] = data.ReadCell();	// map completions
+		iCompletions[1] = data.ReadCell();	// bonus completions
 		iMaps[0] = data.ReadCell();
 		iMaps[1] = data.ReadCell();
 		iWRs[0] = data.ReadCell();
 		iWRs[1] = data.ReadCell();
+
+		iStages = data.ReadCell();	// stage counts
+		iStageCompletions = data.ReadCell();
+		iStageWRs = data.ReadCell();
 	}
 
 	delete data;
@@ -1024,6 +1085,18 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 		{
 			iMaps[results.FetchInt(2)] = results.FetchInt(1);
 		}
+		else if (type == 6)
+		{
+			iStageCompletions = results.FetchInt(1);
+		}
+		else if (type == 7)
+		{
+			iStageWRs = results.FetchInt(1);				
+		}
+		else if (type == 8)
+		{
+			iStages = results.FetchInt(1);
+		}
 	}
 	while (results.FetchRow());
 
@@ -1037,6 +1110,8 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 	iCompletions[1] = iCompletions[1] < iMaps[1] ? iCompletions[1] : iMaps[1];
 	iWRs[0] = iWRs[0] < iMaps[0] ? iWRs[0] : iMaps[0];
 	iWRs[1] = iWRs[1] < iMaps[1] ? iWRs[1] : iMaps[1];
+	iStageCompletions = iStageCompletions < iStages ? iStageCompletions : iStages;
+	iStageWRs = iStageWRs < iStages ? iStageWRs : iStages; 
 
 	if (1 & 1) // :upside_down_smiley_face:
 	{
@@ -1080,18 +1155,23 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 			{
 				FormatEx(sStyleInfo, sizeof(sStyleInfo),
 					"%s\n"...
-					"    [Main] %T: %d/%d (%0.1f%%)\n"...
-					"    [Main] %T: %d\n"...
-					"    [Bonus] %T: %d/%d (%0.1f%%)\n"...
-					"    [Bonus] %T: %d\n"...
-					"    [%T] %s\n"...
-					"",
+					"%T: %s\n"...
+					" \n%T:\n" ...
+					"    Main: %d/%d (%0.1f%%)\n"...
+					"    Bonuses: %d/%d (%0.1f%%)\n"...
+					"    Stages: %d/%d (%0.1f%%)\n"...
+					" \n%T:\n"...
+					"    Main WR: %d\n"...
+					"    Bonus WR: %d\n"...
+					"    Stage WR: %d\n ",
 					gS_StyleStrings[iStyle].sStyleName,
-					"MapCompletions", client, iCompletions[0], iMaps[0], ((float(iCompletions[0]) / (iMaps[0] > 0 ? float(iMaps[0]) : 0.0)) * 100.0),
-					"WorldRecords", client, iWRs[0],
-					"MapCompletions", client, iCompletions[1], iMaps[1], ((float(iCompletions[1]) / (iMaps[1] > 0 ? float(iMaps[1]) : 0.0)) * 100.0),
-					"WorldRecords", client, iWRs[1],
-					"Playtime", client, sStylePlaytime
+					"Playtime", client, sStylePlaytime,
+					"Completions", client, 
+					iCompletions[0], iMaps[0], ((float(iCompletions[0]) / (iMaps[0] > 0 ? float(iMaps[0]) : 0.0)) * 100.0),
+					iCompletions[1], iMaps[1], ((float(iCompletions[1]) / (iMaps[1] > 0 ? float(iMaps[1]) : 0.0)) * 100.0),
+					iStageCompletions, iStages, ((float(iStageCompletions) / (iStages > 0 ? float(iStages) : 0.0)) * 100.0),
+					"WorldRecords", client, 
+					iWRs[0], iWRs[1], iStageWRs
 				);
 			}
 			else
@@ -1130,28 +1210,7 @@ public int MenuHandler_ProfileHandler(Menu menu, MenuAction action, int param1, 
 		// If we select the same style, then display these
 		if(iSelectedStyle == gI_Style[param1])
 		{
-			Menu submenu = new Menu(MenuHandler_TypeHandler);
-			submenu.SetTitle("%T", "MapsMenu", param1, gS_StyleStrings[gI_Style[param1]].sShortName);
-
-			for(int j = 0; j < TRACKS_SIZE; j++)
-			{
-				char sTrack[32];
-				GetTrackName(param1, j, sTrack, 32);
-
-				char sMenuItem[64];
-				FormatEx(sMenuItem, 64, "%T (%s)", "MapsDone", param1, sTrack);
-
-				char sNewInfo[32];
-				FormatEx(sNewInfo, 32, "%d;0", j);
-				submenu.AddItem(sNewInfo, sMenuItem);
-
-				FormatEx(sMenuItem, 64, "%T (%s)", "MapsLeft", param1, sTrack);
-				FormatEx(sNewInfo, 32, "%d;1", j);
-				submenu.AddItem(sNewInfo, sMenuItem);
-			}
-
-			submenu.ExitBackButton = true;
-			submenu.Display(param1, MENU_TIME_FOREVER);
+			ShowTypeMenu(param1);
 		}
 		else // No? display stats menu but different style
 		{
@@ -1164,6 +1223,50 @@ public int MenuHandler_ProfileHandler(Menu menu, MenuAction action, int param1, 
 	}
 
 	return 0;
+}
+
+public void ShowTypeMenu(int client)
+{
+	Menu menu = new Menu(MenuHandler_TypeHandler);
+	menu.SetTitle("%T\n ", "MapsMenu", client, gS_StyleStrings[gI_Style[client]].sShortName);
+
+	char sMenuItem[64];
+	char sNewInfo[32];
+
+	FormatEx(sMenuItem, 64, "%T", "CompletedMaps", client);
+	FormatEx(sNewInfo, 32, "0;0");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T", "CompletedBonuses", client);
+	FormatEx(sNewInfo, 32, "1;0");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T\n ", "CompletedStages", client);
+	FormatEx(sNewInfo, 32, "2;0");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T", "MapsRecords", client);
+	FormatEx(sNewInfo, 32, "0;2");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T", "BonusRecords", client);
+	FormatEx(sNewInfo, 32, "1;2");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T\n ", "StageRecords", client);
+	FormatEx(sNewInfo, 32, "2;2");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T", "MapsLeft", client);
+	FormatEx(sNewInfo, 32, "0;1");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	FormatEx(sMenuItem, 64, "%T", "BonusLeft", client);
+	FormatEx(sNewInfo, 32, "1;1");
+	menu.AddItem(sNewInfo, sMenuItem);
+
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
 }
 
 public int MenuHandler_TypeHandler(Menu menu, MenuAction action, int param1, int param2)
@@ -1202,25 +1305,35 @@ void ShowMaps(int client)
 
 	char sQuery[512];
 
+	bool bBonus = gI_Track[client] == 1;
+	bool bStage = gI_Track[client] == 2;
+
 	if(gI_MapType[client] == MAPSDONE)
 	{
 		FormatEx(sQuery, 512,
-			"SELECT a.map, a.time, a.jumps, a.id, COUNT(b.map) + 1 as 'rank', a.points FROM %splayertimes a LEFT JOIN %splayertimes b ON a.time > b.time AND a.map = b.map AND a.style = b.style AND a.track = b.track WHERE a.auth = %d AND a.style = %d AND a.track = %d GROUP BY a.map, a.time, a.jumps, a.id, a.points ORDER BY a.%s;",
-			gS_MySQLPrefix, gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client], gI_Track[client], (gB_Rankings)? "points DESC":"map");
+		"SELECT a.map, %s, a.time, a.jumps, a.id, COUNT(b.map) + 1 as 'rank', a.points FROM %s%s a LEFT JOIN %s%s b ON a.time > b.time AND a.map = b.map AND a.style = b.style AND %s WHERE a.auth = %d AND a.style = %d %s GROUP BY a.map, a.time, a.jumps, a.id, a.points ORDER BY a.%s;",
+			bStage ? "a.stage":"a.track", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes",  
+			bStage ? "a.stage = b.stage":"a.track = b.track", gI_TargetSteamID[client], gI_Style[client],
+			bStage ? "" : bBonus ? "AND a.track > 0":"AND a.track = 0", (gB_Rankings)? "points DESC":"map");
+	}
+	else if(gI_MapType[client] == MAPSRECORD)
+	{
+		FormatEx(sQuery, 512, "SELECT map, %s, time, jumps, id, 1 as 'rank', points FROM %s%swrs WHERE auth = %d AND style = %d %s ORDER BY %s;",
+			bStage ? "stage":"track", gS_MySQLPrefix, bStage ? "stage":"", gI_TargetSteamID[client], gI_Style[client], bStage ? "" : bBonus ? "AND track > 0":"AND track = 0", (gB_Rankings)? "points DESC":"map");
 	}
 	else
 	{
 		if(gB_Rankings)
 		{
 			FormatEx(sQuery, 512,
-				"SELECT DISTINCT m.map, t.tier FROM %smapzones m LEFT JOIN %smaptiers t ON m.map = t.map WHERE m.type = 0 AND m.track = %d AND m.map NOT IN (SELECT DISTINCT map FROM %splayertimes WHERE auth = %d AND style = %d AND track = %d) ORDER BY m.map;",
-				gS_MySQLPrefix, gS_MySQLPrefix, gI_Track[client], gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client], gI_Track[client]);
+				"SELECT DISTINCT m.map, t.tier FROM %smapzones m LEFT JOIN %smaptiers t ON m.map = t.map WHERE m.type = 0 AND m.track %s 0 AND m.map NOT IN (SELECT DISTINCT map FROM %splayertimes WHERE auth = %d AND style = %d AND track %s 0) ORDER BY m.map;",
+				gS_MySQLPrefix, gS_MySQLPrefix, bBonus ? ">":"=", gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client], bBonus ? ">":"=");
 		}
 		else
 		{
 			FormatEx(sQuery, 512,
-				"SELECT DISTINCT map FROM %smapzones WHERE type = 0 AND track = %d AND map NOT IN (SELECT DISTINCT map FROM %splayertimes WHERE auth = %d AND style = %d AND track = %d) ORDER BY map;",
-				gS_MySQLPrefix, gI_Track[client], gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client], gI_Track[client]);
+				"SELECT DISTINCT map FROM %smapzones WHERE type = 0 AND track %s 0 AND map NOT IN (SELECT DISTINCT map FROM %splayertimes WHERE auth = %d AND style = %d AND track %s 0) ORDER BY map;",
+				gS_MySQLPrefix, bBonus ? ">":"=", gS_MySQLPrefix, gI_TargetSteamID[client], gI_Style[client], bBonus ? ">":"=");
 		}
 	}
 
@@ -1249,12 +1362,12 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 
 	int rows = results.RowCount;
 
-	char sTrack[32];
-	GetTrackName(client, gI_Track[client], sTrack, 32);
-
 	Menu menu = new Menu(MenuHandler_ShowMaps);
 
-	StringMap mapchooser_maps = (gB_Mapchooser && gCV_UseMapchooser.BoolValue) ? Shavit_GetMapsStringMap() : null;
+	StringMap mapchooser_maps = null;
+	
+	if (gB_Mapchooser && gCV_UseMapchooser.BoolValue)
+		mapchooser_maps = Shavit_GetMapsStringMap();
 
 	while(results.FetchRow())
 	{
@@ -1270,28 +1383,39 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 
 		char sRecordID[PLATFORM_MAX_PATH];
 		char sDisplay[PLATFORM_MAX_PATH];
+		char sTrack[32];
 
-		if(gI_MapType[client] == MAPSDONE)
+		if(gI_MapType[client] == MAPSDONE || gI_MapType[client] == MAPSRECORD)
 		{
-			float time = results.FetchFloat(1);
-			int jumps = results.FetchInt(2);
-			int rank = results.FetchInt(4);
+			int track = results.FetchInt(1);
+			float time = results.FetchFloat(2);
+			int jumps = results.FetchInt(3);
+			int rank = results.FetchInt(5);
+
+			if(gI_Track[client] < 2)
+			{
+				GetTrackName(client, track, sTrack, 32);				
+			}
+			else
+			{
+				FormatEx(sTrack, sizeof(sTrack), "Stage %d", track);
+			}
 
 			char sTime[32];
 			FormatSeconds(time, sTime, 32);
 
-			float points = results.FetchFloat(5);
+			float points = results.FetchFloat(6);
 
 			if(gB_Rankings && points > 0.0)
 			{
-				FormatEx(sDisplay, sizeof(sDisplay), "[#%d] %s - %s (%.03f %T)", rank, sMap, sTime, points, "MapsPoints", client);
+				FormatEx(sDisplay, sizeof(sDisplay), "[%s] %s - %s - #%d (%.03f %T)", sTrack, sMap, sTime, rank, points, "MapsPoints", client);
 			}
 			else
 			{
-				FormatEx(sDisplay, sizeof(sDisplay), "[#%d] %s - %s (%d %T)", rank, sMap, sTime, jumps, "MapsJumps", client);
+				FormatEx(sDisplay, sizeof(sDisplay), "[%s] %s - %s - #%d (%d %T)", sTrack, sMap, sTime, rank, jumps, "MapsJumps", client);
 			}
 
-			int iRecordID = results.FetchInt(3);
+			int iRecordID = results.FetchInt(4);
 			IntToString(iRecordID, sRecordID, sizeof(sRecordID));
 		}
 		else
@@ -1320,11 +1444,17 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 
 	if(gI_MapType[client] == MAPSDONE)
 	{
-		menu.SetTitle("%T (%s)", "MapsDoneFor", client, gS_StyleStrings[gI_Style[client]].sShortName, gS_TargetName[client], rows, sTrack);
+		menu.SetTitle("%T", "MapsDoneFor", client, gS_StyleStrings[gI_Style[client]].sShortName, 
+		gI_Track[client] == 0 ? "Map" : gI_Track[client] == 1 ? "Bonus" : "Stage", gS_TargetName[client], rows);
+	}
+	else if(gI_MapType[client] == MAPSRECORD)
+	{
+		menu.SetTitle("%T", "RecordsFor", client, gS_StyleStrings[gI_Style[client]].sShortName, 
+		gI_Track[client] == 0 ? "Map" : gI_Track[client] == 1 ? "Bonus" : "Stage", gS_TargetName[client], rows);
 	}
 	else
 	{
-		menu.SetTitle("%T (%s)", "MapsLeftFor", client, gS_StyleStrings[gI_Style[client]].sShortName, gS_TargetName[client], rows, sTrack);
+		menu.SetTitle("%T", "MapsLeftFor", client, gS_StyleStrings[gI_Style[client]].sShortName, gS_TargetName[client], rows);
 	}
 
 	if(menu.ItemCount == 0)
@@ -1333,6 +1463,8 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 		FormatEx(sMenuItem, 64, "%T", "NoResults", client);
 		menu.AddItem("nope", sMenuItem);
 	}
+
+	delete mapchooser_maps;
 
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -1358,14 +1490,17 @@ public int MenuHandler_ShowMaps(Menu menu, MenuAction action, int param1, int pa
 			return 0;
 		}
 
+		bool bStageRecord = gI_Track[param1] == 2;
+
 		char sQuery[512];
-		FormatEx(sQuery, 512, "SELECT u.name, p.time, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.points FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.id = '%s' LIMIT 1;", gS_MySQLPrefix, gS_MySQLPrefix, sInfo);
+		FormatEx(sQuery, 512, "SELECT u.name, p.time, p.%s, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.points FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = '%s' LIMIT 1;", 
+		bStageRecord ? "stage":"track", gS_MySQLPrefix, bStageRecord ? "stagetimes":"playertimes", gS_MySQLPrefix, sInfo);
 
 		QueryLog(gH_SQL, SQL_SubMenu_Callback, sQuery, GetClientSerial(param1));
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
 	{
-		OpenStatsMenu(param1, gI_TargetSteamID[param1], gI_Style[param1], gI_MenuPos[param1]);
+		ShowTypeMenu(param1);
 	}
 	else if(action == MenuAction_End)
 	{
@@ -1397,6 +1532,8 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 	int iSteamID = 0;
 	char sMap[PLATFORM_MAX_PATH];
 
+	int track;
+
 	if(results.FetchRow())
 	{
 		// 0 - name
@@ -1407,37 +1544,39 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 		char sTime[16];
 		FormatSeconds(time, sTime, 16);
 
+		track = results.FetchInt(2);
+
 		char sDisplay[128];
 		FormatEx(sDisplay, 128, "%T: %s", "Time", client, sTime);
-		hMenu.AddItem("-1", sDisplay);
+		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
 		// 2 - jumps
-		int jumps = results.FetchInt(2);
+		int jumps = results.FetchInt(3);
 		FormatEx(sDisplay, 128, "%T: %d", "Jumps", client, jumps);
-		hMenu.AddItem("-1", sDisplay);
+		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
 		// 3 - style
-		int style = results.FetchInt(3);
+		int style = results.FetchInt(4);
 		FormatEx(sDisplay, 128, "%T: %s", "Style", client, gS_StyleStrings[style].sStyleName);
-		hMenu.AddItem("-1", sDisplay);
+		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
 		// 4 - steamid3
-		iSteamID = results.FetchInt(4);
+		iSteamID = results.FetchInt(5);
 
 		// 6 - map
-		results.FetchString(6, sMap, sizeof(sMap));
+		results.FetchString(7, sMap, sizeof(sMap));
 
-		float points = results.FetchFloat(9);
+		float points = results.FetchFloat(10);
 
 		if(gB_Rankings && points > 0.0)
 		{
 			FormatEx(sDisplay, 128, "%T: %.03f", "Points", client, points);
-			hMenu.AddItem("-1", sDisplay);
+			hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 		}
 
 		// 5 - date
 		char sDate[32];
-		results.FetchString(5, sDate, 32);
+		results.FetchString(6, sDate, 32);
 
 		if(sDate[4] != '-')
 		{
@@ -1445,20 +1584,31 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 		}
 
 		FormatEx(sDisplay, 128, "%T: %s", "Date", client, sDate);
-		hMenu.AddItem("-1", sDisplay);
+		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
-		int strafes = results.FetchInt(7);
-		float sync = results.FetchFloat(8);
+		int strafes = results.FetchInt(8);
+		float sync = results.FetchFloat(9);
 
 		if(jumps > 0 || strafes > 0)
 		{
 			FormatEx(sDisplay, 128, (sync > 0.0)? "%T: %d (%.02f%%)":"%T: %d", "Strafes", client, strafes, sync, "Strafes", client, strafes);
-			hMenu.AddItem("-1", sDisplay);
+			hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 		}
 	}
 
+	char sTrack[32];
+
+	if(gI_Track[client] == 2)
+	{
+		FormatEx(sTrack, sizeof(sTrack), "Stage %d", track);
+	}
+	else
+	{
+		GetTrackName(client, track, sTrack, sizeof(sTrack));		
+	}
+
 	char sFormattedTitle[256];
-	FormatEx(sFormattedTitle, 256, "%s [U:1:%u]\n--- %s:", sName, iSteamID, sMap);
+	FormatEx(sFormattedTitle, 256, "%s [U:1:%u]\n--- %s: [%s]", sName, iSteamID, sMap, sTrack);
 
 	hMenu.SetTitle(sFormattedTitle);
 	hMenu.ExitBackButton = true;

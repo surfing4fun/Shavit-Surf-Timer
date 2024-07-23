@@ -66,6 +66,7 @@ int gI_Driver = Driver_unknown;
 // forwards
 Handle gH_Forwards_Start = null;
 Handle gH_Forwards_StartPre = null;
+Handle gH_Forwards_StageStart = null;
 Handle gH_Forwards_Stop = null;
 Handle gH_Forwards_StopPre = null;
 Handle gH_Forwards_FinishPre = null;
@@ -278,6 +279,7 @@ public void OnPluginStart()
 	// forwards
 	gH_Forwards_Start = CreateGlobalForward("Shavit_OnStart", ET_Ignore, Param_Cell, Param_Cell);
 	gH_Forwards_StartPre = CreateGlobalForward("Shavit_OnStartPre", ET_Event, Param_Cell, Param_Cell);
+	gH_Forwards_StageStart = CreateGlobalForward("Shavit_OnStageStart", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_Stop = CreateGlobalForward("Shavit_OnStop", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_StopPre = CreateGlobalForward("Shavit_OnStopPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_FinishPre = CreateGlobalForward("Shavit_OnFinishPre", ET_Hook, Param_Cell, Param_Array);
@@ -1648,7 +1650,7 @@ void CallOnTrackChanged(int client, int oldtrack, int newtrack)
 		else if (oldtrack == Track_Main && !DoIHateMain(client))
 		{
 			Shavit_StopChatSound();
-			Shavit_PrintToChat(client, "%T", "TrackChangeFromMain", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+			Shavit_PrintToChat(client, "%T", "TrackChangeFromMain", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 		}		
 	}
 }
@@ -2041,7 +2043,6 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 		}
 		else if(gA_Timers[client].iLastStage == stage)
 		{
-
 			if(!IsValidClient(client, true) || GetClientTeam(client) < 2 || IsFakeClient(client) || !gB_CookiesRetrieved[client])
 			{
 				return 0;
@@ -2064,6 +2065,11 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 					((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
 					(gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))))) // beautiful
 			{
+				Call_StartForward(gH_Forwards_StageStart);
+				Call_PushCell(client);
+				Call_PushCell(stage);
+				Call_Finish();
+
 				gA_Timers[client].aStageStartInfo.fStageStartTime = gA_Timers[client].fCurrentTime;
 				gA_Timers[client].aStageStartInfo.iFractionalTicks = gA_Timers[client].iFractionalTicks;
 				gA_Timers[client].aStageStartInfo.iFullTicks = gA_Timers[client].iFullTicks;
@@ -2345,6 +2351,12 @@ public int Native_FinishStage(Handle handler, int numParams)
 
 	if(result != Plugin_Continue)
 	{
+		if(gB_PlayerRepeat[client])
+		{
+			Shavit_TeleportToStartZone(client, track, stage);
+			return 0;
+		}
+
 		return 0;
 	}
 
@@ -2574,6 +2586,9 @@ public int Native_RestartTimer(Handle handler, int numParams)
 		CallOnTrackChanged(client, gA_Timers[client].iTimerTrack, track);
 	}
 
+	SetEntityMoveType(client, MOVETYPE_WALK);
+	gA_Timers[client].bPracticeMode = false;
+
 	Call_StartForward(gH_Forwards_OnRestart);
 	Call_PushCell(client);
 	Call_PushCell(track);
@@ -2649,6 +2664,7 @@ public int Native_SetPracticeMode(Handle handler, int numParams)
 	if(alert && practice && !gA_Timers[client].bPracticeMode && (!gB_HUD || (Shavit_GetHUDSettings(client) & HUD_NOPRACALERT) == 0))
 	{
 		Shavit_PrintToChat(client, "%T", "PracticeModeAlert", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "PracticeModeTips", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 	}
 
 	gA_Timers[client].bPracticeMode = practice;
@@ -2739,6 +2755,11 @@ public int Native_LoadSnapshot(Handle handler, int numParams)
 	if (gA_Timers[client].bsStyle != snapshot.bsStyle)
 	{
 		CallOnStyleChanged(client, gA_Timers[client].bsStyle, snapshot.bsStyle, false);
+	}
+
+	if (gA_Timers[client].iLastStage != snapshot.iLastStage)
+	{
+		ChangeClientLastStage(client, snapshot.iLastStage);
 	}
 
 	float oldts = gA_Timers[client].fTimescale;
@@ -3038,7 +3059,7 @@ void StartTimer(int client, int track)
 			gA_Timers[client].bTimerEnabled = true;
 			gA_Timers[client].iKeyCombo = -1;
 			gA_Timers[client].fCurrentTime = 0.0;
-			gA_Timers[client].bPracticeMode = false;
+			//gA_Timers[client].bPracticeMode = false;
 			gA_Timers[client].iMeasuredJumps = 0;
 			gA_Timers[client].iPerfectJumps = 0;
 			gA_Timers[client].bCanUseAllKeys = false;
@@ -3187,6 +3208,13 @@ public void OnClientPutInServer(int client)
 	gA_Timers[client].iZoneIncrement = 0;
 	gA_Timers[client].fNextFrameTime = 0.0;
 	gA_Timers[client].fplayer_speedmod = 1.0;
+	gA_Timers[client].iLastStage = 0;
+	gA_Timers[client].aStageStartInfo.fStageStartTime = 0.0;
+	gA_Timers[client].aStageStartInfo.iFullTicks = 0;
+	gA_Timers[client].aStageStartInfo.iFractionalTicks = 0;
+	gA_Timers[client].aStageStartInfo.iJumps = 0;
+	gA_Timers[client].aStageStartInfo.iStrafes = 0;
+	gA_Timers[client].fCPTimes = empty_times;
 	gS_DeleteMap[client][0] = 0;
 	gI_FirstTouchedGround[client] = 0;
 	gI_LastTickcount[client] = 0;
