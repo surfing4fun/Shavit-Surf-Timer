@@ -1075,7 +1075,7 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 		FormatEx(sStageInfo, 16, "Linear");
 	}
 
-	int iBonusCount = Shavit_GetMapTrackCount(true);
+	int iBonusCount = Shavit_GetMapTracks(true, false);
 	char sTrackInfo[32];
 
 	FormatEx(sTrackInfo, 32, "%d Bonus%s", iBonusCount, iBonusCount > 1 ? "es":"");

@@ -78,6 +78,7 @@ int g_strafeTick[MAXPLAYERS + 1];
 int g_iTouchTicks[MAXPLAYERS + 1];
 float g_flRawGain[MAXPLAYERS + 1];
 bool g_bTouchesWall[MAXPLAYERS + 1];
+float g_fLastSpeed[MAXPLAYERS + 1];
 
 //Speedometer Cookies
 Handle gH_SpeedometerCookie;
@@ -615,7 +616,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		return Plugin_Continue;
 	}
 
-	int speed = RoundToFloor(GetClientSpeed(target));
+	float speed = GetClientSpeed(target);
 	bool bReplay = false;
 	int iTrack;
 	int iStage;
@@ -711,6 +712,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	if(gI_SpeedometerHud_SpeedDynamicColor[client] == dynamicColor_mode_1)
 	{
 		GetColorBySpeed(client, target, speed, rgb);
+		g_fLastSpeed[target] = speed;
 	}
 	else if(!bReplay && gI_SpeedometerHud_SpeedDynamicColor[client] == dynamicColor_mode_2)
 	{
@@ -734,17 +736,17 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 		SetHudTextParams(-1.0, -1.0, 0.3, rgb[0], rgb[1], rgb[2], 255, 0, 0.0, 0.0, 0.0);
 		if (gB_AllLibraryExists)
 		{
-			ShowSyncHudText(client, hudSync_Spd, "Debug mode\nSpd: %d\nGn: %.2f\nRGB: %i %i %i\nSpd Diff: %s%.0f", speed, coeffsum*100, rgb[0], rgb[1], rgb[2], fClosestVelocityDifference > 0 ? "+":"", fClosestVelocityDifference);
+			ShowSyncHudText(client, hudSync_Spd, "Debug mode\nSpd: %.0f\nGn: %.2f\nRGB: %i %i %i\nSpd Diff: %s%.0f", speed, coeffsum*100, rgb[0], rgb[1], rgb[2], fClosestVelocityDifference > 0 ? "+":"", fClosestVelocityDifference);
 		}
 		else
 		{
-			ShowSyncHudText(client, hudSync_Spd, "Debug mode\nSpd: %d\nGn: %.2f\nRGB: %i %i %i\nSpd Diff: N/A", speed, coeffsum*100, rgb[0], rgb[0], rgb[2]);
+			ShowSyncHudText(client, hudSync_Spd, "Debug mode\nSpd: %.0f\nGn: %.2f\nRGB: %i %i %i\nSpd Diff: N/A", speed, coeffsum*100, rgb[0], rgb[0], rgb[2]);
 		}
 	}
 	else
 	{
 		SetHudTextParams(gF_SpeedometerHud_PosX[client], gF_SpeedometerHud_PosY[client], 0.3, rgb[0], rgb[1], rgb[2], 255, 0, 0.0, 0.0, 0.0);
-		ShowSyncHudText(client, hudSync_Spd, "%d\n", speed);
+		ShowSyncHudText(client, hudSync_Spd, "%.0f\n", speed);
 		if (gB_AllLibraryExists && gB_SpeedometerHud_SpeedDiff[client])
 		{
 			if(fClosestReplayTime != -1.0 && !bReplay && iTimerStatus == Timer_Running && !bInStart)
@@ -773,24 +775,20 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	return Plugin_Continue;
 }
 
-void GetColorBySpeed(int client, int target, int speed, int rgb[3])
+void GetColorBySpeed(int client, int target, float speed, int rgb[3])
 {
-	static int lastSpeed[MAXPLAYERS + 1];
-
-	if (speed > lastSpeed[target])
+	if (speed > g_fLastSpeed[target])
 	{
 		rgb = Colors[gI_SpeedometerColor_SpeedIncrease[client]];
 	}
-	else if (speed < lastSpeed[target])
+	else if (speed < g_fLastSpeed[target])
 	{
 		rgb = Colors[gI_SpeedometerColor_SpeedDecrease[client]];
 	}
 	else
 	{
 		rgb = Colors[gI_SpeedometerColor_Default[client]];
-	}
-	
-	lastSpeed[target] = speed;
+	}		
 }
 
 
