@@ -3916,6 +3916,11 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 				stage = 1;
 			}
 
+			if (style < 0)
+			{
+				return false;
+			}
+
 			// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 			hasFrames = gA_FrameCache[style][track][stage].iFrameCount > 0;
 
@@ -3932,6 +3937,11 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 	for (int i = 0; i < (TRACKS_SIZE*gI_Styles); i++)
 	{
 		int nextstyle = GetNextBit(style, gA_LoopingBotConfig[config].aStyleMask, gI_Styles);
+
+		if (nextstyle < 0)
+		{
+			return false;
+		}
 
 		if (nextstyle <= style || track == -1)
 		{
