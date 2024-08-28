@@ -84,9 +84,9 @@ Convar gCV_SavePlaytime = null;
 
 public Plugin myinfo =
 {
-	name = "[shavit] Player Stats",
+	name = "[shavit-surf] Player Stats",
 	author = "shavit, rtldg, Nuko",
-	description = "Player stats for shavit's bhop timer.",
+	description = "Player stats for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_VERSION,
 	url = "https://github.com/shavitush/bhoptimer"
 }
@@ -1311,15 +1311,15 @@ void ShowMaps(int client)
 	if(gI_MapType[client] == MAPSDONE)
 	{
 		FormatEx(sQuery, 512,
-		"SELECT a.map, %s, a.time, a.jumps, a.id, COUNT(b.map) + 1 as 'rank', a.points FROM %s%s a LEFT JOIN %s%s b ON a.time > b.time AND a.map = b.map AND a.style = b.style AND %s WHERE a.auth = %d AND a.style = %d %s GROUP BY a.map, a.time, a.jumps, a.id, a.points ORDER BY a.%s;",
+		"SELECT a.map, %s, a.time, a.jumps, a.id, COUNT(b.map) + 1 as 'rank', a.points FROM %s%s a LEFT JOIN %s%s b ON a.time > b.time AND a.map = b.map AND a.style = b.style AND %s WHERE a.auth = %d AND a.style = %d %s GROUP BY a.map, a.time, a.jumps, a.id, a.points ORDER BY a.map;",
 			bStage ? "a.stage":"a.track", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes",  
 			bStage ? "a.stage = b.stage":"a.track = b.track", gI_TargetSteamID[client], gI_Style[client],
-			bStage ? "" : bBonus ? "AND a.track > 0":"AND a.track = 0", (gB_Rankings)? "points DESC":"map");
+			bStage ? "" : bBonus ? "AND a.track > 0":"AND a.track = 0");
 	}
 	else if(gI_MapType[client] == MAPSRECORD)
 	{
-		FormatEx(sQuery, 512, "SELECT map, %s, time, jumps, id, 1 as 'rank', points FROM %s%swrs WHERE auth = %d AND style = %d %s ORDER BY %s;",
-			bStage ? "stage":"track", gS_MySQLPrefix, bStage ? "stage":"", gI_TargetSteamID[client], gI_Style[client], bStage ? "" : bBonus ? "AND track > 0":"AND track = 0", (gB_Rankings)? "points DESC":"map");
+		FormatEx(sQuery, 512, "SELECT map, %s, time, jumps, id, 1 as 'rank', points FROM %s%swrs WHERE auth = %d AND style = %d %s ORDER BY map;",
+			bStage ? "stage":"track", gS_MySQLPrefix, bStage ? "stage":"", gI_TargetSteamID[client], gI_Style[client], bStage ? "" : bBonus ? "AND track > 0":"AND track = 0");
 	}
 	else
 	{
@@ -1406,13 +1406,13 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 
 			float points = results.FetchFloat(6);
 
-			if(gB_Rankings && points > 0.0)
+			if(gB_Rankings)
 			{
 				FormatEx(sDisplay, sizeof(sDisplay), "[%s] %s - %s - #%d (%.03f %T)", sTrack, sMap, sTime, rank, points, "MapsPoints", client);
 			}
 			else
 			{
-				FormatEx(sDisplay, sizeof(sDisplay), "[%s] %s - %s - #%d (%d %T)", sTrack, sMap, sTime, rank, jumps, "MapsJumps", client);
+				FormatEx(sDisplay, sizeof(sDisplay), "[%s] %s - %s - #%d", sTrack, sMap, sTime, rank);
 			}
 
 			int iRecordID = results.FetchInt(4);

@@ -138,6 +138,7 @@ native int Shavit_GetWRHolderRank(int client, int track = -1, int style = -1, bo
  * Requires shavit-rankings.
  *
  * @param track                     The track the time is from.
+ * @param stage						The stage the time is from.
  * @param style                     The style the time is from.
  * @param tier                      The map tier. -1 to use the current map's tier.
  * @param time                      The time you want to calculate the points for.
@@ -145,7 +146,7 @@ native int Shavit_GetWRHolderRank(int client, int track = -1, int style = -1, bo
  *
  * @return                          The number of points the time would give.
  */
-native float Shavit_GuessPointsForTime(int track, int style, int tier, float time, float wr);
+native float Shavit_GuessPointsForTime(int track, int stage, int total_stages, int style, int tier, float time, float wr);
 
 public SharedPlugin __pl_shavit_rankings =
 {

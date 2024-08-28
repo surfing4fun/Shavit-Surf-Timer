@@ -3790,7 +3790,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		Format(sDifferencePB, sizeof(sDifferencePB), "%s+%s%s", gS_ChatStrings.sWarning, sDifferencePB, gS_ChatStrings.sText);
 	}
 
-	float fPoints = 0.0;
+	float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, stage, Shavit_GetStageCount(track), style, -1, time, gF_StageWRTime[style][stage]) : 0.0;
 
 	int iRank = GetStageRankForTime(style, time, stage);
 	int iRankCount = GetStageRecordAmount(style, stage);
@@ -4148,7 +4148,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 	if(iOverwrite > 0)  //Valid Run
 	{
-		float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, style, -1, time, gF_WRTime[style][track]) : 0.0;
+		float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, 0, Shavit_GetStageCount(track), style, -1, time, gF_WRTime[style][track]) : 0.0;
 
 		char sQuery[1024];
 
@@ -4362,13 +4362,13 @@ public void ReplaceCPTimes(Database db, int client, int style, int track, float[
 
 	int steamid = GetSteamAccountID(client);
 
-	int cpCount = Shavit_GetCheckpointCount(track);
+	int iCheckpointCounts = Shavit_GetCheckpointCount(track);
 	QueryLog(db, SQL_ReplaceCPTimesFirst_Callback, sQuery, 0, DBPrio_High);
 
 	Transaction trans = new Transaction();
 	for (int i = 0; i < MAX_STAGES; i++)
 	{
-		if (i > cpCount)
+		if (i > iCheckpointCounts + 1)
 		{
 			break;
 		}
@@ -4538,10 +4538,10 @@ public void SQL_UpdateStageLeaderboards_Callback(Database db, DBResultSet result
 	Call_Finish();
 }
 
-public void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage)
-{
+// public void Shavit_OnReachNextStage(int client, int track, int startStage, int endStage)
+// {
 
-}
+// }
 
 public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float time)
 {
@@ -4551,6 +4551,7 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 	}
 
 	int style = Shavit_GetBhopStyle(client);
+	int iCheckpointCounts = Shavit_GetCheckpointCount(track);
 	float fCPWR = gA_StageCP_WR[style][track][checkpoint];
 	float fCPPB = Shavit_GetStageCPPB(client, track, style, checkpoint);
 
@@ -4559,9 +4560,10 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 
 	if (fCPWR == 0.0) // no wr, early return
 	{
-		Shavit_PrintToChat(client, "CP %s%d%s | Time: %s%s%s.",
-		gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
-		gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "CheckpointTime", client,
+			gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText);
 		
 		return;
 	}
@@ -4582,8 +4584,9 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 
 	if(fCPPB == 0.0)	// no pb
 	{
-		Shavit_PrintToChat(client, "%T", "WRStageTime", 
-		client, gS_ChatStrings.sText, gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+		Shavit_PrintToChat(client, "%T", "WRCheckpointTime", client,
+		gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+		gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
 		gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR);
 		
 		return;
@@ -4603,9 +4606,10 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 		Format(sDifferencePB, sizeof(sDifferencePB), "%s+%s%s", gS_ChatStrings.sWarning, sDifferencePB, gS_ChatStrings.sText);
 	}
 
-	Shavit_PrintToChat(client, "%T", "WRPBStageTime", 
-	client, gS_ChatStrings.sText, gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
-	gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);
+	Shavit_PrintToChat(client, "%T", "WRPBCheckpointTime", client,
+		gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+		gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
+		gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);
 }
 
 

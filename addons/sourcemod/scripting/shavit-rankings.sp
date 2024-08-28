@@ -176,6 +176,7 @@ public void OnPluginStart()
 
 	RegAdminCmd("sm_setmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvelocity <value> [map]");
 	RegAdminCmd("sm_setmapmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmapmaxvelocity <value> [map] (sm_setmaxvelocity alias)");
+	RegAdminCmd("sm_setmapmaxvel", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmapmaxvelocity <value> [map] (sm_setmaxvelocity alias)");
 
 	RegAdminCmd("sm_recalcmap", Command_RecalcMap, ADMFLAG_RCON, "Recalculate the current map's records' points.");
 
@@ -1073,6 +1074,30 @@ public void Trans_OnReallyRecalcFail(Database db, any data, int numQueries, cons
 	LogError("Timer (rankings) error! ReallyRecalculateCurrentMap failed. Reason: %s", error);
 }
 
+public void Shavit_OnFinishStage_Post(int client, int style, float time, int jumps, int strafes, float sync, int rank, int overwrite, int stage, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
+{
+	if (Shavit_GetStyleSettingBool(style, "unranked") || Shavit_GetStyleSettingFloat(style, "rankingmultiplier") == 0.0)
+	{
+		return;
+	}
+
+	if (rank != 1)
+	{
+		UpdatePointsForSinglePlayer(client);
+		return;
+	}
+
+	#if defined DEBUG
+	PrintToServer("Recalculating points. (%s, %d, %d)", map, track, style);
+	#endif
+
+	char sQuery[1024];
+	FormatRecalculate(true, Track_Main, style, sQuery, sizeof(sQuery));
+
+	QueryLog(gH_SQL, SQL_Recalculate_Callback, sQuery, (style << 8) | Track_Main, DBPrio_High);
+	UpdateAllPoints(true, gS_Map, Track_Main);
+}
+
 public void Shavit_OnFinish_Post(int client, int style, float time, int jumps, int strafes, float sync, int rank, int overwrite, int track)
 {
 	if (Shavit_GetStyleSettingBool(style, "unranked") || Shavit_GetStyleSettingFloat(style, "rankingmultiplier") == 0.0)
@@ -1123,8 +1148,10 @@ void UpdatePointsForSinglePlayer(int client)
 	if (gCV_WeightingMultiplier.FloatValue == 1.0 || gB_SqliteHatesPOW)
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"UPDATE %susers SET points = (SELECT SUM(points) FROM %splayertimes WHERE auth = %d) WHERE auth = %d;",
-			gS_MySQLPrefix, gS_MySQLPrefix, auth, auth);
+			"UPDATE %susers SET points = (SELECT SUM(points) FROM "...
+			"(SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) "...
+			"WHERE auth = %d) WHERE auth = %d;",
+			gS_MySQLPrefix, gS_MySQLPrefix, gS_MySQLPrefix, auth, auth);
 	}
 	else if (gB_SQLWindowFunctions)
 	{
@@ -1136,13 +1163,15 @@ void UpdatePointsForSinglePlayer(int client)
 		    "UPDATE %susers SET points = (\n"
 		... "  SELECT SUM(points2) FROM (\n"
 		... "    SELECT (points * POW(%f, ROW_NUMBER() OVER (ORDER BY points DESC) - 1)) as points2\n"
-		... "    FROM %splayertimes\n"
+		... "    FROM (SELECT auth, pints, FROM %splayertimes\n"
+		... "	 UNION ALL SELECT auth, points FROM %sstagetimes)\n"
 		... "    WHERE auth = %d AND points > 0\n"
 		... "    ORDER BY points DESC %s\n"
 		... "  ) as t\n"
 		... ") WHERE auth = %d;",
 			gS_MySQLPrefix,
 			gCV_WeightingMultiplier.FloatValue,
+			gS_MySQLPrefix,
 			gS_MySQLPrefix,
 			auth,
 			sLimit,
@@ -1766,13 +1795,17 @@ public int Native_Rankings_DeleteMap(Handle handler, int numParams)
 public int Native_GuessPointsForTime(Handle plugin, int numParams)
 {
 	int rtrack = GetNativeCell(1);
-	int rstyle = GetNativeCell(2);
-	int tier = GetNativeCell(3);
-	float rtime = view_as<float>(GetNativeCell(4));
-	float pwr = view_as<float>(GetNativeCell(5));
+	int rstage = GetNativeCell(2);
+	int rStageCounts = GetNativeCell(3);
+	int rstyle = GetNativeCell(4);
+	int tier = GetNativeCell(5);
+	float rtime = view_as<float>(GetNativeCell(6));
+	float pwr = view_as<float>(GetNativeCell(7));
 
 	float ppoints = Sourcepawn_GetRecordPoints(
 		rtrack,
+		rstage,
+		rStageCounts,
 		rtime,
 		gCV_PointsPerTier.FloatValue,
 		Shavit_GetStyleSettingFloat(rstyle, "rankingmultiplier"),
@@ -1783,7 +1816,7 @@ public int Native_GuessPointsForTime(Handle plugin, int numParams)
 	return view_as<int>(ppoints);
 }
 
-float Sourcepawn_GetRecordPoints(int rtrack, float rtime, float pointspertier, float stylemultiplier, float pwr, float ptier)
+float Sourcepawn_GetRecordPoints(int rtrack, int rstage, int rStageCounts, float rtime, float pointspertier, float stylemultiplier, float pwr, float ptier)
 {
 	float ppoints = 0.0;
 
@@ -1799,6 +1832,15 @@ float Sourcepawn_GetRecordPoints(int rtrack, float rtime, float pointspertier, f
 	if (rtrack > 0)
 	{
 		ppoints *= 0.25;
+	}
+	else if (rStageCounts < 2)
+	{
+		ppoints *= 1.5;		// 1.5 multiplier for linear map ;)
+	}
+
+	if(rstage > 0)
+	{
+		ppoints *= 1 / rStageCounts * 2;
 	}
 
 	return ppoints;
