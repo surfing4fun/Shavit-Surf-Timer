@@ -769,7 +769,7 @@ void ApplyMigration_AddMaptiersMaxvelocity()
 void ApplyMigration_AddStartpositionsStage()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstartpositions` ADD COLUMN `stage` TINYINT NOT NULL DEFAULT 1 AFTER `track`;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstartpositions` ADD COLUMN `stage` TINYINT NOT NULL DEFAULT 1;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStartpositionsStage, DBPrio_High);
 }
 
