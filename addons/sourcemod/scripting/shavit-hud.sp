@@ -1390,7 +1390,6 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 		char sTrack[32];
 		if((gI_HUDSettings[client] & HUD_ZONEHUD) > 0 && data.iZoneHUD != ZoneHUD_None)
 		{
-
 			if(data.iZoneHUD == ZoneHUD_Start)
 			{
 				GetTrackName(client, data.iTrack, sTrack, 32);
@@ -1450,7 +1449,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 					}
 					else
 					{
-						if(data.bInsideStageZone && data.fStageTime < 0.3)
+						if(data.bInsideStageZone && data.iZoneStage == data.iCurrentStage && data.fStageTime < 0.3)
 						{
 							FormatEx(sLine, 128, "%T", "HudInStageStart", client, data.iZoneStage);
 							AddHUDLine(buffer, maxlen, sLine, iLines);
