@@ -188,7 +188,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 		return;
 	}
 
-	if(oldtime != 0.0 && time > oldtime && gA_NoImprovementSounds.Length != 0)
+	if(Shavit_IsPracticeMode(client) || (oldtime != 0.0 && time > oldtime && gA_NoImprovementSounds.Length != 0))
 	{
 		char sSound[PLATFORM_MAX_PATH];
 		gA_NoImprovementSounds.GetString(GetRandomInt(0, gA_NoImprovementSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
@@ -232,6 +232,27 @@ public void Shavit_OnFinish_Post(int client, int style, float time, int jumps, i
 	if(StrContains(sSound, ".") != -1) // file has an extension?
 	{
 		PlayEventSound(client, bEveryone, sSound);
+	}
+}
+
+public void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp)
+{
+	if(!gCV_Enabled.BoolValue)
+	{
+		return;
+	}
+
+	if(!Shavit_IsOnlyStageMode(client))
+	{
+		return;
+	}
+
+	if(Shavit_IsPracticeMode(client) || (oldtime != 0.0 && time > oldtime && gA_NoImprovementSounds.Length != 0))
+	{
+		char sSound[PLATFORM_MAX_PATH];
+		gA_NoImprovementSounds.GetString(GetRandomInt(0, gA_NoImprovementSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
+
+		PlayEventSound(client, false, sSound);
 	}
 }
 
