@@ -1665,6 +1665,8 @@ void SaveCheckpointCache(int saver, int target, cp_cache_t cpcache, int index, H
 		snapshot.aStageStartInfo.iFractionalTicks = 0;
 		snapshot.aStageStartInfo.iJumps = 0;
 		snapshot.aStageStartInfo.iStrafes = 0;
+		snapshot.aStageStartInfo.iGoodGains = 0;
+		snapshot.aStageStartInfo.iTotalMeasures = 0;
 
 		snapshot.bStageTimeValid = false;
 		snapshot.bOnlyStageMode = Shavit_GetReplayBotStage(target) > 0 ? true : false;

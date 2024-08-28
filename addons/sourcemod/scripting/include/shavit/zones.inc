@@ -33,6 +33,8 @@ enum
 	Zone_End, 				// stops timer
 	Zone_Stage,				// as a start zone in stageed map
 	Zone_Checkpoint,		// shows time when entering zone	
+	Zone_Autobhop,			// forces autobhop for the player
+	Zone_NoJump,			// blocks the player from jumping while inside the zone	
 	Zone_Respawn, 			// respawns the player
 	Zone_Stop,				// stops the player's timer
 	Zone_Slay,				// slays (kills) players which come to this zone
@@ -127,6 +129,8 @@ stock void GetZoneName(int client, int zoneType, char[] output, int size)
 		"Zone_End",
 		"Zone_Stage",	
 		"Zone_Checkpoint",
+		"Zone_Autobhop",
+		"Zone_NoJump",
 		"Zone_Respawn",
 		"Zone_Stop",
 		"Zone_Slay",
@@ -424,9 +428,10 @@ native int Shavit_GetZoneTrack(int zoneid);
  * Returns how many tracks in current map.
  * 
  * @param bonus						Whether to count bonus only.
- * @return 							Track counts.
+ * @param mask						Return track mask if true, else return number of tracks count.
+ * @return 							Result of specific parameters.
  */
-native int Shavit_GetMapTrackCount(bool bonus);
+native int Shavit_GetMapTracks(bool bonus, bool mask);
 
 /**
  * Returns the zone type.

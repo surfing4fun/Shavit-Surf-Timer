@@ -241,7 +241,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetZone", Native_GetZone);
 	CreateNative("Shavit_AddZone", Native_AddZone);
 	CreateNative("Shavit_RemoveZone", Native_RemoveZone);
-	CreateNative("Shavit_GetMapTrackCount", Native_GetMapTrackCount);
+	CreateNative("Shavit_GetMapTracks", Native_GetMapTracks);
 	CreateNative("Shavit_TeleportToStartZone", Native_TeleportToStartZone);
 	CreateNative("Shavit_InsideZoneStage", Native_InsideZoneStage);
 	CreateNative("Shavit_GetZoneUseSpeedLimit", Native_GetZoneUseSpeedLimit);
@@ -831,7 +831,7 @@ public int Native_GetCheckpointCount(Handle handler, int numParas)
 		return 0;
 	}
 
-	return gI_HighestStage[iTrack] < 2 ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack];
+	return gI_HighestStage[iTrack] < 2 ? gI_HighestCheckpoint[iTrack] : gI_HighestStage[iTrack] - 1;
 }
 
 public int Native_Zones_DeleteMap(Handle handler, int numParams)
@@ -943,9 +943,10 @@ public any Native_GetZone(Handle plugin, int numParams)
 	return 0;
 }
 
-public any Native_GetMapTrackCount(Handle plugin, int numParams)
+public any Native_GetMapTracks(Handle plugin, int numParams)
 {
 	bool bCountBonusOnly = GetNativeCell(1);
+	bool bAsMask = GetNativeCell(2);
 	int iTrackMask = 0;
 	int iTrackCount = 0;
 
@@ -962,17 +963,24 @@ public any Native_GetMapTrackCount(Handle plugin, int numParams)
 		}
 	}
 
-	while (iTrackMask > 0)
+	if(bAsMask)
 	{
-		if ((iTrackMask & 1) == 1)
-		{
-			iTrackCount++;
-		}
-
-		iTrackMask >>= 1;
+		return iTrackMask;
 	}
+	else
+	{
+		while (iTrackMask > 0)
+		{
+			if ((iTrackMask & 1) == 1)
+			{
+				iTrackCount++;
+			}
 
-	return iTrackCount;
+			iTrackMask >>= 1;
+		}	
+
+		return iTrackCount;			
+	}
 }
 
 public any Native_AddZone(Handle plugin, int numParams)
@@ -1037,14 +1045,6 @@ public any Native_RemoveZone(Handle plugin, int numParams)
 	int ent = gA_ZoneCache[index].iEntity;
 	ClearZoneEntity(index, true);
 
-	if(gA_ZoneCache[index].iForm == ZoneForm_trigger_multiple)
-	{
-		SetEntData(ent, gI_OffsetMFEffects, GetEntData(ent, gI_OffsetMFEffects) | EF_NODRAW);
-		ChangeEdictState(ent, gI_OffsetMFEffects);
-		SetEdictFlags(ent, GetEdictFlags(ent) | FL_EDICT_DONTSEND);
-		SDKUnhook(ent, SDKHook_SetTransmit, Hook_SetTransmit);
-	}
-
 	if (ent > MaxClients && gA_ZoneCache[index].iForm == ZoneForm_Box) // created by shavit-zones
 	{
 		AcceptEntityInput(ent, "Kill");
@@ -1106,6 +1106,8 @@ bool JumpToZoneType(KeyValues kv, int type, int track)
 		{"End", ""},
 		{"Stage", ""},		
 		{"Checkpoint", ""},
+		{"Autobhop", ""},		
+		{"No Jump", ""},
 		{"Glitch_Respawn", "Glitch Respawn"},
 		{"Glitch_Stop", "Glitch Stop"},
 		{"Glitch_Slay", "Glitch Slay"},
@@ -1550,6 +1552,14 @@ void ClearZoneEntity(int index, bool unhook)
 	}
 
 	int entity = gA_ZoneCache[index].iEntity;
+
+	if(gA_ZoneCache[index].iForm == ZoneForm_trigger_multiple)
+	{
+		SetEntData(entity, gI_OffsetMFEffects, GetEntData(entity, gI_OffsetMFEffects) | EF_NODRAW);
+		ChangeEdictState(entity, gI_OffsetMFEffects);
+		SetEdictFlags(entity, GetEdictFlags(entity) | FL_EDICT_DONTSEND);
+		SDKUnhook(entity, SDKHook_SetTransmit, Hook_SetTransmit);
+	}
 
 	gA_ZoneCache[index].iEntity = -1;
 
@@ -2707,14 +2717,12 @@ public Action Command_Stages(int client, int args)
 		menu.SetTitle("%T", "ZoneMenuStage", client);
 
 		char sDisplay[64];
-		char sTrack[32];
 
 		for(int i = 0; i < gI_MapZones; i++)
 		{
 			if (gA_ZoneCache[i].iType == Zone_Stage)
 			{
-				GetTrackName(client, gA_ZoneCache[i].iTrack, sTrack, 32);
-				FormatEx(sDisplay, 64, "#%d - %T (%s)", (i + 1), "ZoneSetStage", client, gA_ZoneCache[i].iData, sTrack);
+				FormatEx(sDisplay, 64, "#%d - %T", (i + 1), "ZoneSetStage", client, gA_ZoneCache[i].iData);
 
 				char sInfo[8];
 				IntToString(i, sInfo, 8);
@@ -2723,8 +2731,7 @@ public Action Command_Stages(int client, int args)
 			}
 			else if (gA_ZoneCache[i].iType == Zone_Start && gA_ZoneCache[i].iTrack == Track_Main)
 			{
-				GetTrackName(client, gA_ZoneCache[i].iTrack, sTrack, 32);
-				FormatEx(sDisplay, 64, "#%d - %T (%s)", (i + 1), "ZoneSetStage", client, 1, sTrack);
+				FormatEx(sDisplay, 64, "#%d - %T", (i + 1), "ZoneSetStage", client, 1);
 
 				char sInfo[8];
 				IntToString(i, sInfo, 8);
@@ -3002,6 +3009,8 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 				| (1 << Zone_End)
 				| (1 << Zone_Stage)
 				| (1 << Zone_Checkpoint)
+				| (1 << Zone_Autobhop)
+				| (1 << Zone_NoJump)
 				| (1 << Zone_Respawn)
 				| (1 << Zone_Stop)
 				| (1 << Zone_Slay)
@@ -5467,6 +5476,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 				fCenter[2] += 1.0;
 			}
 
+			ResetClientTargetNameAndClassName(client, Track_Main);
 			TeleportEntity(client, fCenter, gB_HasSetStart[client][track][stage] ? gF_StartAng[client][track][stage] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
 			return;
 		}

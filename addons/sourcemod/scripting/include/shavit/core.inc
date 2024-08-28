@@ -116,6 +116,8 @@ enum struct stagestart_info_t
 	int iFractionalTicks;
 	int iJumps;
 	int iStrafes;
+	int iTotalMeasures;
+	int iGoodGains;
 }
 
 enum struct timer_snapshot_t
