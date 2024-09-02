@@ -19,7 +19,18 @@
 ### - Checkpoint zone for linear maps
 - Save checkpoint times
 - Enable to check checkpoint time for each record
-　
+
+
+### - New shavit-wrsh plugin
+- Rank your time in surfheaven: `!shrank` or `!shstagerank`
+- Command `!shwr` `!shwrcp` to see top records in surfheaven
+
+
+### - New shavit-ghost2 plugin 
+- Display record's route on map which have customize options (include route width / color / mode / style / jumpbox)
+- Enable ghost by using `!ghost` 
+- Three different style to display route:  `Race` `Guide` `Route`
+  
 　
 ### - More feature for better surf experience
 - Track timer repeat feature: Repeat player's timer in a single stage or bonus
@@ -28,6 +39,7 @@
 - Teleport player back to stage start zone: Use command `!back` to back to stage start
 - Customize noclip speed: Use `!noclipspeed` to change noclip speed
 - Allow to set max velocity for each map
+
 
 ### - Better zone creation style
 - Create zone in 3 point (xyz) instead using default zone height
