@@ -139,6 +139,7 @@ native int Shavit_GetWRHolderRank(int client, int track = -1, int style = -1, bo
  *
  * @param track                     The track the time is from.
  * @param stage						The stage the time is from.
+ * @param total_stages				Total stage count of map.
  * @param style                     The style the time is from.
  * @param tier                      The map tier. -1 to use the current map's tier.
  * @param time                      The time you want to calculate the points for.

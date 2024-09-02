@@ -119,7 +119,6 @@ Convar gCV_RestrictNoclip = null;
 Convar gCV_SpecScoreboardOrder = null;
 Convar gCV_BadSetLocalAnglesFix = null;
 Convar gCV_PrestrafeZone = null;
-//ConVar gCV_PauseMovement = null;
 
 // external cvars
 ConVar sv_cheats = null;

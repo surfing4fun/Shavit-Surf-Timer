@@ -5509,10 +5509,10 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 			if (gB_ReplayRecorder && gB_HasSetStart[client][track])
 			{
-				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][0], gF_StartAng[client][track][stage][1], -1, true);
+				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][1], gF_StartAng[client][track][stage][1], -1, true);
 			}
 
-			if (!gB_HasSetStart[client][track] || gB_StartAnglesOnly[client][track])
+			if (!gB_HasSetStart[client][track][1] || gB_StartAnglesOnly[client][track][1])
 			{
 				ResetClientTargetNameAndClassName(client, track);
 				// normally StartTimer will happen on zone-touch BUT we have this here for zones that are in the air

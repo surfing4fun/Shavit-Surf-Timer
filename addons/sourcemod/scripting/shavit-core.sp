@@ -142,7 +142,6 @@ TopMenuObject gH_TimerCommands = INVALID_TOPMENUOBJECT;
 // cvars
 Convar gCV_Restart = null;
 Convar gCV_Pause = null;
-Convar gCV_PauseMovement = null;
 Convar gCV_BlockPreJump = null;
 Convar gCV_NoZAxisSpeed = null;
 Convar gCV_VelocityTeleport = null;
@@ -422,7 +421,6 @@ public void OnPluginStart()
 
 	gCV_Restart = new Convar("shavit_core_restart", "1", "Allow commands that restart the timer?", 0, true, 0.0, true, 1.0);
 	gCV_Pause = new Convar("shavit_core_pause", "1", "Allow pausing?", 0, true, 0.0, true, 1.0);
-	gCV_PauseMovement = new Convar("shavit_core_pause_movement", "1", "Allow movement/noclip while paused?", 0, true, 0.0, true, 1.0);
 	gCV_BlockPreJump = new Convar("shavit_core_blockprejump", "0", "Prevents jumping in the start zone.", 0, true, 0.0, true, 1.0);
 	gCV_NoZAxisSpeed = new Convar("shavit_core_nozaxisspeed", "0", "Don't start timer if vertical speed exists (btimes style).", 0, true, 0.0, true, 1.0);
 	gCV_VelocityTeleport = new Convar("shavit_core_velocityteleport", "0", "Teleport the client when changing its velocity? (for special styles)", 0, true, 0.0, true, 1.0);
@@ -3856,18 +3854,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	Remove_sv_cheat_Impluses(client, impulse);
 
 	int flags = GetEntityFlags(client);
-
-	if (gA_Timers[client].bClientPaused && IsPlayerAlive(client) && !gCV_PauseMovement.BoolValue)
-	{
-		buttons = 0;
-		vel = view_as<float>({0.0, 0.0, 0.0});
-
-		SetEntityFlags(client, (flags | FL_ATCONTROLS));
-
-		SetEntityMoveType(client, MOVETYPE_NONE);
-
-		return Plugin_Changed;
-	}
 
 	SetEntityFlags(client, (flags & ~FL_ATCONTROLS));
 

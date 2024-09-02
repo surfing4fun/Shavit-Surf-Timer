@@ -1840,7 +1840,7 @@ float Sourcepawn_GetRecordPoints(int rtrack, int rstage, int rStageCounts, float
 
 	if(rstage > 0)
 	{
-		ppoints *= 1 / rStageCounts * 2;
+		ppoints *= (1.0 / (float(rStageCounts) * 2.0));
 	}
 
 	return ppoints;

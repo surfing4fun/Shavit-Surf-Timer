@@ -91,6 +91,7 @@ bool gB_GhostFnished[MAXPLAYERS + 1];
 
 // client settings
 bool gB_Ghost[MAXPLAYERS + 1];
+bool gB_StageGhost[MAXPLAYERS + 1];
 bool gB_DrawBox[MAXPLAYERS + 1];
 
 int gGM_GhostMode[MAXPLAYERS + 1];
@@ -175,11 +176,15 @@ public void OnPluginStart()
 				continue;
 			}
 
-			gI_GhostStyle[i] = Shavit_GetBhopStyle(i);
-
 			OnClientCookiesCached(i);
 		}
 	}
+}
+
+public void OnClientConnected(int client)
+{
+	gB_StageGhost[client] = false;
+	gI_GhostStyle[client] = Shavit_GetBhopStyle(client);
 }
 
 public void OnConfigsExecuted() 
@@ -314,7 +319,7 @@ public void ShowGhostMenu(int client)
 	menu.AddItem("mode", sMenu, ITEMDRAW_DEFAULT);
 	
 	int track = Shavit_GetClientTrack(client);
-	int stage = Shavit_IsOnlyStageMode(client) && track == Track_Main ? Shavit_GetClientLastStage(client) : 0;
+	int stage = track > Track_Main ? 0 : (Shavit_IsOnlyStageMode(client) || gB_StageGhost[client]) ? Shavit_GetClientLastStage(client) : 0;
 	
 	char sTime[32];
 	if(!gA_GhostInfo[track][gI_GhostStyle[client]][stage].aFrames)
@@ -326,8 +331,11 @@ public void ShowGhostMenu(int client)
 		FormatSeconds(gA_GhostInfo[track][gI_GhostStyle[client]][stage].fTime, sTime, 32, false, false, true);
 	}
 
-	FormatEx(sMenu, sizeof(sMenu), "Change Style: %s (%s)\n ", gS_StyleStrings[gI_GhostStyle[client]].sStyleName, sTime);
+	FormatEx(sMenu, sizeof(sMenu), "Change Style: %s (%s)", gS_StyleStrings[gI_GhostStyle[client]].sStyleName, sTime);
 	menu.AddItem("style", sMenu, ITEMDRAW_DEFAULT);
+
+	FormatEx(sMenu, sizeof(sMenu), "Use stage route: %s\n ", gB_StageGhost[client] ? "ON":"OFF");
+	menu.AddItem("stage", sMenu, Shavit_GetStageCount(Track_Main) > 1 ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);		
 
 	menu.AddItem("option", "Ghost Options");
 
@@ -370,6 +378,12 @@ public int MenuHandler_Ghost(Menu menu, MenuAction action, int param1, int param
 			{
 				gI_GhostStyle[param1] = 0;
 			}
+
+			ShowGhostMenu(param1);
+		}
+		else if(StrEqual(sInfo, "stage", false))
+		{
+			gB_StageGhost[param1] = !gB_StageGhost[param1];
 
 			ShowGhostMenu(param1);
 		}
@@ -570,7 +584,7 @@ public Action Shavit_OnStart(int client)
 {
 	int style = gI_GhostStyle[client];
 	int track = Shavit_GetClientTrack(client);
-	int stage = Shavit_IsOnlyStageMode(client) && track == Track_Main ? Shavit_GetClientLastStage(client) : 0;
+	int stage = track > Track_Main ? 0 : (Shavit_IsOnlyStageMode(client) || gB_StageGhost[client]) ? Shavit_GetClientLastStage(client) : 0;
 
 	gB_GhostFnished[client] = false;
 
@@ -582,17 +596,18 @@ public void Shavit_OnCheckpointCacheLoaded(int client, cp_cache_t cache, int ind
 {
 	int track = cache.aSnapshot.iTimerTrack;
 	int style = gI_GhostStyle[client];
-	int stage = cache.aSnapshot.iLastStage;
+	int stage = track > Track_Main ? 0 : (cache.aSnapshot.bOnlyStageMode || gB_StageGhost[client]) ? cache.aSnapshot.iLastStage : 0;
 	
 	gI_ClientTicks[client] = cache.aSnapshot.iFullTicks + gA_GhostInfo[track][style][stage].iPreFrames;
 	gB_GhostFnished[client] = gI_ClientTicks[client] >= (gA_GhostInfo[track][style][stage].iFrameCount + gA_GhostInfo[track][style][stage].iPreFrames);
 }
 
+
 public void SynchronizeClientTick(int client)
 {
 	int style = gI_GhostStyle[client];
 	int track = Shavit_GetClientTrack(client);
-	int stage = Shavit_IsOnlyStageMode(client) && track == Track_Main ? Shavit_GetClientLastStage(client) : 0;
+	int stage = track > Track_Main ? 0 : (Shavit_IsOnlyStageMode(client) || gB_StageGhost[client]) ? Shavit_GetClientLastStage(client) : 0;
 
 	timer_snapshot_t snapshot;
 	Shavit_SaveSnapshot(client, snapshot, sizeof(snapshot));
@@ -611,7 +626,7 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 
 	int style = gI_GhostStyle[client];
 	int track = Shavit_GetClientTrack(client);
-	int stage = Shavit_IsOnlyStageMode(client) && track == Track_Main ? Shavit_GetClientLastStage(client) : 0;
+	int stage = track > Track_Main ? 0 : (Shavit_IsOnlyStageMode(client) || gB_StageGhost[client]) ? Shavit_GetClientLastStage(client) : 0;
 
 	ArrayList info = gA_GhostInfo[track][style][stage].aFrames;
 	
