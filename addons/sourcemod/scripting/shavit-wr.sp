@@ -3258,7 +3258,10 @@ public Action Command_PersonalBest(int client, int args)
 	pack.WriteString(name);
 
 	char query[512];
-	FormatEx(query, sizeof(query), "SELECT p.id, p.style, p.track, p.time, p.date, u.name FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.auth = %d AND p.map = '%s' ORDER BY p.track, p.style;", gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap);
+	FormatEx(query, sizeof(query), 
+	"SELECT p.id, p.style, p.track, 0 as stage, p.time, p.date, u.name FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.auth = %d AND p.map = '%s' UNION ALL "...
+	"SELECT s.id, s.style, s.track, s.stage, s.time, s.date, u.name FROM %sstagetimes s JOIN %susers u ON s.auth = u.auth WHERE s.auth = %d AND s.map = '%s' ORDER BY s.stage, p.track, s.style;",
+	gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap, gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap);
 
 	QueryLog(gH_SQL, SQL_PersonalBest_Callback, query, pack, DBPrio_Low);
 
@@ -3301,17 +3304,26 @@ public void SQL_PersonalBest_Callback(Database db, DBResultSet results, const ch
 		int id = results.FetchInt(0);
 		int style = results.FetchInt(1);
 		int track = results.FetchInt(2);
-		float time = results.FetchFloat(3);
+		int stage = results.FetchInt(3);
+		float time = results.FetchFloat(4);
 		char date[32];
-		FormatTime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", results.FetchInt(4));
+		FormatTime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", results.FetchInt(5));
 
 		if (!name[0])
 		{
-			results.FetchString(5, name, sizeof(name));
+			results.FetchString(6, name, sizeof(name));
 		}
 
 		char track_name[32];
-		GetTrackName(client, track, track_name, sizeof(track_name));
+
+		if(stage == 0)
+		{
+			GetTrackName(client, track, track_name, sizeof(track_name));			
+		}
+		else
+		{
+			FormatEx(track_name, sizeof(track_name), "%T %d", "WRStage", client, stage);
+		}
 
 		char formated_time[32];
 		FormatSeconds(time, formated_time, sizeof(formated_time));
