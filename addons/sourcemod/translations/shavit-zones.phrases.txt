@@ -182,6 +182,11 @@
 	{
 		"en"		"Grid snap -"
 	}
+	"LockZoneAxis"
+	{
+		"#format"	"{1:s}"
+		"en"		"Lock axis: {1}"
+	}
 	"WallSnap"
 	{
 		"#format"	"{1:T}"
@@ -362,6 +367,10 @@
 	{
 		"en"		"Input your desired data in chat."
 	}
+	"ZoneBadInputData"
+	{
+		"en"		"Bad input data."
+	}
 	"ZoneSetNo"
 	{
 		"en"		"No"
@@ -395,6 +404,10 @@
 	"ZoneTeleportInsideZone"
 	{
 		"en"		"You may not place the destination inside the zone."
+	}
+	"ZoneTeleportInsideOtherStageZone"
+	{
+		"en"		"You may not place the destination inside another stage zone."
 	}
 	"ZoneEditTrack"
 	{

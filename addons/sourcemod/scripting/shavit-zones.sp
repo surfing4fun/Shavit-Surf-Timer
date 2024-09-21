@@ -95,6 +95,8 @@ bool gB_Button[MAXPLAYERS+1];
 float gF_Modifier[MAXPLAYERS+1];
 int gI_AdjustAxis[MAXPLAYERS+1];
 int gI_GridSnap[MAXPLAYERS+1];
+int gI_LockAxis[MAXPLAYERS+1];
+float gF_LockPos[MAXPLAYERS+1];
 bool gB_SnapToWall[MAXPLAYERS+1];
 bool gB_CursorTracing[MAXPLAYERS+1];
 
@@ -306,6 +308,7 @@ public void OnPluginStart()
 
 	RegConsoleCmd("sm_drawallzones", Command_DrawAllZones, "Toggles drawing all zones.");
 	RegConsoleCmd("sm_drawzones", Command_DrawAllZones, "Toggles drawing all zones.");
+	RegConsoleCmd("sm_showzones", Command_DrawAllZones, "Toggles drawing all zones.");
 	gH_DrawAllZonesCookie = new Cookie("shavit_drawallzones", "Draw all zones cookie", CookieAccess_Protected);
 
 	RegConsoleCmd("sm_czone", Command_CustomZones, "Customize start and end zone for each track");
@@ -4106,6 +4109,8 @@ void Reset(int client)
 	cache.bUseSpeedLimit = true;
 	gA_EditCache[client] = cache;
 	gI_MapStep[client] = 0;
+	gI_LockAxis[client] = -1;
+	gF_LockPos[client] = 0.0;
 	gI_HookListPos[client] = -1;
 	delete gH_StupidTimer[client];
 	gB_WaitingForChatInput[client] = false;
@@ -4152,14 +4157,17 @@ void ShowPanel(int client, int step)
 
 	pPanel.DrawItem(sPanelText, ITEMDRAW_RAWLINE);
 	char sPanelItem[64];
-	FormatEx(sPanelItem, 64, "%T", "AbortZoneCreation", client);
+	FormatEx(sPanelItem, 64, "%T\n ", "AbortZoneCreation", client);
 	pPanel.DrawItem(sPanelItem);
 
 	char sDisplay[64];
 	FormatEx(sDisplay, 64, "%T", "GridSnapPlus", client, gI_GridSnap[client]);
 	pPanel.DrawItem(sDisplay);
 
-	FormatEx(sDisplay, 64, "%T", "GridSnapMinus", client);
+	FormatEx(sDisplay, 64, "%T\n ", "GridSnapMinus", client);
+	pPanel.DrawItem(sDisplay);
+
+	FormatEx(sDisplay, 64, "%T\n ", "LockZoneAxis", client, gI_LockAxis[client] == -1 ? "None": gI_LockAxis[client] == 1 ? "Y":"X");
 	pPanel.DrawItem(sDisplay);
 
 	FormatEx(sDisplay, 64, "%T", "WallSnap", client, (gB_SnapToWall[client])? "ZoneSetYes":"ZoneSetNo", client);
@@ -4208,6 +4216,42 @@ public int ZoneCreation_Handler(Menu menu, MenuAction action, int param1, int pa
 
 			case 4:
 			{
+				if(gI_MapStep[param1] == 1 || gI_MapStep[param1] == 2)
+				{
+					gI_LockAxis[param1] += 1;
+
+					if(gI_LockAxis[param1] > 1)
+					{
+						gI_LockAxis[param1] = -1;
+					}				
+					
+					if(gI_LockAxis[param1] > -1)
+					{
+						float vPlayerOrigin[3];
+						GetClientAbsOrigin(param1, vPlayerOrigin);
+
+						float origin[3];
+
+						if(gB_CursorTracing[param1])
+						{
+							origin = GetAimPosition(param1);
+						}
+						else if(!(gB_SnapToWall[param1] && SnapToWall(vPlayerOrigin, param1, origin)))
+						{
+							origin = gI_MapStep[param1] == 3 ? GetAimPosition(param1):SnapToGrid(vPlayerOrigin, gI_GridSnap[param1], false);
+						}
+						else
+						{
+							gV_WallSnap[param1] = origin;
+						}		
+
+						gF_LockPos[param1] = origin[gI_LockAxis[param1]];			
+					}					
+				}
+			}
+
+			case 5:
+			{
 				gB_SnapToWall[param1] = !gB_SnapToWall[param1];
 
 				if(gB_SnapToWall[param1])
@@ -4221,7 +4265,7 @@ public int ZoneCreation_Handler(Menu menu, MenuAction action, int param1, int pa
 				}
 			}
 
-			case 5:
+			case 6:
 			{
 				gB_CursorTracing[param1] = !gB_CursorTracing[param1];
 
@@ -4434,6 +4478,11 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 					gV_WallSnap[client] = origin;
 				}
 
+				if (gI_LockAxis[client] != -1)
+				{
+					origin[gI_LockAxis[client]] = gF_LockPos[client];
+				}
+
 				if(gI_MapStep[client] == 1)
 				{
 					origin[2] = vPlayerOrigin[2];
@@ -4441,6 +4490,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 					if (!InStartOrEndZone(origin, NULL_VECTOR, gA_EditCache[client].iTrack, gA_EditCache[client].iType))
 					{
 						gA_EditCache[client].fCorner1 = origin;
+						gI_LockAxis[client] = -1;
 						ShowPanel(client, 2);
 					}
 				}
@@ -4451,6 +4501,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 					if (origin[0] != gA_EditCache[client].fCorner1[0] && origin[1] != gA_EditCache[client].fCorner1[1] && !InStartOrEndZone(gA_EditCache[client].fCorner1, origin, gA_EditCache[client].iTrack, gA_EditCache[client].iType))
 					{
 						gA_EditCache[client].fCorner2 = origin;
+						gI_LockAxis[client] = -1;
 						ShowPanel(client, 3);
 					}
 				}
@@ -4546,7 +4597,6 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 		}
 		else if(StrEqual(sInfo, "datafromchat"))
 		{
-			gA_EditCache[param1].iData = 0;
 			gB_WaitingForChatInput[param1] = true;
 			Shavit_PrintToChat(param1, "%T", "ZoneEnterDataChat", param1);
 			return 0;
@@ -4600,6 +4650,19 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 		{
 			gA_EditCache[client].iData = view_as<int>(StringToFloat(sArgs));
 		}
+		else if(gA_EditCache[client].iType == Zone_Stage || gA_EditCache[client].iType == Zone_Checkpoint)
+		{
+			int input = StringToInt(sArgs);
+
+			if(gA_EditCache[client].iData > 0)
+			{
+				gA_EditCache[client].iData = input;
+			}
+			else
+			{
+				Shavit_PrintToChat(client, "%T", "ZoneBadInputData", client);
+			}
+		}
 		else
 		{
 			gA_EditCache[client].iData = StringToInt(sArgs);
@@ -4621,9 +4684,19 @@ void UpdateTeleportZone(int client)
 
 	if (gA_EditCache[client].iType == Zone_Stage)
 	{
-		gA_EditCache[client].fDestination = vTeleport;
+		int iZoneStage;
+		bool InsideStage = Shavit_InsideZoneStage(client, Track_Main, iZoneStage);
 
-		Shavit_PrintToChat(client, "%T", "ZoneTeleportUpdated", client);
+		if(InsideStage && iZoneStage != Shavit_GetClientLastStage(client))
+		{
+			Shavit_PrintToChat(client, "%T", "ZoneTeleportInsideOtherStageZone", client);
+		}
+		else
+		{
+			gA_EditCache[client].fDestination = vTeleport;
+
+			Shavit_PrintToChat(client, "%T", "ZoneTeleportUpdated", client);			
+		}
 	}
 	else
 	{
@@ -5171,6 +5244,11 @@ public Action Timer_Draw(Handle Timer, any data)
 	{
 		gV_WallSnap[client] = origin;
 	}
+	
+	if (gI_LockAxis[client] != -1)
+	{
+		origin[gI_LockAxis[client]] = gF_LockPos[client];
+	}
 
 	if (gI_MapStep[client] == 1)// || gA_EditCache[client].fCorner2[0] == 0.0)
 	{
@@ -5231,7 +5309,14 @@ public Action Timer_Draw(Handle Timer, any data)
 			snap2 = origin;
 			snap2[i] += gI_GridSnap[client];
 
-			TE_SetupBeamPoints(snap1, snap2, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 0.3, 0.3, 0, 0.0, {255, 255, 255, 75}, 0);
+			int color[4] = {255, 255, 255, 75};
+
+			if(gI_LockAxis[client] == i)
+			{
+				color = {255, 0, 0, 75};
+			}
+
+			TE_SetupBeamPoints(snap1, snap2, gI_BeamSpriteIgnoreZ, gA_ZoneSettings[type][track].iHalo, 0, 0, 0.1, 0.3, 0.3, 0, 0.0, color, 0);
 			TE_SendToAll(0.0);
 		}
 	}
@@ -5443,7 +5528,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 	if(gCV_TeleportToStart.BoolValue)
 	{
-		int stage = Shavit_IsOnlyStageMode(client) && !tostartzone ? Shavit_GetClientLastStage(client) : 1;
+		int stage = Shavit_IsOnlyStageMode(client) && !tostartzone && track == Track_Main ? Shavit_GetClientLastStage(client) : 1;
 		bool bCustomStart = gB_HasSetStart[client][track][stage] && !gB_StartAnglesOnly[client][track][stage];
 		bool use_CustomStart_over_CustomSpawn = (iIndex != -1) && bCustomStart;
 
@@ -5507,7 +5592,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 			TeleportEntity(client, fCenter, gB_HasSetStart[client][track][1] ? gF_StartAng[client][track][1] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
 
-			if (gB_ReplayRecorder && gB_HasSetStart[client][track])
+			if (gB_ReplayRecorder && gB_HasSetStart[client][track][1])
 			{
 				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][1], gF_StartAng[client][track][stage][1], -1, true);
 			}
