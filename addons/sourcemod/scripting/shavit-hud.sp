@@ -1414,25 +1414,26 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				char sTime[32];
 				FormatSeconds(data.fTime, sTime, 32, false, false, true);
 
-				char sTimeDiff[32];
-
-				if ((gI_HUD2Settings[client] & HUD2_TIMEDIFFERENCE) == 0 && data.fClosestReplayTime != -1.0 && data.iZoneHUD != ZoneHUD_Start)
-				{
-					float fDifference = data.fTime - data.fClosestReplayTime;
-					FormatSeconds(fDifference, sTimeDiff, 32, false, FloatAbs(fDifference) >= 60.0);
-					Format(sTimeDiff, 32, " (%s%s)", (fDifference >= 0.0)? "+":"", sTimeDiff);
-				}
-
 				if((gI_HUD2Settings[client] & HUD2_RANK) == 0)
 				{
-					FormatEx(sLine, 128, "%s%s (#%d)", sTime, sTimeDiff, data.iRank);
+					FormatEx(sLine, 128, "%s (#%d)", sTime, data.iRank);
 				}
 				else
 				{
-					FormatEx(sLine, 128, "%s%s", sTime, sTimeDiff);
+					FormatEx(sLine, 128, "%s%s", sTime);
 				}
 
 				AddHUDLine(buffer, maxlen, sLine, iLines);
+
+				if ((gI_HUD2Settings[client] & HUD2_TIMEDIFFERENCE) == 0 && data.fClosestReplayTime != -1.0 && data.iZoneHUD != ZoneHUD_Start)
+				{
+					char sTimeDiff[32];
+					float fDifference = data.fTime - data.fClosestReplayTime;
+					FormatSeconds(fDifference, sTimeDiff, 32, false, false, true);
+					Format(sTimeDiff, 32, "(SR %s%s)", (fDifference >= 0.0)? "+":"", sTimeDiff);
+					AddHUDLine(buffer, maxlen, sTimeDiff, iLines);
+				}
+
 				AddHUDLine(buffer, maxlen, " ", iLines);
 			}
 
