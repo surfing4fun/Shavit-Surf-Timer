@@ -175,6 +175,7 @@ public void OnPluginStart()
 #endif
 
 	RegAdminCmd("sm_setmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvelocity <value> [map]");
+	RegAdminCmd("sm_setmaxvel", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvel <value> [map] (sm_setmaxvelocity alias)");
 	RegAdminCmd("sm_setmapmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmapmaxvelocity <value> [map] (sm_setmaxvelocity alias)");
 	RegAdminCmd("sm_setmapmaxvel", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmapmaxvelocity <value> [map] (sm_setmaxvelocity alias)");
 
@@ -678,6 +679,7 @@ public Action Command_SetMaxVelocity(int client, int args)
 	GetCmdArg(1, sArg, 8);
 
 	float fMaxVelocity = StringToFloat(sArg);
+	float fOldMaxVelocity = sv_maxvelocity.FloatValue;
 
 	if(args == 0 || fMaxVelocity < gCV_MinMaxVelocity.FloatValue)
 	{
@@ -709,7 +711,11 @@ public Action Command_SetMaxVelocity(int client, int args)
 		}
 	}
 
-	Shavit_PrintToChat(client, "%T", "SetMaxVelocity", client, gS_ChatStrings.sVariable2, fMaxVelocity, gS_ChatStrings.sText);
+	for(int i = 0; i < MaxClients; i++)
+	{
+		Shavit_PrintToChat(i, "%T", "SetMaxVelocity", i, gS_ChatStrings.sVariable2, fOldMaxVelocity, gS_ChatStrings.sText, gS_ChatStrings.sVariable2, fMaxVelocity, gS_ChatStrings.sText);
+	}
+	
 	Shavit_LogMessage("%L - set sv_maxvelocity of `%s` to %f", client, gS_Map, fMaxVelocity);
 
 	char sQuery[512];
