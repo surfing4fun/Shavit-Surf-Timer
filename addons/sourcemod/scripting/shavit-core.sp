@@ -99,6 +99,7 @@ timer_snapshot_t gA_Timers[MAXPLAYERS+1];
 bool gB_Auto[MAXPLAYERS+1];
 int gI_FirstTouchedGround[MAXPLAYERS+1];
 int gI_LastTickcount[MAXPLAYERS+1];
+int gI_LastNoclipTick[MAXPLAYERS+1];
 
 // these are here until the compiler bug is fixed
 float gF_PauseOrigin[MAXPLAYERS+1][3];
@@ -144,6 +145,7 @@ Convar gCV_Restart = null;
 Convar gCV_Pause = null;
 Convar gCV_BlockPreJump = null;
 Convar gCV_NoZAxisSpeed = null;
+Convar gCV_DisablePracticeModeOnStart = null;
 Convar gCV_VelocityTeleport = null;
 Convar gCV_DefaultStyle = null;
 Convar gCV_NoChatSound = null;
@@ -423,6 +425,7 @@ public void OnPluginStart()
 	gCV_Pause = new Convar("shavit_core_pause", "1", "Allow pausing?", 0, true, 0.0, true, 1.0);
 	gCV_BlockPreJump = new Convar("shavit_core_blockprejump", "0", "Prevents jumping in the start zone.", 0, true, 0.0, true, 1.0);
 	gCV_NoZAxisSpeed = new Convar("shavit_core_nozaxisspeed", "0", "Don't start timer if vertical speed exists (btimes style).", 0, true, 0.0, true, 1.0);
+	gCV_DisablePracticeModeOnStart = new Convar("shavit_core_disable_practicemode_onstart", "0", "Disable practice mode when client enter start zone?", 0, true, 0.0, true, 1.0);
 	gCV_VelocityTeleport = new Convar("shavit_core_velocityteleport", "0", "Teleport the client when changing its velocity? (for special styles)", 0, true, 0.0, true, 1.0);
 	gCV_DefaultStyle = new Convar("shavit_core_defaultstyle", "0", "Default style ID.\nAdd the '!' prefix to disable style cookies - i.e. \"!3\" to *force* scroll to be the default style.", 0, true, 0.0);
 	gCV_NoChatSound = new Convar("shavit_core_nochatsound", "0", "Disables click sound for chat messages.", 0, true, 0.0, true, 1.0);
@@ -2737,7 +2740,11 @@ public int Native_SetPracticeMode(Handle handler, int numParams)
 	if(alert && practice && !gA_Timers[client].bPracticeMode && (!gB_HUD || (Shavit_GetHUDSettings(client) & HUD_NOPRACALERT) == 0))
 	{
 		Shavit_PrintToChat(client, "%T", "PracticeModeAlert", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
-		Shavit_PrintToChat(client, "%T", "PracticeModeTips", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		
+		if(!gCV_DisablePracticeModeOnStart.BoolValue)
+		{
+			Shavit_PrintToChat(client, "%T", "PracticeModeTips", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);			
+		}
 	}
 
 	gA_Timers[client].bPracticeMode = practice;
@@ -2992,7 +2999,7 @@ public void ChangeClientLastStage(int client, int stage)
 	{
 		char sStage[32];
 		FormatEx(sStage, 32, "%T %d", "StageText", client, stage);
-		Shavit_PrintToChat(client, "%T",  "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "EnabledTimerRepeat", client, gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
 	}
 
 	Call_StartForward(gH_Forwards_OnStageChanged);
@@ -3017,6 +3024,11 @@ public Action Shavit_OnStartPre(int client, int track)
 	}
 
 	if(gB_Zones && (!Shavit_ZoneExists(Zone_End, track) || !Shavit_ZoneExists(Zone_Start, track)))
+	{
+		return Plugin_Stop;
+	}
+
+	if(gI_LastNoclipTick[client] > gI_FirstTouchedGround[client])
 	{
 		return Plugin_Stop;
 	}
@@ -3132,7 +3144,7 @@ void StartTimer(int client, int track)
 			gA_Timers[client].bTimerEnabled = true;
 			gA_Timers[client].iKeyCombo = -1;
 			gA_Timers[client].fCurrentTime = 0.0;
-			//gA_Timers[client].bPracticeMode = false;
+
 			gA_Timers[client].iMeasuredJumps = 0;
 			gA_Timers[client].iPerfectJumps = 0;
 			gA_Timers[client].bCanUseAllKeys = false;
@@ -3142,6 +3154,11 @@ void StartTimer(int client, int track)
 			gA_Timers[client].fDistanceOffset[Zone_End] = 0.0;
 			gA_Timers[client].fAvgVelocity = curVel;
 			gA_Timers[client].fMaxVelocity = curVel;
+
+			if(gCV_DisablePracticeModeOnStart.BoolValue)
+			{
+				gA_Timers[client].bPracticeMode = false;
+			}
 
 			// TODO: Look into when this should be reset (since resetting it here disables timescale while in startzone).
 			//gA_Timers[client].fNextFrameTime = 0.0;
@@ -3292,6 +3309,7 @@ public void OnClientPutInServer(int client)
 	gA_Timers[client].fCPTimes = empty_times;
 	gS_DeleteMap[client][0] = 0;
 	gI_FirstTouchedGround[client] = 0;
+	gI_LastNoclipTick[client] = 0;
 	gI_LastTickcount[client] = 0;
 	gI_HijackFrames[client] = 0;
 	gI_LastPrintedSteamID[client] = 0;
@@ -3489,6 +3507,14 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 	if (track != gA_Timers[client].iTimerTrack)
 	{
 		return;		
+	}
+
+	if(type == Zone_Start || (type == Zone_Stage && gA_Timers[client].bOnlyStageMode))
+	{
+		if(gI_LastNoclipTick[client] > gI_FirstTouchedGround[client])
+		{
+			Shavit_PrintToChat(client, "%T", "NoclipPrestrafe", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+		}
 	}
 
 	if (type != Zone_Airaccelerate && type != Zone_CustomSpeedLimit)
@@ -4125,6 +4151,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	// perf jump measuring
 	bool bOnGround = (!bInWater && mtMoveType == MOVETYPE_WALK && iGroundEntity != -1);
+
+	if(mtMoveType == MOVETYPE_NOCLIP)
+	{
+		gI_LastNoclipTick[client] = tickcount;
+	}
 
 	gI_LastTickcount[client] = tickcount;
 
