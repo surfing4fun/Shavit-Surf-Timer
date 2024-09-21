@@ -18,8 +18,8 @@
 	}
 	"SetMaxVelocity"
 	{
-		"#format"	"{1:s},{2:.0f},{3:s}"
-		"en"		"sv_maxvelocity changed to {1}{2}{3}."
+		"#format"	"{1:s},{2:.0f},{3:s},{4:s},{5:.0f},{6:s}"
+		"en"		"sv_maxvelocity changed from {1}{2}{3} to {4}{5}{6}."
 	}
 	"Rank"
 	{
