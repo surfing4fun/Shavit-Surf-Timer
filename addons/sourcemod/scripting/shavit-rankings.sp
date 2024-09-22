@@ -1896,6 +1896,13 @@ public void GetMapInfoFromSurfHeaven_Callback(HTTPResponse response, any data, c
 	}
 
 	JSONArray array = view_as<JSONArray>(response.Data);
+
+	if(array.Length < 1)
+	{
+		delete array;
+		return;
+	}
+
 	JSONObject info = view_as<JSONObject>(array.Get(0));
 
 	gI_Tier = info.GetInt("tier");

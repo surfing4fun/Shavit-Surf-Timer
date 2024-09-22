@@ -159,6 +159,8 @@ public void OnPluginStart()
 	gCV_RouteDrawInterval.AddChangeHook(OnConVarChanged);
 	gCV_RouteFramesAhead.AddChangeHook(OnConVarChanged);
 
+	Convar.AutoExecConfig();
+
 	gI_Tickrate = RoundToNearest(1.0 / GetTickInterval());
 	gI_TimeCompensation = gI_Tickrate / 10;
 	
