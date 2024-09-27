@@ -45,6 +45,7 @@
 #include <shavit/core>
 #include <shavit/rankings>
 #include <shavit/wr>
+#include <shavit/zones>
 
 #undef REQUIRE_PLUGIN
 
@@ -181,7 +182,7 @@ public void OnPluginStart()
 
 	RegAdminCmd("sm_recalcmap", Command_RecalcMap, ADMFLAG_RCON, "Recalculate the current map's records' points.");
 
-	RegAdminCmd("sm_recalcall", Command_RecalcAll, ADMFLAG_ROOT, "Recalculate the points for every map on the server. Run this after you change the ranking multiplier for a style or after you install the plugin.");
+	// RegAdminCmd("sm_recalcall", Command_RecalcAll, ADMFLAG_ROOT, "Recalculate the points for every map on the server. Run this after you change the ranking multiplier for a style or after you install the plugin.");
 
 	
 
@@ -481,7 +482,7 @@ public void Shavit_OnWRDeleted(int style, int id, int track, int stage, int acco
 
 	char sQuery[1024];
 	// bUseCurrentMap=true because shavit-wr should maybe have updated the wr even through the updatewrcache query hasn't run yet
-	FormatRecalculate(true, track, style, sQuery, sizeof(sQuery));
+	FormatRecalculate(true, track, stage, style, sQuery, sizeof(sQuery));
 	QueryLog(gH_SQL, SQL_Recalculate_Callback, sQuery, (style << 8) | track, DBPrio_High);
 
 	UpdateAllPoints(true);
@@ -778,7 +779,7 @@ public Action Command_SetTier(int client, int args)
 	Call_Finish();
 
 	Shavit_PrintToChat(client, "%T", "SetTier", client, gS_ChatStrings.sVariable2, tier, gS_ChatStrings.sText);
-	Shavit_LogMessage("%L - set tier of `%s` to %d", client, gS_Map, tier);
+	Shavit_LogMessage("%L - set tier of `%s` to %d", client, map, tier);
 
 	char sQuery[512];
 	FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, tier) VALUES ('%s', %d);", gS_MySQLPrefix, map, tier);
@@ -835,20 +836,18 @@ public Action Command_RecalcMap(int client, int args)
 }
 
 // You can use Sourcepawn_GetRecordPoints() as a reference for how the queries calculate points.
-void FormatRecalculate(bool bUseCurrentMap, int track, int style, char[] sQuery, int sQueryLen, const char[] map = "")
+void FormatRecalculate(bool bUseCurrentMap, int track, int stage, int style, char[] sQuery, int sQueryLen, const char[] map = "")
 {
 	float fMultiplier = Shavit_GetStyleSettingFloat(style, "rankingmultiplier");
 
-	if (track > 0)
-	{
-		fMultiplier *= 0.25;
-	}
+	char sTable[32];
+	FormatEx(sTable, sizeof(sTable), "%s", stage == 0 ? "playertimes":"stagetimes");
 
 	if (Shavit_GetStyleSettingBool(style, "unranked") || fMultiplier == 0.0)
 	{
 		FormatEx(sQuery, sQueryLen,
-			"UPDATE %splayertimes SET points = 0 WHERE style = %d AND track %c 0 %s%s%s;",
-			gS_MySQLPrefix,
+			"UPDATE %s%s SET points = 0 WHERE style = %d AND track %c 0 %s%s%s;",
+			gS_MySQLPrefix, sTable,
 			style,
 			(track > 0) ? '>' : '=',
 			(bUseCurrentMap) ? "AND map = '" : "",
@@ -859,150 +858,108 @@ void FormatRecalculate(bool bUseCurrentMap, int track, int style, char[] sQuery,
 		return;
 	}
 
+	float fMaxRankPoint;
+	float fBaiscFinishPoint;
+	float fExtraFinishPoint = 0.0;
+	float fTier = float(gI_Tier);
+
+	if(track >= Track_Bonus)
+	{
+		fTier = 1.0;
+		fMaxRankPoint = 300.0;
+		fBaiscFinishPoint = 20.0;
+	}
+	else if(stage == 0)
+	{
+		fMaxRankPoint = 600.0;
+		fBaiscFinishPoint = 25.0;
+		fExtraFinishPoint = fTier * Pow(max(0.0, fTier-4.0), 2.0) * fBaiscFinishPoint;
+	}
+	else 
+	{
+		fMaxRankPoint = 150.0;
+		fBaiscFinishPoint = fTier;
+	}
+
+	float fFinishPoint = fBaiscFinishPoint * fTier;
+
+	char sStageFilter[32];
+	if(stage > 0) FormatEx(sStageFilter, sizeof(sStageFilter), "AND stage = %d", stage);
+
 	if (bUseCurrentMap)
 	{
-		float fTier = (track > 0) ? 1.0 : float(gI_Tier);
-
-		// a faster, joinless query is used for main due to it having 70% of playertimes.
-		if (track == Track_Main && gB_WorldRecordsCached)
-		{
-			float fWR = Shavit_GetWorldRecord(style, track);
-
-			FormatEx(sQuery, sQueryLen,
-				"UPDATE %splayertimes " ...
-				"SET points = %f * (%f / time) " ...
-				"WHERE style = %d AND track = 0 AND map = '%s';",
-				gS_MySQLPrefix,
-				(((gCV_PointsPerTier.FloatValue * fTier) * 1.5) + (fWR / 15.0)) * fMultiplier,
-				fWR,
-				style,
-				gS_Map
-			);
-		}
-		else if (gI_Driver == Driver_sqlite)
-		{
-			FormatEx(sQuery, sQueryLen,
-			    "UPDATE %splayertimes AS PT\n"
-			... "SET\n"
-			... " points =\n"
-			... "   (%f + (WR.time / 15.0))\n"
-			... " * (WR.time / PT.time)\n"
-			... " * %f\n"
-			... "FROM %swrs WR\n"
-			... "WHERE PT.track %c 0 AND PT.style = %d AND PT.map = '%s'\n"
-			... "  AND PT.track = WR.track AND PT.style = WR.style AND PT.map = WR.map;",
-				gS_MySQLPrefix,
-				((gCV_PointsPerTier.FloatValue * fTier) * 1.5),
-				fMultiplier,
-				gS_MySQLPrefix,
-				(track > 0) ? '>' : '=',
-				style,
-				gS_Map
-			);
-		}
-		else
-		{
-			FormatEx(sQuery, sQueryLen,
-				"UPDATE %splayertimes AS PT " ...
-				"INNER JOIN %swrs WR ON " ...
-				"   PT.track = WR.track AND PT.style = WR.style AND PT.map = WR.map " ...
-				"SET " ...
-				" PT.points = "...
-				"   (%f + (WR.time / 15.0)) " ...
-				" * (WR.time / PT.time) " ...
-				" * %f " ...
-				"WHERE PT.track %c 0 AND PT.style = %d AND PT.map = '%s';",
-				gS_MySQLPrefix, gS_MySQLPrefix,
-				((gCV_PointsPerTier.FloatValue * fTier) * 1.5),
-				fMultiplier,
-				(track > 0) ? '>' : '=',
-				style,
-				gS_Map
-			);
-		}
-	}
-	else if (gI_Driver == Driver_sqlite)
-	{
-		char mapfilter[50+PLATFORM_MAX_PATH];
-		if (map[0]) FormatEx(mapfilter, sizeof(mapfilter), "AND PT.map = '%s'", map);
-
 		FormatEx(sQuery, sQueryLen,
-		   "UPDATE %splayertimes AS PT\n"
-		... "SET points =\n"
-		... "   (((%f * %s) * 1.5) + (WR.time / 15.0))\n"
-		... " * (WR.time / PT.time)\n"
-		... " * %f\n"
-		... "FROM %swrs AS WR\n"
-		... "JOIN %smaptiers AS MT ON\n"
-		... "  PT.map = MT.map\n"
-		... "WHERE PT.track %c 0 AND PT.track = WR.track AND PT.style = %d AND PT.style = WR.style %s AND PT.map = WR.map;",
-			gS_MySQLPrefix,
-			gCV_PointsPerTier.FloatValue,
-			(track > 0) ? "1" : "MT.tier",
-			fMultiplier,
-			gS_MySQLPrefix,
-			gS_MySQLPrefix,
-			(track > 0) ? '>' : '=',
-			style,
-			mapfilter
-		);
+			"WITH RankedPT AS "...
+			"(SELECT id, %f / RANK() OVER (ORDER BY time ASC) AS points FROM %s%s WHERE map = '%s' AND track = %d AND style = %d %s) "...
+			"UPDATE %s%s SET points = RankedPT.points + %f FROM RankedPT WHERE %s.id = RankedPT.id;",
+			fMaxRankPoint, gS_MySQLPrefix, sTable, gS_Map, track, style, sStageFilter, gS_MySQLPrefix, sTable, fFinishPoint + fExtraFinishPoint, sTable);
 	}
 	else
 	{
 		char mapfilter[50+PLATFORM_MAX_PATH];
-		if (map[0]) FormatEx(mapfilter, sizeof(mapfilter), "AND PT.map = '%s'", map);
+		if (map[0]) FormatEx(mapfilter, sizeof(mapfilter), "AND %s.map = '%s'", sTable, map);
+
+		char sPointCalculate[256];
+
+		if(stage > 0)
+		{
+			FormatEx(sPointCalculate, sizeof(sPointCalculate), "RankedPT.tier * RankedPT.tier");
+		}
+		else if(track == Track_Main)
+		{
+			FormatEx(sPointCalculate, sizeof(sPointCalculate), "(25.0 * RankedPT.tier) + (RankedPT.tier * Pow(Max(0.0, RankedPT.tier - 4.0), 2.0) * 25.0)");
+		}
+		else
+		{
+			FormatEx(sPointCalculate, sizeof(sPointCalculate), "20.0");
+		}
 
 		FormatEx(sQuery, sQueryLen,
-			"UPDATE %splayertimes AS PT " ...
-			"INNER JOIN %swrs AS WR ON " ...
-			"  PT.track %c 0 AND PT.track = WR.track AND PT.style = %d AND PT.style = WR.style %s AND PT.map = WR.map " ...
-			"INNER JOIN %smaptiers AS MT ON " ...
-			"  PT.map = MT.map " ...
-			"SET " ...
-			" PT.points = "...
-			"   (((%f * %s) * 1.5) + (WR.time / 15.0)) " ...
-			" * (WR.time / PT.time) " ...
-			" * %f;",
-			gS_MySQLPrefix,
-			gS_MySQLPrefix,
-			(track > 0) ? '>' : '=',
-			style,
-			mapfilter,
-			gS_MySQLPrefix,
-			gCV_PointsPerTier.FloatValue,
-			(track > 0) ? "1" : "MT.tier",
-			fMultiplier
-		);
+			"WITH RankedPT AS "...
+			"(SELECT id, CAST(tier AS FLOAT) as tier, %f / RANK() OVER (ORDER BY time ASC) AS points "...
+			"FROM %s%s JOIN %smaptiers AS MT ON %s.map = MT.map WHERE track = %d AND style = %d %s %s ) "...
+			"UPDATE %s%s SET points = (RankedPT.points + (%s)) "...
+			"FROM RankedPT WHERE %s.id = RankedPT.id;",
+			fMaxRankPoint, gS_MySQLPrefix, sTable, gS_MySQLPrefix, sTable, 
+			track, style, mapfilter, sStageFilter, gS_MySQLPrefix, sTable, sPointCalculate, sTable);
 	}
 }
 
-public Action Command_RecalcAll(int client, int args)
-{
-	ReplyToCommand(client, "- Started recalculating points for all maps. Check console for output.");
+// it didnt work on shavit surf timer
+// public Action Command_RecalcAll(int client, int args)
+// {
+// 	ReplyToCommand(client, "- Started recalculating points for all maps. Check console for output.");
 
-	Transaction trans = new Transaction();
-	char sQuery[1024];
+// 	Transaction trans = new Transaction();
+// 	char sQuery[1024];
 
-	FormatEx(sQuery, sizeof(sQuery), "UPDATE %splayertimes SET points = 0;", gS_MySQLPrefix);
-	AddQueryLog(trans, sQuery);
-	FormatEx(sQuery, sizeof(sQuery), "UPDATE %susers SET points = 0;", gS_MySQLPrefix);
-	AddQueryLog(trans, sQuery);
+// 	FormatEx(sQuery, sizeof(sQuery), "UPDATE %splayertimes SET points = 0;", gS_MySQLPrefix);
+// 	AddQueryLog(trans, sQuery);
+// 	FormatEx(sQuery, sizeof(sQuery), "UPDATE %sstagetimes SET points = 0;", gS_MySQLPrefix);
+// 	AddQueryLog(trans, sQuery);
+// 	FormatEx(sQuery, sizeof(sQuery), "UPDATE %susers SET points = 0;", gS_MySQLPrefix);
+// 	AddQueryLog(trans, sQuery);
 
-	for(int i = 0; i < gI_Styles; i++)
-	{
-		if (!Shavit_GetStyleSettingBool(i, "unranked") && Shavit_GetStyleSettingFloat(i, "rankingmultiplier") != 0.0)
-		{
-			FormatRecalculate(false, Track_Main, i, sQuery, sizeof(sQuery));
-			AddQueryLog(trans, sQuery);
-			FormatRecalculate(false, Track_Bonus, i, sQuery, sizeof(sQuery));
-			AddQueryLog(trans, sQuery);
-		}
-	}
+// 	for(int i = 0; i < gI_Styles; i++)
+// 	{
+// 		if (!Shavit_GetStyleSettingBool(i, "unranked") && Shavit_GetStyleSettingFloat(i, "rankingmultiplier") != 0.0)
+// 		{
+// 			for (int j = 0; j < TRACKS_SIZE; j++)
+// 			{
+// 				FormatRecalculate(false, j, 0, i, sQuery, sizeof(sQuery));
+// 			}
 
-	gH_SQL.Execute(trans, Trans_OnRecalcSuccess, Trans_OnRecalcFail, (client == 0)? 0:GetClientSerial(client));
+// 			for (int k = 0; k <= Shavit_GetStageCount(Track_Main); k++)
+// 			{
+// 				FormatRecalculate(false, Track_Main, k, i, sQuery, sizeof(sQuery));
+// 			}
+// 		}
+// 	}
 
-	return Plugin_Handled;
-}
+// 	gH_SQL.Execute(trans, Trans_OnRecalcSuccess, Trans_OnRecalcFail, (client == 0)? 0:GetClientSerial(client));
+
+// 	return Plugin_Handled;
+// }
 
 public void Trans_OnRecalcSuccess(Database db, any data, int numQueries, DBResultSet[] results, any[] queryData)
 {
@@ -1031,13 +988,24 @@ void RecalculateSpecificMap(const char[] map, int serial)
 	// Only maintrack times because bonus times aren't tiered.
 	FormatEx(sQuery, sizeof(sQuery), "UPDATE %splayertimes SET points = 0 WHERE map = '%s' AND track = 0;", gS_MySQLPrefix, map);
 	AddQueryLog(trans, sQuery);
+	FormatEx(sQuery, sizeof(sQuery), "UPDATE %sstagetimes SET points = 0 WHERE map = '%s';", gS_MySQLPrefix, map);
+	AddQueryLog(trans, sQuery);
 
 	for(int i = 0; i < gI_Styles; i++)
 	{
 		if (!Shavit_GetStyleSettingBool(i, "unranked") && Shavit_GetStyleSettingFloat(i, "rankingmultiplier") != 0.0)
 		{
-			FormatRecalculate(false, Track_Main, i, sQuery, sizeof(sQuery), map);
-			AddQueryLog(trans, sQuery);
+			for (int j = 0; j < TRACKS_SIZE; j++)
+			{
+				FormatRecalculate(false, j, 0, i, sQuery, sizeof(sQuery), map);
+				AddQueryLog(trans, sQuery);
+			}
+
+			for (int k = 0; k <= Shavit_GetStageCount(Track_Main); k++)
+			{
+				FormatRecalculate(false, Track_Main, k, i, sQuery, sizeof(sQuery), map);
+				AddQueryLog(trans, sQuery);
+			}
 		}
 	}
 
@@ -1055,15 +1023,24 @@ void ReallyRecalculateCurrentMap()
 
 	FormatEx(sQuery, sizeof(sQuery), "UPDATE %splayertimes SET points = 0 WHERE map = '%s';", gS_MySQLPrefix, gS_Map);
 	AddQueryLog(trans, sQuery);
+	FormatEx(sQuery, sizeof(sQuery), "UPDATE %sstagetimes SET points = 0 WHERE map = '%s';", gS_MySQLPrefix, gS_Map);
+	AddQueryLog(trans, sQuery);
 
-	for (int i = 0; i < gI_Styles; i++)
+	for(int i = 0; i < gI_Styles; i++)
 	{
 		if (!Shavit_GetStyleSettingBool(i, "unranked") && Shavit_GetStyleSettingFloat(i, "rankingmultiplier") != 0.0)
 		{
-			FormatRecalculate(true, Track_Main, i, sQuery, sizeof(sQuery));
-			AddQueryLog(trans, sQuery);
-			FormatRecalculate(true, Track_Bonus, i, sQuery, sizeof(sQuery));
-			AddQueryLog(trans, sQuery);
+			for (int j = 0; j < TRACKS_SIZE; j++)
+			{
+				FormatRecalculate(true, j, 0, i, sQuery, sizeof(sQuery));
+				AddQueryLog(trans, sQuery);
+			}
+
+			for (int k = 0; k <= Shavit_GetStageCount(Track_Main); k++)
+			{
+				FormatRecalculate(true, Track_Main, k, i, sQuery, sizeof(sQuery));
+				AddQueryLog(trans, sQuery);
+			}
 		}
 	}
 
@@ -1087,7 +1064,7 @@ public void Shavit_OnFinishStage_Post(int client, int style, float time, int jum
 		return;
 	}
 
-	if (rank != 1)
+	if (rank >= 20)
 	{
 		UpdatePointsForSinglePlayer(client);
 		return;
@@ -1098,7 +1075,7 @@ public void Shavit_OnFinishStage_Post(int client, int style, float time, int jum
 	#endif
 
 	char sQuery[1024];
-	FormatRecalculate(true, Track_Main, style, sQuery, sizeof(sQuery));
+	FormatRecalculate(true, Track_Main, stage, style, sQuery, sizeof(sQuery));
 
 	QueryLog(gH_SQL, SQL_Recalculate_Callback, sQuery, (style << 8) | Track_Main, DBPrio_High);
 	UpdateAllPoints(true, gS_Map, Track_Main);
@@ -1111,7 +1088,7 @@ public void Shavit_OnFinish_Post(int client, int style, float time, int jumps, i
 		return;
 	}
 
-	if (rank != 1)
+	if (rank >= 20)
 	{
 		UpdatePointsForSinglePlayer(client);
 		return;
@@ -1122,7 +1099,7 @@ public void Shavit_OnFinish_Post(int client, int style, float time, int jumps, i
 	#endif
 
 	char sQuery[1024];
-	FormatRecalculate(true, track, style, sQuery, sizeof(sQuery));
+	FormatRecalculate(true, track, 0, style, sQuery, sizeof(sQuery));	// recal points here
 
 	QueryLog(gH_SQL, SQL_Recalculate_Callback, sQuery, (style << 8) | track, DBPrio_High);
 	UpdateAllPoints(true, gS_Map, track);
@@ -1155,8 +1132,7 @@ void UpdatePointsForSinglePlayer(int client)
 	{
 		FormatEx(sQuery, sizeof(sQuery),
 			"UPDATE %susers SET points = (SELECT SUM(points) FROM "...
-			"(SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) "...
-			"WHERE auth = %d) WHERE auth = %d;",
+			"(SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) PT WHERE PT.auth = %d) WHERE users.auth = %d;",
 			gS_MySQLPrefix, gS_MySQLPrefix, gS_MySQLPrefix, auth, auth);
 	}
 	else if (gB_SQLWindowFunctions)
@@ -1199,7 +1175,6 @@ void UpdateAllPoints(bool recalcall=false, char[] map="", int track=-1)
 	#if defined DEBUG
 	LogError("DEBUG: 6 (UpdateAllPoints)");
 	#endif
-
 	char sQuery[1024];
 	char sLastLogin[69], sLimit[30], sMapWhere[512], sTrackWhere[64];
 
@@ -1221,15 +1196,17 @@ void UpdateAllPoints(bool recalcall=false, char[] map="", int track=-1)
 		if (gI_Driver == Driver_sqlite)
 		{
 			FormatEx(sQuery, sizeof(sQuery),
-				"UPDATE %susers AS U SET points = P.total FROM (SELECT auth, SUM(points) AS total FROM %splayertimes GROUP BY auth) P WHERE U.auth = P.auth %s %s;",
-				gS_MySQLPrefix, gS_MySQLPrefix,
+				"UPDATE %susers AS U SET points = P.total FROM (SELECT auth, SUM(points) AS total "...
+				"FROM (SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) GROUP BY auth) P WHERE U.auth = P.auth %s %s;",
+				gS_MySQLPrefix, gS_MySQLPrefix, gS_MySQLPrefix,
 				(sLastLogin[0] != 0) ? "AND " : "", sLastLogin);
 		}
 		else
 		{
 			FormatEx(sQuery, sizeof(sQuery),
-				"UPDATE %susers AS U INNER JOIN (SELECT auth, SUM(points) AS total FROM %splayertimes GROUP BY auth) P ON U.auth = P.auth SET U.points = P.total %s %s;",
-				gS_MySQLPrefix, gS_MySQLPrefix,
+				"UPDATE %susers AS U INNER JOIN (SELECT auth, SUM(points) AS total "...
+				"FROM (SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) GROUP BY auth) P ON U.auth = P.auth SET U.points = P.total %s %s;",
+				gS_MySQLPrefix, gS_MySQLPrefix, gS_MySQLPrefix,
 				(sLastLogin[0] != 0) ? "WHERE" : "", sLastLogin);
 		}
 	}
@@ -1273,6 +1250,7 @@ void UpdateAllPoints(bool recalcall=false, char[] map="", int track=-1)
 		... "  SELECT SUM(points2) FROM (\n"
 		... "    SELECT (points * POW(%f, ROW_NUMBER() OVER (ORDER BY points DESC) - 1)) AS points2\n"
 		... "    FROM %splayertimes\n"
+		... "				"
 		... "    WHERE auth = u.auth AND points > 0\n"
 		... "    ORDER BY points DESC %s\n"
 		... "  ) AS t\n"
@@ -1800,56 +1778,53 @@ public int Native_Rankings_DeleteMap(Handle handler, int numParams)
 
 public int Native_GuessPointsForTime(Handle plugin, int numParams)
 {
-	int rtrack = GetNativeCell(1);
-	int rstage = GetNativeCell(2);
-	int rStageCounts = GetNativeCell(3);
-	int rstyle = GetNativeCell(4);
+	int track = GetNativeCell(1);
+	int stage = GetNativeCell(2);
+	int style = GetNativeCell(3);
+	int rank = GetNativeCell(4);
 	int tier = GetNativeCell(5);
-	float rtime = view_as<float>(GetNativeCell(6));
-	float pwr = view_as<float>(GetNativeCell(7));
 
 	float ppoints = Sourcepawn_GetRecordPoints(
-		rtrack,
-		rstage,
-		rStageCounts,
-		rtime,
-		gCV_PointsPerTier.FloatValue,
-		Shavit_GetStyleSettingFloat(rstyle, "rankingmultiplier"),
-		pwr,
+		track,
+		stage,
+		rank,
+		Shavit_GetStyleSettingFloat(style, "rankingmultiplier"),
 		float(tier == -1 ? gI_Tier : tier)
 	);
 
 	return view_as<int>(ppoints);
 }
 
-float Sourcepawn_GetRecordPoints(int rtrack, int rstage, int rStageCounts, float rtime, float pointspertier, float stylemultiplier, float pwr, float ptier)
+float Sourcepawn_GetRecordPoints(int track, int stage, int rank, float stylemultiplier, float tier)
 {
-	float ppoints = 0.0;
+	float fMaxRankPoint;
+	float fBaiscFinishPoint;
+	float fExtraFinishPoint = 0.0;
 
-	if (rtrack > 0)
+	if(track >= Track_Bonus)
 	{
-		ptier = 1.0;
+		tier = 1.0;
+		fMaxRankPoint = 300.0;
+		fBaiscFinishPoint = 20.0;
+	}
+	else if(stage == 0)
+	{
+		fMaxRankPoint = 600.0;
+		fBaiscFinishPoint = 25.0;
+		fExtraFinishPoint = tier * Pow(max(0.0, tier-4.0), 2.0) * fBaiscFinishPoint;
+	}
+	else 
+	{
+		fMaxRankPoint = 150.0;
+		fBaiscFinishPoint = tier;
 	}
 
-	ppoints  = ((pointspertier * ptier) * 1.5) + (pwr / 15.0);
-	ppoints *= (pwr / rtime);
-	ppoints *= stylemultiplier;
+	float fRankPoint = fMaxRankPoint / float(rank);
+	float fFinishPoint = fBaiscFinishPoint * tier;
 
-	if (rtrack > 0)
-	{
-		ppoints *= 0.25;
-	}
-	else if (rStageCounts < 2)
-	{
-		ppoints *= 1.5;		// 1.5 multiplier for linear map ;)
-	}
+	float fTotalPoint = (fRankPoint + fFinishPoint + fExtraFinishPoint) * stylemultiplier;
 
-	if(rstage > 0)
-	{
-		ppoints *= (1.0 / (float(rStageCounts) * 2.0));
-	}
-
-	return ppoints;
+	return fTotalPoint;
 }
 
 public void SQL_DeleteMap_Callback(Database db, DBResultSet results, const char[] error, any data)
@@ -1867,6 +1842,11 @@ public void SQL_DeleteMap_Callback(Database db, DBResultSet results, const char[
 
 		UpdateAllPoints(true);
 	}
+}
+
+stock float max(float a, float b)
+{
+	return a > b ? a:b;
 }
 
 #if USE_SHMAPTIERS

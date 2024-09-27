@@ -141,11 +141,6 @@
 	{
 		"en"		"Stage"
 	}
-	"NoclipPrestrafe"
-	{
-		"#format"	"{1:s},{2:s}"
-		"en"		"You {1}cannot{2} prestrafe with noclip."
-	}
 	// ---------- Pauses ---------- //
 	"MessagePause"
 	{

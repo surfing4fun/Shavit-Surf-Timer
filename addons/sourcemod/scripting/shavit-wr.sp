@@ -3802,10 +3802,10 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		Format(sDifferencePB, sizeof(sDifferencePB), "%s+%s%s", gS_ChatStrings.sWarning, sDifferencePB, gS_ChatStrings.sText);
 	}
 
-	float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, stage, Shavit_GetStageCount(track), style, -1, time, gF_StageWRTime[style][stage]) : 0.0;
-
 	int iRank = GetStageRankForTime(style, time, stage);
 	int iRankCount = GetStageRecordAmount(style, stage);
+
+	float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, stage, style, iRank, -1) : 0.0;
 
 	if(iOverwrite > 0)  //Valid Run
 	{
@@ -4160,7 +4160,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 	if(iOverwrite > 0)  //Valid Run
 	{
-		float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, 0, Shavit_GetStageCount(track), style, -1, time, gF_WRTime[style][track]) : 0.0;
+		float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, 0, style, iRank, -1) : 0.0;
 
 		char sQuery[1024];
 
