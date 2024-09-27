@@ -24,6 +24,7 @@ char gS_PreviousMap[PLATFORM_MAX_PATH];
 
 int gI_RequestTimes;
 bool gB_Fetching = false;
+bool gB_Stop = false;
 bool gB_MapWRCached = false;
 bool gB_StageWRCached = false;
 bool gB_CacheFail = false;
@@ -83,6 +84,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_shwrcp", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
 
 	RegAdminCmd("sm_reloadshrecord", Command_ReloadSHRecord, ADMFLAG_RCON, "Reload SH record.")
+	RegAdminCmd("sm_stopfetchingrecord", Command_StopFetchingSHRecord, ADMFLAG_RCON, "Stop fetching records from surfheaven.")
 
 	gCV_MaxFetchingTime = new Convar("shavit_wrsh_maxfetchingtime", "60.0", "Maximum time to fetching records from SurfHeaven.", 0, true, 10.0, false, 0.0);
 	gCV_MaxRankingTime = new Convar("shavit_wrsh_maxrankingtime", "30.0", "Maximum time to ranking player's time from SurfHeaven.", 0, true, 10.0, false, 0.0);
@@ -130,6 +132,19 @@ public Action Command_ReloadSHRecord(int client, int args)
 	return Plugin_Handled;
 }
 
+public Action Command_StopFetchingSHRecord(int client, int args)
+{
+	if(gB_MapWRCached && gB_StageWRCached)
+	{
+		return Plugin_Continue;
+	}
+
+	Shavit_LogMessage("%L - Stop server fetching SH records.", client);
+	gB_Stop = true;
+
+	return Plugin_Handled;
+}
+
 public Action Command_SHStageTop(int client, int args)
 {
 	BuildSHStageTopMenu(client, -1, 0);
@@ -160,7 +175,7 @@ public Action Command_SHMapRank(int client, int args)
 	int track = Shavit_GetClientTrack(client);
 	float time = Shavit_GetClientPB(client, Shavit_GetBhopStyle(client), track);
 
-	if(gA_MapWorldRecord[track].iRankCount == 0 && gB_MapWRCached)
+	if(gB_Stop || (gA_MapWorldRecord[track].iRankCount == 0 && gB_MapWRCached))
 	{
 		Shavit_PrintToChat(client, "There are no records in SurfHeaven.");
 		return Plugin_Handled;
@@ -215,7 +230,7 @@ public Action Command_SHStageRank(int client, int args)
 		stage = Shavit_GetClientLastStage(client);      
 	}
 
-	if(gA_StageWorldRecord[stage].iRankCount == 0 && gB_StageWRCached)
+	if(gB_Stop || gA_StageWorldRecord[stage].iRankCount == 0 && gB_StageWRCached)
 	{
 		Shavit_PrintToChat(client, "There are no records in SurfHeaven.");
 		return Plugin_Handled;
@@ -260,7 +275,7 @@ public Action Timer_CacheWorldRecord(Handle timer)
 		gI_RequestTimes = gI_RequestTimes + 1;
 	}
 
-	if(gI_RequestTimes > gCV_MaxRequest.IntValue || (gB_MapWRCached && gB_StageWRCached))
+	if(gB_Stop || gI_RequestTimes > gCV_MaxRequest.IntValue || (gB_MapWRCached && gB_StageWRCached))
 	{
 		gB_CacheFail = !(gB_MapWRCached && gB_StageWRCached);
 		gB_Timer = false;
@@ -278,6 +293,7 @@ public void OnMapStart()
 	
 	if (!StrEqual(gS_Map, gS_PreviousMap))
 	{
+		gB_Stop = false;
 		ResetWRCache();
 		CreateTimer(gCV_RetryInterval.FloatValue, Timer_CacheWorldRecord, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 	}
@@ -325,6 +341,11 @@ public void ResetWRCache()
 // cache stuffs on map start
 public void CacheStageWorldRecord(const char[] map)
 {
+	if(gB_Stop)
+	{
+		return;
+	}
+
 	if(Shavit_GetStageCount(Track_Main) < 2)
 	{
 		gB_Fetching = false;
@@ -350,6 +371,11 @@ public void CacheStageWorldRecord(const char[] map)
 
 public void CacheWorldRecord(const char[] map)
 {
+	if(gB_Stop)
+	{
+		return;
+	}
+
 	char sUrl[256];
 	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_MAPRECORD_URL, map);
 	gB_Fetching = true;
@@ -377,7 +403,7 @@ public void CacheMapWorldRecord_Callback(HTTPResponse response, any data, const 
 
 	JSONArray array = view_as<JSONArray>(response.Data);
 
-	if(array.Length < 1)
+	if(array.Length < 1 || gB_Stop)
 	{
 		gB_Fetching = false;
 		gB_MapWRCached = true;
@@ -460,7 +486,7 @@ public void CacheStageWorldRecord_Callback(HTTPResponse response, any data, cons
 
 	JSONArray array = view_as<JSONArray>(response.Data);
 
-	if(array.Length < 1)
+	if(array.Length < 1 || gB_Stop)
 	{
 		gB_Fetching = false;
 		gB_StageWRCached = true;
@@ -1073,7 +1099,12 @@ public void OpenReloadSHReocrdMenu(int client)
 {
 	Menu menu = new Menu(MenuHandler_ReloadSHRecord);
 	char sStatus[16];
-	if(gB_Fetching)
+	
+	if(gB_Stop)
+	{
+		FormatEx(sStatus, 16, "Forcibly Stop Fetching");
+	}
+	else if(gB_Fetching)
 	{
 		FormatEx(sStatus, 16, "Fetching");
 	}
@@ -1097,6 +1128,14 @@ public void OpenReloadSHReocrdMenu(int client)
 	sStatus, gB_Timer ? "Running":"Stopped", gI_RequestTimes, gCV_MaxRequest.IntValue, gB_MapWRCached ? "True":"False", gB_StageWRCached ? "True":"False");
 
 	menu.AddItem("refresh", "Refresh Status\n ");
+	if(gB_Stop)
+	{
+		menu.AddItem("resume", "Resume fetching");		
+	}
+	else
+	{
+		menu.AddItem("stop", "Forcibly Stop fetching");		
+	}
 	menu.AddItem("reset", "Reset Record Cache");
 	menu.AddItem("unfetching", "Set Fetching to false");
 	menu.AddItem("reload", "Reload Records", gB_Fetching ? ITEMDRAW_DISABLED:ITEMDRAW_DEFAULT);
@@ -1114,6 +1153,20 @@ public int MenuHandler_ReloadSHRecord(Menu menu, MenuAction action, int param1, 
 
 		if(StrEqual(sInfo, "refresh"))
 		{
+			OpenReloadSHReocrdMenu(param1);
+		}
+		else if(StrEqual(sInfo, "resume"))
+		{
+			Shavit_LogMessage("%L - Restart server fetching SH records.", param1);
+			gB_Stop = false;
+
+			OpenReloadSHReocrdMenu(param1);
+		}
+		else if(StrEqual(sInfo, "stop"))
+		{
+			Shavit_LogMessage("%L - Stop server fetching SH records.", param1);
+			gB_Stop = true;
+
 			OpenReloadSHReocrdMenu(param1);
 		}
 		else if(StrEqual(sInfo, "reset"))
