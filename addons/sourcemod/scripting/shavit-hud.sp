@@ -1442,7 +1442,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				GetTrackName(client, data.iTrack, sTrack, 32);
 				if(data.iStageCount > 1)
 				{
-					if(Shavit_IsOnlyStageMode(client))
+					if(Shavit_IsOnlyStageMode(data.iTarget))
 					{
 						FormatEx(sLine, 128, "%s%s%T %d", data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
 						"HudStageText", client, data.iCurrentStage);
@@ -1556,46 +1556,6 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 
 		return iLines;
 	}
-
-// 	if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
-// 	{
-// 		if(data.iTimerStatus != Timer_Stopped)
-// 		{
-// 			if (data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
-// 			{
-// 				float res = data.fClosestVelocityDifference;
-// 				FormatEx(sLine, 128, "%T: %d (%s%.0f)", "HudSpeedText", client, data.iSpeed, (res >= 0.0) ? "+":"", res);
-// 			}
-// 			else
-// 			{
-// 				FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
-// 			}
-// 		}
-// 		else
-// 		{
-// 			FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
-// 		}
-
-// 		AddHUDLine(buffer, maxlen, sLine, iLines);
-
-// 		float limit = Shavit_GetStyleSettingFloat(data.iStyle, "velocity_limit");
-
-// 		if (limit > 0.0 && gB_Zones && Shavit_InsideZone(data.iTarget, Zone_CustomSpeedLimit, data.iTrack))
-// 		{
-// 			if(gI_ZoneSpeedLimit[data.iTarget] == 0)
-// 			{
-// 				FormatEx(sLine, 128, "%T", "HudNoSpeedLimit", data.iTarget);
-// 			}
-// 			else
-// 			{
-// 				FormatEx(sLine, 128, "%T", "HudCustomSpeedLimit", client, gI_ZoneSpeedLimit[data.iTarget]);
-// 			}
-
-// 			AddHUDLine(buffer, maxlen, sLine, iLines);
-// 		}
-// 	}
-
-// 	return iLines;
 }
 
 int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
