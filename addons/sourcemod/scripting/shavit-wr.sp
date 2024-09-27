@@ -3735,7 +3735,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	bool bServerFirstCompletion = (gF_StageWRTime[style][stage] == 0.0);
 	float fDifferenceWR = (time - gF_StageWRTime[style][stage]);
 	char sMessage[255];
-	//char sMessage2[255];
+	char sMessage2[255];
 
 	char sName[32+1];
 	GetClientName(client, sName, sizeof(sName));
@@ -3805,10 +3805,11 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	int iRank = GetStageRankForTime(style, time, stage);
 	int iRankCount = GetStageRecordAmount(style, stage);
 
-	float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, stage, style, iRank, -1) : 0.0;
-
 	if(iOverwrite > 0)  //Valid Run
 	{
+		float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, stage, style, iRank, -1) : 0.0;
+		float fGainedPoints = 0.0;
+
 		char sQuery[1024];
 
 		if(iOverwrite == 1) //Player first finished in server
@@ -3837,6 +3838,13 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 					gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 			}
 
+			fGainedPoints = gB_Rankings ? fPoints : 0.0;
+
+			FormatEx(sMessage2, sizeof(sMessage2), "%T", "CompletionPointsInfo", client,
+				gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);
+
 			FormatEx(sQuery, sizeof(sQuery),
 				"INSERT INTO %sstagetimes (auth, map, time, jumps, date, style, strafes, sync, points, track, stage, perfs) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %d, %.2f);",
 				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, stage, perfs);
@@ -3852,6 +3860,15 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText, 
 				gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText, 
 				gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+
+			int oldRank = GetStageRankForTime(style, oldtime, stage);
+			fGainedPoints = gB_Rankings ? fPoints - Shavit_GuessPointsForTime(track, stage, style, oldRank, -1) : 0.0;
+
+			FormatEx(sMessage2, sizeof(sMessage2), "%T", "ImprovingPointsInfo", client,
+				gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, oldRank, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
 
 			FormatEx(sQuery, sizeof(sQuery),
 				"UPDATE %sstagetimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1 WHERE map = '%s' AND auth = %d AND style = %d AND track = %d AND stage = %d;",
@@ -3911,14 +3928,6 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 			gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 	}
 
-	// timer_snapshot_t aSnapshot;
-	// Shavit_SaveSnapshot(client, aSnapshot);
-
-	// if (!Shavit_GetStyleSettingBool(style, "autobhop"))
-	// {
-	// 	FormatEx(sMessage2, sizeof(sMessage2), "%s[%s]%s %T", gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText, "CompletionExtraInfo", LANG_SERVER, gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText, gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText, gS_ChatStrings.sVariable, perfs, gS_ChatStrings.sText);
-	// }
-
 	Action aResult = Plugin_Continue;
 
 	if(aResult < Plugin_Handled)
@@ -3944,18 +3953,14 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 						gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 					
 					Shavit_PrintToChat(i, "%s", sMessage);
-
-					// if (sMessage2[0] != 0)
-					// {
-					// 	Shavit_PrintToChat(i, "%s", sMessage2);
-					// }
 				}
 			}
 		}
-		// if (sMessage2[0] != 0)
-		// {
-		// 	Shavit_PrintToChat(client, "%s", sMessage2);
-		// }
+
+		if (sMessage2[0] != 0)
+		{
+			Shavit_PrintToChat(client, "%s", sMessage2);
+		}
 	}
 
 	// update pb cache only after sending the message so we can grab the old one inside the Shavit_OnFinishMessage forward
@@ -4161,6 +4166,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	if(iOverwrite > 0)  //Valid Run
 	{
 		float fPoints = gB_Rankings ? Shavit_GuessPointsForTime(track, 0, style, iRank, -1) : 0.0;
+		float fGainedPoints = 0.0;
 
 		char sQuery[1024];
 
@@ -4190,6 +4196,13 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 					gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 			}
 
+			fGainedPoints = gB_Rankings ? fPoints : 0.0;
+
+			FormatEx(sMessage2, sizeof(sMessage2), "%T", "CompletionPointsInfo", client,
+				gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);			
+
 			FormatEx(sQuery, sizeof(sQuery),
 				"INSERT INTO %splayertimes (auth, map, time, jumps, date, style, strafes, sync, points, track, perfs) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %.2f);",
 				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, perfs);
@@ -4205,6 +4218,18 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 				gS_ChatStrings.sVariable, iRank,
 				gS_ChatStrings.sText, gS_ChatStrings.sVariable, iRankCount,
 				gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+
+			int oldRank = GetRankForTime(style, oldtime, track);
+			fGainedPoints = gB_Rankings ? fPoints - Shavit_GuessPointsForTime(track, 0, style, oldRank, -1) : 0.0;
+
+			if(fGainedPoints > 0.0)
+			{
+				FormatEx(sMessage2, sizeof(sMessage2), "%T", "ImprovingPointsInfo", client,
+					gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, oldRank, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);				
+			}
 
 			FormatEx(sQuery, sizeof(sQuery),
 				"UPDATE %splayertimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1 WHERE map = '%s' AND auth = %d AND style = %d AND track = %d;",
