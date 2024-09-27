@@ -361,7 +361,7 @@ public void OnPluginStart()
 	gCV_AllowDrawAllZones = new Convar("shavit_zones_allowdrawallzones", "1", "Allow players to use !drawallzones to see all zones regardless of zone visibility settings.\n0 - nobody can use !drawallzones\n1 - admins (sm_zones access) can use !drawallzones\n2 - anyone can use !drawallzones", 0, true, 0.0, true, 2.0);
 	gCV_UseCustomSprite = new Convar("shavit_zones_usecustomsprite", "1", "Use custom sprite for zone drawing?\nSee `configs/shavit-zones.cfg`.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_MinHeight = new Convar("shavit_zones_minheight", "32.0", "The minimum height to use for the creation of start zone / end zone / stage zone.", 0, true, 0.0, true, 180.0);
-	gCV_Offset = new Convar("shavit_zones_offset", "1.0", "When calculating a zone's *VISUAL* box, by how many units, should we scale it to the center?\n0.0 - no downscaling. Values above 0 will scale it inward and negative numbers will scale it outwards.\nAdjust this value if the zones clip into walls.");
+	gCV_Offset = new Convar("shavit_zones_offset", "0.0", "When calculating a zone's *VISUAL* box, by how many units, should we scale it to the center?\n0.0 - no downscaling. Values above 0 will scale it inward and negative numbers will scale it outwards.\nAdjust this value if the zones clip into walls.");
 	gCV_EnforceTracks = new Convar("shavit_zones_enforcetracks", "1", "Enforce zone tracks upon entry?\n0 - allow every zone except for start/end to affect users on every zone.\n1 - require the user's track to match the zone's track.", 0, true, 0.0, true, 1.0);
 	gCV_BoxOffset = new Convar("shavit_zones_box_offset", "0", "Offset zone trigger boxes by this many unit\n0 - matches players bounding box\n16 - matches players center");
 	gCV_ExtraSpawnHeight = new Convar("shavit_zones_extra_spawn_height", "0.0", "YOU DONT NEED TO TOUCH THIS USUALLY. FIX YOUR ACTUAL ZONES.\nUsed to fix some shit prebuilt zones that are in the ground like bhop_strafecontrol");
@@ -1556,7 +1556,7 @@ void ClearZoneEntity(int index, bool unhook)
 
 	int entity = gA_ZoneCache[index].iEntity;
 
-	if(gA_ZoneCache[index].iForm == ZoneForm_trigger_multiple)
+	if(gA_ZoneCache[index].iForm == ZoneForm_trigger_multiple && entity > 0)
 	{
 		SetEntData(entity, gI_OffsetMFEffects, GetEntData(entity, gI_OffsetMFEffects) | EF_NODRAW);
 		ChangeEdictState(entity, gI_OffsetMFEffects);

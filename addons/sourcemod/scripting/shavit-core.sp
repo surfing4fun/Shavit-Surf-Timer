@@ -3028,7 +3028,7 @@ public Action Shavit_OnStartPre(int client, int track)
 		return Plugin_Stop;
 	}
 
-	if(gI_LastNoclipTick[client] > gI_FirstTouchedGround[client])
+	if(gI_LastNoclipTick[client] > gA_Timers[client].iLandingTick)
 	{
 		return Plugin_Stop;
 	}
@@ -3507,14 +3507,6 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 	if (track != gA_Timers[client].iTimerTrack)
 	{
 		return;		
-	}
-
-	if(type == Zone_Start || (type == Zone_Stage && gA_Timers[client].bOnlyStageMode))
-	{
-		if(gI_LastNoclipTick[client] > gI_FirstTouchedGround[client])
-		{
-			Shavit_PrintToChat(client, "%T", "NoclipPrestrafe", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
-		}
 	}
 
 	if (type != Zone_Airaccelerate && type != Zone_CustomSpeedLimit)
