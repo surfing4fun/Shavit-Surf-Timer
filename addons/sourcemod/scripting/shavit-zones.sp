@@ -1003,7 +1003,7 @@ public any Native_AddZone(Handle plugin, int numParams)
 	cache.iEntity = -1;
 
 	// normalize zone points...
-	FillBoxMinMax(cache.fCorner1, cache.fCorner2, cache.fCorner1, cache.fCorner2);
+	BoxPointsToMinsMaxs(cache.fCorner1, cache.fCorner2, cache.fCorner1, cache.fCorner2);
 
 	gA_ZoneCache[gI_MapZones] = cache;
 
@@ -4373,7 +4373,7 @@ public bool TraceFilter_World(int entity, int contentsMask)
 	return (entity == 0);
 }
 
-void FillBoxMinMax(float point1[3], float point2[3], float boxmin[3], float boxmax[3])
+void BoxPointsToMinsMaxs(float point1[3], float point2[3], float boxmin[3], float boxmax[3])
 {
 	for (int i = 0; i < 3; i++)
 	{
@@ -4419,7 +4419,7 @@ bool InStartOrEndZone(float point1[3], float point2[3], int track, int type)
 
 	if (box)
 	{
-		FillBoxMinMax(point1, point2, amin, amax);
+		BoxPointsToMinsMaxs(point1, point2, amin, amax);
 	}
 
 	for (int i = 0; i < MAX_ZONES; i++)
@@ -4432,7 +4432,7 @@ bool InStartOrEndZone(float point1[3], float point2[3], int track, int type)
 		}
 
 		float bmin[3], bmax[3];
-		FillBoxMinMax(gV_MapZones_Visual[i][0], gV_MapZones_Visual[i][7], bmin, bmax);
+		BoxPointsToMinsMaxs(gV_MapZones_Visual[i][0], gV_MapZones_Visual[i][7], bmin, bmax);
 
 		if (box)
 		{
@@ -4992,7 +4992,7 @@ void InsertZone(int client)
 	GetZoneName(LANG_SERVER, c.iType, sZoneName, sizeof(sZoneName));
 
 	// normalize zone points...
-	FillBoxMinMax(c.fCorner1, c.fCorner2, c.fCorner1, c.fCorner2);
+	BoxPointsToMinsMaxs(c.fCorner1, c.fCorner2, c.fCorner1, c.fCorner2);
 
 	Shavit_AddZone(c);
 
