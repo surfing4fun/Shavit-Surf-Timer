@@ -214,6 +214,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_nc", Command_Noclip, "Toggles noclip.");
 	RegConsoleCmd("sm_noclipme", Command_Noclip, "Toggles noclip. (sm_nc alias)");
 
+	RegConsoleCmd("sm_help", Command_Help, "Shows command menu to client.");
+
 	// qol
 	RegConsoleCmd("sm_autorestart", Command_AutoRestart, "Toggles auto-restart.");
 	RegConsoleCmd("sm_autoreset", Command_AutoRestart, "Toggles auto-restart.");
@@ -2388,6 +2390,62 @@ public Action CommandListener_Real_Noclip(int client, const char[] command, int 
 	}
 
 	return Plugin_Continue;
+}
+
+// copy from Anie1337
+public Action Command_Help(int client, int args)
+{
+	OpenCommandsMenu(client);
+
+	return Plugin_Continue;
+}
+
+void OpenCommandsMenu(int client)
+{
+	Menu menu = new Menu(CommandsMenu_Handler);
+	menu.SetTitle("%T\n ", "MenuTitle_Command", client);
+
+	CommandIterator CmdIt = new CommandIterator();
+	while(CmdIt.Next())
+	{
+		char sCommand[32];
+		CmdIt.GetName(sCommand, sizeof(sCommand));
+		if(!CheckCommandAccess(client, sCommand, CmdIt.Flags) || 
+			StrEqual(sCommand, "ff") || 
+			StrEqual(sCommand, "motd") || 
+			StrEqual(sCommand, "nextmap"))
+		{
+			continue;
+		}
+
+		char sDescription[128];
+		CmdIt.GetDescription(sDescription, sizeof(sDescription));
+
+		char sItem[160];
+		FormatEx(sItem, sizeof(sItem), "%s - %s", sCommand, sDescription);
+
+		menu.AddItem(sCommand, sItem, ITEMDRAW_DISABLED);
+	}
+
+	delete CmdIt;
+
+	menu.Display(client, -1);
+}
+
+public int CommandsMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char sCommand[32];
+		menu.GetItem(param2, sCommand, sizeof(sCommand));
+		FakeClientCommand(param1, sCommand);
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
 }
 
 public Action Command_Specs(int client, int args)

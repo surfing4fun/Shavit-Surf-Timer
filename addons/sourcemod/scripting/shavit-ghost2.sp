@@ -138,8 +138,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart() 
 {
-	RegConsoleCmd("sm_ghost", Command_Ghost);
-	RegConsoleCmd("sm_toggleghost", Command_ToggleGhost);
+	RegConsoleCmd("sm_ghost", Command_Ghost, "Shows ghost menu to client.");
+	RegConsoleCmd("sm_toggleghost", Command_ToggleGhost, "Toggle ghost usage.");
 
 	gH_GhostCookie = RegClientCookie("ghost_enable", "Ghost enable", CookieAccess_Public);
 	gH_GhostModeCookie = RegClientCookie("ghost_mode", "Ghost mode", CookieAccess_Public);

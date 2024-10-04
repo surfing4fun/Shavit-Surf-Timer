@@ -433,7 +433,7 @@ public void OnPluginStart()
 	gCV_DefaultTeam = new Convar("shavit_replay_defaultteam", "3", "Default team to make the bots join, if possible.\n2 - Terrorists/RED\n3 - Counter Terrorists/BLU", 0, true, 2.0, true, 3.0);
 	gCV_CentralBot = new Convar("shavit_replay_centralbot", "1", "Have one central bot instead of one bot per replay.\nTriggered with !replay.\nRestart the map for changes to take effect.\nThe disabled setting is not supported - use at your own risk.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_DynamicBotLimit = new Convar("shavit_replay_dynamicbotlimit", "3", "How many extra bots next to the central bot can be spawned with !replay.\n0 - no dynamically spawning bots.", 0, true, 0.0, true, float(MaxClients-2));
-	gCV_AllowPropBots = new Convar("shavit_replay_allowpropbots", "1", "Should players be able to view replays through a prop instead of a bot?", 0, true, 0.0, true, 1.0);
+	gCV_AllowPropBots = new Convar("shavit_replay_allowpropbots", "0", "Should players be able to view replays through a prop instead of a bot?", 0, true, 0.0, true, 1.0);
 	gCV_BotShooting = new Convar("shavit_replay_botshooting", "3", "Attacking buttons to allow for bots.\n0 - none\n1 - +attack\n2 - +attack2\n3 - both", 0, true, 0.0, true, 3.0);
 	gCV_BotPlusUse = new Convar("shavit_replay_botplususe", "1", "Allow bots to use +use?", 0, true, 0.0, true, 1.0);
 	gCV_BotWeapon = new Convar("shavit_replay_botweapon", "", "Choose which weapon the bot will hold.\nLeave empty to use the default.\nSet to \"none\" to have none.\nExample: weapon_usp");
@@ -3446,9 +3446,12 @@ void OpenReplayTypeMenu(int client)
 	IntToString(Replay_Dynamic, sInfo, sizeof(sInfo));
 	menu.AddItem(sInfo, sDisplay, (gI_DynamicBots < gCV_DynamicBotLimit.IntValue && !alreadyHaveBot) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 
-	FormatEx(sDisplay, sizeof(sDisplay), "%T", "Menu_Replay_Prop", client);
-	IntToString(Replay_Prop, sInfo, sizeof(sInfo));
-	menu.AddItem(sInfo, sDisplay, (gCV_AllowPropBots.BoolValue && !alreadyHaveBot) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+	if(gCV_AllowPropBots.BoolValue)
+	{
+		FormatEx(sDisplay, sizeof(sDisplay), "%T", "Menu_Replay_Prop", client);
+		IntToString(Replay_Prop, sInfo, sizeof(sInfo));
+		menu.AddItem(sInfo, sDisplay, (!alreadyHaveBot) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);		
+	}
 
 	menu.ExitBackButton = true;
 	menu.DisplayAt(client, 0, MENU_TIME_FOREVER);

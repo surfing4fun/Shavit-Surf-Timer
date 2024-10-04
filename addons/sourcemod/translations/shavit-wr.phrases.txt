@@ -87,8 +87,13 @@
 	}
 	"DeleteAllRecordsMenuTitle"
 	{
-		"#format"	"{1:s},{2:s},{3:s},{4:3}"
-		"en"		"Delete ALL the records for '{1}'? ({2}: {3} | Style: {4})"
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Delete ALL the records for '{1}'? (Track: {2} | Style: {3})"
+	}
+	"DeleteAllStageRecordsMenuTitle"
+	{
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Delete ALL the stage records for '{1}'? (Stage: {2} | Style: {3})"
 	}
 	"DeleteConfirm"
 	{
@@ -236,6 +241,10 @@
 	{
 		"en"		"Choose a style:"
 	}
+	"WRMenuStageTitle"
+	{
+		"en"		"Choose a stage:"
+	}
 	"WRPoints"
 	{
 		"en"		"points"
@@ -266,7 +275,8 @@
 	}
 	"WRRecordFor"
 	{
-		"en"		"Records for"
+		"#format"	"{1:s},{2:s}"
+		"en"		"Records for {1}: [{2}]"
 	}
 	"WRStrafes"
 	{

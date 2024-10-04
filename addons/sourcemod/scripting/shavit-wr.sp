@@ -49,12 +49,6 @@ enum struct wrcache_t
 	float fWRs[STYLE_LIMIT];
 }
 
-enum struct stagetimewrcp_t
-{
-	float fTime;
-	int iAuth;
-}
-
 bool gB_Late = false;
 bool gB_Rankings = false;
 bool gB_Stats = false;
@@ -207,13 +201,13 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_wr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_wr [map]");
 	RegConsoleCmd("sm_worldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_worldrecord [map]");
 
-	RegConsoleCmd("sm_cpwr", Command_WorldRecord);
-	RegConsoleCmd("sm_swr", Command_WorldRecord);
-	RegConsoleCmd("sm_stagewr", Command_WorldRecord);
-	RegConsoleCmd("sm_stageworldrecord", Command_WorldRecord);
-	RegConsoleCmd("sm_sworldrecord", Command_WorldRecord);
+	RegConsoleCmd("sm_cpwr", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
+	RegConsoleCmd("sm_swr", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
+	RegConsoleCmd("sm_stagewr", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
+	RegConsoleCmd("sm_stageworldrecord", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
+	RegConsoleCmd("sm_sworldrecord", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
 
-	RegConsoleCmd("sm_wrcp", Command_WorldRecord);
+	RegConsoleCmd("sm_wrcp", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
 
 	RegConsoleCmd("sm_bwr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_bwr [map] [bonus number]");
 	RegConsoleCmd("sm_bworldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_bworldrecord [map] [bonus number]");
@@ -1670,11 +1664,11 @@ public int MenuHandler_DeleteAll_Stage_Second(Menu menu, MenuAction action, int 
 
 void DeleteAllStageSubmenu(int client)
 {
-	char sTrack[32];
-	GetTrackName(client, gA_WRCache[client].iLastTrack, sTrack, 32);
+	char sStage[32];
+	FormatEx(sStage, sizeof(sStage), "%T %d", "WRStage", client, gA_WRCache[client].iLastStage);
 
 	Menu menu = new Menu(MenuHandler_DeleteAllStage);
-	menu.SetTitle("%T\n ", "DeleteAllRecordsMenuTitle", client, gS_Map, "Stage", sTrack, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
+	menu.SetTitle("%T\n ", "DeleteAllStageRecordsMenuTitle", client, gS_Map, sStage, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
 
 	char sMenuItem[64];
 
@@ -1849,7 +1843,7 @@ void DeleteAllSubmenu(int client)
 	GetTrackName(client, gA_WRCache[client].iLastTrack, sTrack, 32);
 
 	Menu menu = new Menu(MenuHandler_DeleteAll);
-	menu.SetTitle("%T\n ", "DeleteAllRecordsMenuTitle", client, gS_Map, "Track", sTrack, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
+	menu.SetTitle("%T\n ", "DeleteAllRecordsMenuTitle", client, gS_Map, sTrack, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
 
 	char sMenuItem[64];
 
@@ -2527,7 +2521,7 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 	else if (stage < 0)
 	{
 		Menu selectstage = new Menu(MenuHandler_WRSelectStage);
-		selectstage.SetTitle("Choose Stage");
+		selectstage.SetTitle("%T", "WRMenuStageTitle", client);
 		char sSelection[4];
 		char sMenu[16];
 		for(int i = 1; i < MAX_STAGES; i++)
@@ -2859,7 +2853,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
 		}	
 
-		FormatEx(sFormattedTitle, 192, "%T %s: [%s]\n%s", "WRRecordFor", client, sMap, sTrack, sRanks);
+		FormatEx(sFormattedTitle, 192, "%T\n%s", "WRRecordFor", client, sMap, sTrack, sRanks);
 		hMenu.SetTitle(sFormattedTitle);
 	}
 
@@ -3376,13 +3370,12 @@ void OpenSubMenu(int client, int id, int stage = 0)
 {
 	char sQuery[512];
 	FormatEx(sQuery, 512,
-		"SELECT u.name, p.time, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.perfs, p.points, p.track, %sp.completions FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = %d LIMIT 1;",
-		stage > 0 ? "p.stage, ":"", gS_MySQLPrefix, stage > 0 ? "stagetimes":"playertimes", gS_MySQLPrefix, id);
+		"SELECT u.name, p.time, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.perfs, p.points, p.track, %sstage, p.completions FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = %d LIMIT 1;",
+		stage > 0 ? "p.":"0 AS ", gS_MySQLPrefix, stage > 0 ? "stagetimes":"playertimes", gS_MySQLPrefix, id);
 
 	DataPack datapack = new DataPack();
 	datapack.WriteCell(GetClientSerial(client));
 	datapack.WriteCell(id);
-	datapack.WriteCell(stage);
 
 	QueryLog(gH_SQL, SQL_SubMenu_Callback, sQuery, datapack, DBPrio_High);
 }
@@ -3392,7 +3385,6 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 	data.Reset();
 	int client = GetClientFromSerial(data.ReadCell());
 	int id = data.ReadCell();
-	int stage = data.ReadCell();
 	delete data;
 
 	if(results == null)
@@ -3418,6 +3410,7 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 
 	if(results.FetchRow())
 	{
+		int stage = results.FetchInt(12);
 		results.FetchString(0, sName, MAX_NAME_LENGTH);
 
 		float fTime = results.FetchFloat(1);
@@ -3443,7 +3436,7 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 
 		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
-		FormatEx(sDisplay, 128, "%T: %d", "WRCompletions", client, results.FetchInt(12));
+		FormatEx(sDisplay, 128, "%T: %d", "WRCompletions", client, results.FetchInt(13));
 		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
 		FormatEx(sDisplay, 128, "%T: %s", "WRStyle", client, gS_StyleStrings[iStyle].sStyleName);
@@ -3714,9 +3707,6 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 
 	int iSteamID = GetSteamAccountID(client);
 
-	char sTrack[32];
-	GetTrackName(LANG_SERVER, track, sTrack, 32);
-
 	if(Shavit_GetStyleSettingInt(style, "unranked") || Shavit_IsPracticeMode(client))
 	{
 		iOverwrite = 0;
@@ -3775,7 +3765,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	FormatSeconds(time, sTime, 32);
 
 	char sStage[16];
-	Format(sStage, 16, "%T %d", "WRStage", client, stage);
+	Format(sStage, 16, "%T %d", "WRStage", bEveryone ? LANG_SERVER:client, stage);
 
 	char sDifferenceWR[32];
 	FormatSeconds(fDifferenceWR, sDifferenceWR, 32, true);
@@ -3864,11 +3854,14 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 			int oldRank = GetStageRankForTime(style, oldtime, stage);
 			fGainedPoints = gB_Rankings ? fPoints - Shavit_GuessPointsForTime(track, stage, style, oldRank, -1) : 0.0;
 
-			FormatEx(sMessage2, sizeof(sMessage2), "%T", "ImprovingPointsInfo", client,
-				gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
-				gS_ChatStrings.sVariable, oldRank, gS_ChatStrings.sText,
-				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
-				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
+			if(fGainedPoints > 0.0)
+			{
+				FormatEx(sMessage2, sizeof(sMessage2), "%T", "ImprovingPointsInfo", client,
+					gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, oldRank, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText);
+			}
 
 			FormatEx(sQuery, sizeof(sQuery),
 				"UPDATE %sstagetimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1 WHERE map = '%s' AND auth = %d AND style = %d AND track = %d AND stage = %d;",
@@ -4042,9 +4035,6 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	char sTime[32];
 	FormatSeconds(time, sTime, 32);
 
-	char sTrack[32];
-	GetTrackName(LANG_SERVER, track, sTrack, 32);
-
 	// 0 - no query
 	// 1 - insert
 	// 2 - update
@@ -4071,6 +4061,9 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	char sMessage[255];
 	char sMessage2[255];
 	float cptimes[MAX_STAGES];
+
+	char sTrack[32];
+	GetTrackName(bEveryone ? LANG_SERVER:client, track, sTrack, 32);
 
 	if (iOverwrite > 0)
 	{

@@ -2651,7 +2651,7 @@ public Action Command_Stages(int client, int args)
 		TimerStatus status = Shavit_GetTimerStatus(client);
 		if(status != Timer_Running)
 		{
-			Shavit_PrintToChat(client, "%T", "StageCommandTimerNotRunning", client, gS_ChatStrings.sVariable, status == Timer_Paused ? "resumed":"started", gS_ChatStrings.sText);
+			Shavit_PrintToChat(client, "%T", status == Timer_Paused ? "StageCommandTimerPaused":"StageCommandTimerNotRunning", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 			return Plugin_Handled;
 		}
 
@@ -4085,7 +4085,10 @@ public int MenuHandler_SelectZoneType(Menu menu, MenuAction action, int param1, 
 		char sZoneName[32];
 		GetZoneName(param1, gA_EditCache[param1].iType, sZoneName, 32);
 
-		Shavit_PrintToChat(param1, "%T", "ZoneCreateType", param1, gS_ChatStrings.sVariable, sZoneName, gS_ChatStrings.sText);
+		char sTrack[32];
+		GetTrackName(param1, gA_EditCache[param1].iTrack, sTrack, 32);
+
+		Shavit_PrintToChat(param1, "%T", "ZoneCreateType", param1, gS_ChatStrings.sVariable, sTrack, sZoneName, gS_ChatStrings.sText);
 
 		if (gA_EditCache[param1].iType == Zone_Gravity || gA_EditCache[param1].iType == Zone_Speedmod)
 		{
@@ -5650,7 +5653,12 @@ public void TeleportToStartZone(int client, int track, int stage)
 	{
 		iIndex = GetZoneIndex(Zone_Start, track);
 
-		if(iIndex != -1)
+		if (!EmptyVector(gF_CustomSpawn[track]))
+		{
+			float pos[3]; pos = gF_CustomSpawn[track]; pos[2] += 1.0;
+			TeleportEntity(client, pos, NULL_VECTOR, ZERO_VECTOR);
+		}
+		else if(iIndex != -1)
 		{
 			float fCenter[3];
 			fCenter[0] = gV_ZoneCenter[iIndex][0];
@@ -5658,7 +5666,7 @@ public void TeleportToStartZone(int client, int track, int stage)
 			fCenter[2] = gA_ZoneCache[iIndex].fCorner1[2] + gCV_ExtraSpawnHeight.FloatValue;
 
 			fCenter[2] += 1.0;
-			TeleportEntity(client, fCenter, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
+			TeleportEntity(client, fCenter, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));			
 		}
 	}
 	else if(track == Track_Main)
@@ -6071,17 +6079,28 @@ public void EndTouchPost(int entity, int other)
 			{
 				float fSpeed[3];
 				GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
-				float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
 				float speed = GetVectorLength(fSpeed);
 
-				bool valid = true;
-				Shavit_SetStageTimeValid(other, valid);
-
-				if ((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0) && curVel >= 15.0 && Shavit_GetClientTime(other) < 1.0)
+				float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+					
+				if (curVel >= 15.0 && Shavit_GetClientTime(other) < 1.0)
 				{
-					Shavit_StopChatSound();
-					Shavit_PrintToChat(other, "Start: %s%.2f %su/s", 
-					valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+					Shavit_SetStageTimeValid(other, true);
+
+					if((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0))
+					{
+						Shavit_StopChatSound();							
+						Shavit_PrintToChat(other, "%T", "ZoneStartZonePrespeed", other, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText);
+					}
+
+					for(int i = 1; i <= MaxClients; i++)
+					{
+						if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetHUDSettings(i) & HUD_SPEEDTRAP > 0))
+						{
+							Shavit_StopChatSound();							
+							Shavit_PrintToChat(i, "%T", "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText);
+						}
+					}
 				}
 			}
 		}
@@ -6095,20 +6114,36 @@ public void EndTouchPost(int entity, int other)
 			{
 				float fSpeed[3];
 				GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
-				float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
 				float speed = GetVectorLength(fSpeed);
-				int style = Shavit_GetBhopStyle(other);
-				float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
 
-				bool valid = gA_ZoneCache[entityzone].bUseSpeedLimit ? curVel < limit : true;
-				Shavit_SetStageTimeValid(other, valid);
+				float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
 
-				if ((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0) && curVel >= 15.0 && Shavit_GetClientStageTime(other) < 1.0)
+				if (curVel >= 15.0 && Shavit_GetClientStageTime(other) < 1.0)
 				{
-					Shavit_StopChatSound();
-					Shavit_PrintToChat(other, "Stage %s%d%s Start: %s%.2f %su/s", 
-					gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
-					valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+					int style = Shavit_GetBhopStyle(other);
+					float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+
+					bool valid = gA_ZoneCache[entityzone].bUseSpeedLimit ? curVel < limit : true;
+					Shavit_SetStageTimeValid(other, valid);
+
+					if((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0))
+					{
+						Shavit_StopChatSound();							
+						Shavit_PrintToChat(other, "%T", "ZoneStageStartZonePrespeed", other,
+							gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
+							valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+					}
+
+					for(int i = 1; i <= MaxClients; i++)
+					{
+						if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetHUDSettings(i) & HUD_SPEEDTRAP > 0))
+						{
+							Shavit_StopChatSound();
+							Shavit_PrintToChat(i, "%T", "ZoneStageStartZonePrespeed", i,
+								gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
+								valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+						}
+					}
 				}
 			}
 		}

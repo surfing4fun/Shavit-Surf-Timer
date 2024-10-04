@@ -45,40 +45,52 @@
 	{
 		"en"		"[Timer Paused]"
 	}
-	"HudTimeText"
+	"HudTime"
 	{
-		"en"		"Time"
+		"en"		""
 	}
-	"HudTimerStoppedText"
+	"HudStageTime"
+	{
+		"en"		"Time: "
+	}
+	"HudReplayTime"
+	{
+		"en"		"Time: "
+	}
+	"HudTimerStopped"
 	{
 		"#format"	"{1:s}"
 		"en"		"{1} Timer Stopped"
 	}
-	"HudNoTimerText"
+	"HudNoTimer"
 	{
 		"en"		"No Timer"
 	}
-	"HudBestText"
+	"HudRecord"
+	{
+		"en"		"SR"
+	}
+	"HudPersonalBest"
 	{
 		"en"		"PB"
 	}
-	"HudJumpsText"
+	"HudJumps"
 	{
 		"en"		"Jumps"
 	}
-	"HudStyleText"
+	"HudStyle"
 	{
 		"en"		"Style"
 	}
-	"HudSpeedText"
+	"HudSpeed"
 	{
 		"en"		"Speed"
 	}
-	"HudStageText"
+	"HudStage"
 	{
 		"en"		"Stage"
 	}
-	"HudStage"
+	"HudStageInfo"
 	{
 		"#format"	"{1:d},{2:d}"
 		"en"		"Stage {1} / {2}"
@@ -87,37 +99,17 @@
 	{
 		"en"		"Linear Map"
 	}
-	"HudStrafeText"
+	"HudStrafe"
 	{
 		"en"		"Strafes"
+	}
+	"HudSync"
+	{
+		"en"		"Sync"
 	}
 	"HudTimeLeft"
 	{
 		"en"		"Time left"
-	}
-	"HudSpeedTrap"
-	{
-		"en"		"Speed trap message"
-	}
-	"HudStyle"
-	{
-		"en"		"Style"
-	}
-	"HudStageWRPB"
-	{
-		"en"		"Display Stage WR/PB"
-	}
-	"HudDefaultPistol"
-	{
-		"en"		"Default Pistol: 1=USP 2=Glock"
-	}
-	"HudUSPSilencer"
-	{
-		"en"		"Spawn USPs with a silencer attached"
-	}
-	"HudGlockBurst"
-	{
-		"en"		"Spawn Glocks with Burst"
 	}
 	"HudPracticeMode"
 	{
@@ -131,10 +123,6 @@
 	{
 		"#format"	"{1:d}"
 		"en"		"(Speed Limit: {1})"
-	}
-	"HudCenterKeys"
-	{
-		"en"        "!keys in the center"
 	}
 	// ---------- Menus ---------- //
 	"HUDMenuTitle"
@@ -161,9 +149,25 @@
 	{
 		"en"		"Spectator list"
 	}
-	"HudSync"
+	"HudTimeText"
+	{
+		"en"		"Time"
+	}
+	"HudStrafeText"
+	{
+		"en"		"Strafes"
+	}
+	"HudSyncText"
 	{
 		"en"		"Sync"
+	}
+	"HudSpeedText"
+	{
+		"en"		"Speed"
+	}
+	"HudTimeLeftText"
+	{
+		"en"		"Time left"
 	}
 	"HudSpectatorsDead"
 	{
@@ -205,17 +209,29 @@
 	{
 		"en"		"Split PB"
 	}
-	"HudRampSpeedText"
+	"HudStyleText"
 	{
-		"en"		"Show speed when borad / leave on a ramp"
+		"en"		"Style"
+	}
+	"HudSpeedTrap"
+	{
+		"en"		"Speed trap message"
+	}
+	"HudRampSpeed"
+	{
+		"en"		"Show speed when borad / leave a ramp"
 	}
 	"HudTimeDifference"
 	{
 		"en"		"Time Difference"
 	}
-	"HudStageTime"
+	"HudStageTimeText"
 	{
 		"en"		"Stage Time"
+	}
+	"HudJumpsText"
+	{
+		"en"		"Jumps"
 	}
 	"HudVelocityDifference"
 	{
@@ -224,6 +240,26 @@
 	"HudDebugTargetname"
 	{
 		"en"        "Debug targetname"
+	}
+	"HudStageWRPB"
+	{
+		"en"		"Display Stage WR/PB"
+	}
+	"HudDefaultPistol"
+	{
+		"en"		"Default Pistol: 1=USP 2=Glock"
+	}
+	"HudUSPSilencer"
+	{
+		"en"		"Spawn USPs with a silencer attached"
+	}
+	"HudGlockBurst"
+	{
+		"en"		"Spawn Glocks with Burst"
+	}
+	"HudCenterKeys"
+	{
+		"en"        "!keys in the center"
 	}
 	// ---------- Record Bots ---------- //
 	"ReplayText"

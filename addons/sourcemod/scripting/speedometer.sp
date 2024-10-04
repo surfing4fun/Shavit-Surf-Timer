@@ -102,7 +102,7 @@ public Plugin myinfo =
 {
 	name = "Speedometer",
 	author = "KikI",
-	description = "",
+	description = "A advanced center speed hud plugin work with shavit surf timer",
 	version = "1.3.0",
 	url = ""
 };
@@ -127,9 +127,9 @@ public void OnClientPostAdminCheck(int client)
 
 public void OnPluginStart()
 {
-	RegConsoleCmd("sm_speedometer", Command_Speedometer, "");
-	RegConsoleCmd("sm_speed", Command_Speedometer, "");
-	RegConsoleCmd("sm_spd", Command_Speedometer, "");
+	RegConsoleCmd("sm_speedometer", Command_Speedometer, "Show speedometer menu to client.");
+	RegConsoleCmd("sm_speed", Command_Speedometer, "Show speedometer menu to client.");
+	RegConsoleCmd("sm_spd", Command_Speedometer, "Show speedometer menu to client.");
 	RegAdminCmd("sm_spddebug", Command_Debug, ADMFLAG_ROOT);
 
 	gH_SpeedometerCookie = RegClientCookie("speedometer_enabled", "Speedometer enabled", CookieAccess_Public);

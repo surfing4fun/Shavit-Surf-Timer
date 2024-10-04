@@ -763,7 +763,7 @@ Action ShowHUDMenu(int client, int item)
 	menu.AddItem(sInfo, sHudItem);
 
 	FormatEx(sInfo, 16, "@%d", HUD2_STAGETIME);
-	FormatEx(sHudItem, 64, "%T", "HudStageTime", client);
+	FormatEx(sHudItem, 64, "%T", "HudStageTimeText", client);
 	menu.AddItem(sInfo, sHudItem);
 
 	FormatEx(sInfo, 16, "@%d", HUD2_JUMPS);
@@ -775,7 +775,7 @@ Action ShowHUDMenu(int client, int item)
 	menu.AddItem(sInfo, sHudItem);
 
 	FormatEx(sInfo, 16, "@%d", HUD2_SYNC);
-	FormatEx(sHudItem, 64, "%T", "HudSync", client);
+	FormatEx(sHudItem, 64, "%T", "HudSyncText", client);
 	menu.AddItem(sInfo, sHudItem);
 
 	FormatEx(sInfo, 16, "@%d", HUD2_SPEED);
@@ -802,7 +802,7 @@ Action ShowHUDMenu(int client, int item)
 	if(IsSource2013(gEV_Type))
 	{
 		FormatEx(sInfo, 16, "!%d", HUD_TIMELEFT);
-		FormatEx(sHudItem, 64, "%T", "HudTimeLeft", client);
+		FormatEx(sHudItem, 64, "%T", "HudTimeLeftText", client);
 		menu.AddItem(sInfo, sHudItem);
 	}
 
@@ -877,7 +877,7 @@ Action ShowHUDMenu(int client, int item)
 	}
 
 	FormatEx(sInfo, 16, "@%d", HUD2_RAMPSPEED);
-	FormatEx(sHudItem, 64, "%T", "HudRampSpeedText", client);
+	FormatEx(sHudItem, 64, "%T", "HudRampSpeed", client);
 	menu.AddItem(sInfo, sHudItem);
 
 	menu.ExitButton = true;
@@ -1329,7 +1329,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			}
 			else
 			{
-				FormatEx(sTrack, 32, "%T %d", "HudStageText", client, data.iReplayStage);
+				FormatEx(sTrack, 32, "%T %d", "HudStage", client, data.iReplayStage);
 			}
 
 			FormatEx(sTrack, 128, "%T", "ReplayText", client, sTrack);
@@ -1347,7 +1347,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				// char sWR[32];
 				// FormatSeconds(data.fWR, sWR, 32, false);
 
-				FormatEx(sLine, 128, "%T: %s", "HudTimeText", client, sTime);
+				FormatEx(sLine, 128, "%T%s", "HudReplayTime", client, sTime);
 				AddHUDLine(buffer, maxlen, sLine, iLines);
 			}
 
@@ -1355,19 +1355,19 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			{
 				if(data.iStageCount > 1)
 				{
-					FormatEx(sLine, 128, "%T", "HudStage", client, data.iCurrentStage == 0 ? 1:data.iCurrentStage, data.iStageCount);
+					FormatEx(sLine, 128, "%T", "HudStageInfo", client, data.iCurrentStage == 0 ? 1:data.iCurrentStage, data.iStageCount);
 					AddHUDLine(buffer, maxlen, sLine, iLines);
 				}
 				else if(data.iTrack == Track_Main)
 				{
-					FormatEx(sLine, 128, "Linear Map");
+					FormatEx(sLine, 128, "%T", "HudLinearMap", client);
 					AddHUDLine(buffer, maxlen, sLine, iLines);
 				}
 			}
 
 			if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
 			{
-				FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
+				FormatEx(sLine, 128, "%T: %d", "HudSpeed", client, data.iSpeed);
 				AddHUDLine(buffer, maxlen, sLine, iLines);
 			}
 		}
@@ -1416,11 +1416,11 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 
 				if((gI_HUD2Settings[client] & HUD2_RANK) == 0)
 				{
-					FormatEx(sLine, 128, "%s (#%d)", sTime, data.iRank);
+					FormatEx(sLine, 128, "%T%s (#%d)", "HudTime", client, sTime, data.iRank);
 				}
 				else
 				{
-					FormatEx(sLine, 128, "%s%s", sTime);
+					FormatEx(sLine, 128, "%T%s%s", "HudTime", client, sTime);
 				}
 
 				AddHUDLine(buffer, maxlen, sLine, iLines);
@@ -1445,7 +1445,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 					if(Shavit_IsOnlyStageMode(data.iTarget))
 					{
 						FormatEx(sLine, 128, "%s%s%T %d", data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
-						"HudStageText", client, data.iCurrentStage);
+						"HudStage", client, data.iCurrentStage);
 						AddHUDLine(buffer, maxlen, sLine, iLines);
 					}
 					else
@@ -1459,7 +1459,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 						{
 							FormatEx(sLine, 128, "%s%s%T", 
 							data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
-							"HudStage", client, data.iCurrentStage, data.iStageCount);
+							"HudStageInfo", client, data.iCurrentStage, data.iStageCount);
 
 							AddHUDLine(buffer, maxlen, sLine, iLines);
 
@@ -1467,7 +1467,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 							{
 								char sStageTime[32];
 								FormatSeconds(data.fStageTime, sStageTime, 32, false);
-								FormatEx(sLine, 128, "%T: %s", "HudTimeText", client, sStageTime);
+								FormatEx(sLine, 128, "%T%s", "HudStageTime", client, sStageTime);
 								AddHUDLine(buffer, maxlen, sLine, iLines);
 							}
 						}
@@ -1491,7 +1491,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 
 			if((gI_HUD2Settings[client] & HUD2_JUMPS) == 0)
 			{
-				FormatEx(sLine, 128, "%T: %d", "HudJumpsText", client, data.iJumps);
+				FormatEx(sLine, 128, "%T: %d", "HudJumps", client, data.iJumps);
 				AddHUDLine(buffer, maxlen, sLine, iLines);
 			}
 
@@ -1499,11 +1499,11 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			{
 				if((gI_HUD2Settings[client] & HUD2_SYNC) == 0)
 				{
-					FormatEx(sLine, 128, "%T: %d (%.1f％)", "HudStrafeText", client, data.iStrafes, data.fSync);
+					FormatEx(sLine, 128, "%T: %d (%.1f％)", "HudStrafe", client, data.iStrafes, data.fSync);
 				}
 				else
 				{
-					FormatEx(sLine, 128, "%T: %d", "HudStrafeText", client, data.iStrafes);
+					FormatEx(sLine, 128, "%T: %d", "HudStrafe", client, data.iStrafes);
 				}
 
 				AddHUDLine(buffer, maxlen, sLine, iLines);
@@ -1521,12 +1521,12 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				if (Shavit_ZoneExists(Zone_Start, data.iTrack))
 				{
 					GetTrackName(client, data.iTrack, sTrack, 32);
-					FormatEx(sLine, 128, "%T%s", "HudTimerStoppedText", client, sTrack, (gI_HUD2Settings[client] & HUD2_SPEED) == 0 ? "\n":"");
+					FormatEx(sLine, 128, "%T%s", "HudTimerStopped", client, sTrack, (gI_HUD2Settings[client] & HUD2_SPEED) == 0 ? "\n":"");
 					AddHUDLine(buffer, maxlen, sLine, iLines);
 				}
 				else
 				{
-					FormatEx(sLine, 128, "%T%s", "HudNoTimerText", client, (gI_HUD2Settings[client] & HUD2_SPEED) == 0 ? "\n":"");
+					FormatEx(sLine, 128, "%T%s", "HudNoTimer", client, (gI_HUD2Settings[client] & HUD2_SPEED) == 0 ? "\n":"");
 					AddHUDLine(buffer, maxlen, sLine, iLines);
 				}
 			}
@@ -1539,16 +1539,16 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				if (data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
 				{
 					float res = data.fClosestVelocityDifference;
-					FormatEx(sLine, 128, "%T: %d (%s%.0f)", "HudSpeedText", client, data.iSpeed, (res >= 0.0) ? "+":"", res);
+					FormatEx(sLine, 128, "%T: %d (%s%.0f)", "HudSpeed", client, data.iSpeed, (res >= 0.0) ? "+":"", res);
 				}
 				else
 				{
-					FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
+					FormatEx(sLine, 128, "%T: %d", "HudSpeed", client, data.iSpeed);
 				}
 			}
 			else
 			{
-				FormatEx(sLine, 128, "%T: %d", "HudSpeedText", client, data.iSpeed);
+				FormatEx(sLine, 128, "%T: %d", "HudSpeed", client, data.iSpeed);
 			}
 
 			AddHUDLine(buffer, maxlen, sLine, iLines);
@@ -1763,7 +1763,7 @@ int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
 		{
 			char prebuf[32];
 			FormatEx(prebuf, sizeof(prebuf), "%s", ((data.iJumps<10) ? "     " : (data.iJumps<100 ? "   " : (data.iJumps<1000 ? " " : ""))));
-			FormatEx(sLine, 128, "%s%d %T", prebuf, data.iJumps, "HudJumpsText", client);
+			FormatEx(sLine, 128, "%s%d %T", prebuf, data.iJumps, "HudJumps", client);
 			AddHUDLine(buffer, maxlen, sLine, iLines);
 		}
 
@@ -1774,11 +1774,11 @@ int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
 
 			if((gI_HUD2Settings[client] & HUD2_SYNC) == 0)
 			{
-				FormatEx(sLine, 128, "%s%d %T (%.1f%%)", prebuf, data.iStrafes, "HudStrafeText", client, data.fSync);
+				FormatEx(sLine, 128, "%s%d %T (%.1f%%)", prebuf, data.iStrafes, "HudStrafe", client, data.fSync);
 			}
 			else
 			{
-				FormatEx(sLine, 128, "%s%d %T", prebuf, data.iStrafes, "HudStrafeText", client);
+				FormatEx(sLine, 128, "%s%d %T", prebuf, data.iStrafes, "HudStrafe", client);
 			}
 
 			AddHUDLine(buffer, maxlen, sLine, iLines);
@@ -2462,7 +2462,7 @@ void UpdateKeyHint(int client, bool force = false)
 						char sWRName[MAX_NAME_LENGTH];
 						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
 
-						Format(sMessage, sizeof(sMessage), "%s%sSR: %s (%s)", sMessage, ((strlen(sMessage) > 0) && fSHWRTime == 0.0)? "\n\n":"\n", sWRTime, sWRName);
+						Format(sMessage, sizeof(sMessage), "%s%s%T: %s (%s)", sMessage, ((strlen(sMessage) > 0) && fSHWRTime == 0.0)? "\n\n":"\n", "HudRecord", client, sWRTime, sWRName);
 					}
 				}
 				else
@@ -2476,18 +2476,18 @@ void UpdateKeyHint(int client, bool force = false)
 						char sWRName[MAX_NAME_LENGTH];
 						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
 
-						Format(sMessage, sizeof(sMessage), "%s%sSR: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sWRTime, sWRName);
+						Format(sMessage, sizeof(sMessage), "%s%s%T: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudRecord", client, sWRTime, sWRName);
 					}
 				}
 
 				char sTargetPB[64];
 				FormatSeconds(fTargetPB, sTargetPB, sizeof(sTargetPB));
-				Format(sTargetPB, sizeof(sTargetPB), "%T: %s", "HudBestText", client, sTargetPB);
+				Format(sTargetPB, sizeof(sTargetPB), "%T: %s", "HudPersonalBest", client, sTargetPB);
 
 				float fSelfPB = Shavit_GetClientPB(client, style, track);
 				char sSelfPB[64];
 				FormatSeconds(fSelfPB, sSelfPB, sizeof(sSelfPB));
-				Format(sSelfPB, sizeof(sSelfPB), "%T: %s", "HudBestText", client, sSelfPB);
+				Format(sSelfPB, sizeof(sSelfPB), "%T: %s", "HudPersonalBest", client, sSelfPB);
 
 				if(!bReplay)
 				{
@@ -2519,7 +2519,7 @@ void UpdateKeyHint(int client, bool force = false)
 					float fSHStageWRTime = Shavit_GetSHStageRecordTime(stage);
 					if(fSHStageWRTime > 0.0)
 					{
-						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
 						
 						char sSHStageWRTime[16];
 						FormatSeconds(fSHStageWRTime, sSHStageWRTime, 16);
@@ -2531,7 +2531,7 @@ void UpdateKeyHint(int client, bool force = false)
 					}
 					else if(fSHStageWRTime == -1.0)
 					{
-						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
 						Format(sMessage, sizeof(sMessage), "%s\nSH: Loading...", sMessage);
 					}
 
@@ -2539,7 +2539,7 @@ void UpdateKeyHint(int client, bool force = false)
 					{
 						if(fSHStageWRTime == 0.0)
 						{
-							Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);							
+							Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);							
 						}
 						
 						char sStageWRName[MAX_NAME_LENGTH];
@@ -2548,7 +2548,7 @@ void UpdateKeyHint(int client, bool force = false)
 						char sStageWR[16];
 						FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
 
-						Format(sMessage, sizeof(sMessage), "%s\nSR: %s (%s)", sMessage, sStageWR, sStageWRName);
+						Format(sMessage, sizeof(sMessage), "%s\n%T: %s (%s)", sMessage, "HudRecord", client, sStageWR, sStageWRName);
 					}	
 				}
 				else
@@ -2556,26 +2556,26 @@ void UpdateKeyHint(int client, bool force = false)
 				{
 					if (fStageWR != 0.0)
 					{
-						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStageText", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
 						char sStageWRName[MAX_NAME_LENGTH];
 						Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
 
 						char sStageWR[16];
 						FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
 
-						Format(sMessage, sizeof(sMessage), "%s\nSR: %s (%s)", sMessage, sStageWR, sStageWRName);
+						Format(sMessage, sizeof(sMessage), "%s\n%T: %s (%s)", sMessage, "HudRecrod", client, sStageWR, sStageWRName);
 					}					
 				}
 
 				char sTargetStagePB[64];
 				FormatSeconds(fTargetStagePB, sTargetStagePB, sizeof(sTargetStagePB));
-				Format(sTargetStagePB, sizeof(sTargetStagePB), "%T: %s", "HudBestText", client, sTargetStagePB);
+				Format(sTargetStagePB, sizeof(sTargetStagePB), "%T: %s", "HudPersonalBest", client, sTargetStagePB);
 				
 				float fSelfStagePB = Shavit_GetClientStagePB(client, style, stage);
 				char sSelfStagePB[64];
 				
 				FormatSeconds(fSelfStagePB, sSelfStagePB, sizeof(sSelfStagePB));
-				Format(sSelfStagePB, sizeof(sSelfStagePB), "%T: %s", "HudBestText", client, sSelfStagePB);
+				Format(sSelfStagePB, sizeof(sSelfStagePB), "%T: %s", "HudPersonalBest", client, sSelfStagePB);
 
 				if(!bReplay)
 				{

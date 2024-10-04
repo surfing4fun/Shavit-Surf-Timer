@@ -83,8 +83,13 @@
 	}
 	"StageCommandTimerNotRunning"
 	{
-		"#format"	"{1:s},{2:s},{3:s}"
-		"en"		"Your timer has to be {1}{2}{3} to use this command."
+		"#format"	"{1:s},{2:s}"
+		"en"		"Your timer has to be {1}started{2} to use this command."
+	}
+	"StageCommandTimerPaused"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"Your timer has to be {1}resumed{2} to use this command."
 	}
 	"StageCommandInsideStageZone"
 	{
@@ -216,16 +221,12 @@
 	}
 	"ZoneCreateType"
 	{
-		"#format"	"{1:s}{2:s}{3:s}"
-		"en"		"Creating zone: {1}{2}{3}."
+		"#format"	"{1:s},{2:s},{3:s},{4:s}"
+		"en"		"Creating zone: {1}{2} {3}{4}."
 	}
 	"ZoneCustomSpawnSuccess"
 	{
 		"en"		"Successfully placed custom spawn!"
-	}
-	"ZoneDecreased"
-	{
-		"en"		"decreased"
 	}
 	"ZoneEditConfirm"
 	{
@@ -243,10 +244,6 @@
 	"ZoneFirst"
 	{
 		"en"		"FIRST"
-	}
-	"ZoneIncreased"
-	{
-		"en"		"increased"
 	}
 	"ZoneMenuDeleteTitle"
 	{
@@ -547,10 +544,15 @@
 		"#format"	"{1:s},{2:s},{3:s}"
 		"en"		"{1}Your timer has been stopped for entering a {2}glitch zone{3}."
 	}
-	"ZoneStageEnter"
+	"ZoneStartZonePrespeed"
 	{
-		"#format"	"{1:s},{2:s},{3:d},{4:s},{5:s},{6:s}{7:s}"
-		"en"		"{1}CP {2}{3}{4} | Time: {5}{6}{7} "
+		"#format"	"{1:s},{2:.2f},{3:s}"
+		"en"		"Start: {1}{2}{3} u/s "
+	}
+	"ZoneStageStartZonePrespeed"
+	{
+		"#format"	"{1:s},{2:d},{3:s},{4:s},{5:.2f},{6:s}"
+		"en"		"Stage {1}{2}{3} Start: {4}{5}{6} u/s "
 	}
 	"Zone_Start"
 	{

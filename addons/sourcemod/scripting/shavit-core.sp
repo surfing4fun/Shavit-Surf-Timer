@@ -2100,6 +2100,7 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 
 	if(GetTimerStatus(client) == Timer_Stopped && gA_Timers[client].bOnlyStageMode)
 	{
+		gA_Timers[client].iLastStage = stage;	// i dont know why but i need this here to make sure the stage number is right
 		StartTimer(client, track);
 	}
 	else if(GetTimerStatus(client) == Timer_Running)

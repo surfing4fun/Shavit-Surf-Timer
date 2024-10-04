@@ -361,4 +361,8 @@
 		"#format"	"{1:s},{2:s},{3:s}"
 		"en"		"{1}Timer has been {2}paused{3}."
 	}
+	"MenuTitle_Command"
+	{
+		"en"		"Commands menu"
+	}
 }
