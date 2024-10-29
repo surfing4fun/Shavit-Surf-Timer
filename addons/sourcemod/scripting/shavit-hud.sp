@@ -1091,80 +1091,80 @@ void Cron()
 		gI_Cycle = 0;
 	}
 
-	switch(gI_GradientDirection)
-	{
-		case 0:
-		{
-			gI_Gradient.b += gCV_GradientStepSize.IntValue;
+	// switch(gI_GradientDirection)
+	// {
+	// 	case 0:
+	// 	{
+	// 		gI_Gradient.b += gCV_GradientStepSize.IntValue;
 
-			if(gI_Gradient.b >= 255)
-			{
-				gI_Gradient.b = 255;
-				gI_GradientDirection = 1;
-			}
-		}
+	// 		if(gI_Gradient.b >= 255)
+	// 		{
+	// 			gI_Gradient.b = 255;
+	// 			gI_GradientDirection = 1;
+	// 		}
+	// 	}
 
-		case 1:
-		{
-			gI_Gradient.r -= gCV_GradientStepSize.IntValue;
+	// 	case 1:
+	// 	{
+	// 		gI_Gradient.r -= gCV_GradientStepSize.IntValue;
 
-			if(gI_Gradient.r <= 0)
-			{
-				gI_Gradient.r = 0;
-				gI_GradientDirection = 2;
-			}
-		}
+	// 		if(gI_Gradient.r <= 0)
+	// 		{
+	// 			gI_Gradient.r = 0;
+	// 			gI_GradientDirection = 2;
+	// 		}
+	// 	}
 
-		case 2:
-		{
-			gI_Gradient.g += gCV_GradientStepSize.IntValue;
+	// 	case 2:
+	// 	{
+	// 		gI_Gradient.g += gCV_GradientStepSize.IntValue;
 
-			if(gI_Gradient.g >= 255)
-			{
-				gI_Gradient.g = 255;
-				gI_GradientDirection = 3;
-			}
-		}
+	// 		if(gI_Gradient.g >= 255)
+	// 		{
+	// 			gI_Gradient.g = 255;
+	// 			gI_GradientDirection = 3;
+	// 		}
+	// 	}
 
-		case 3:
-		{
-			gI_Gradient.b -= gCV_GradientStepSize.IntValue;
+	// 	case 3:
+	// 	{
+	// 		gI_Gradient.b -= gCV_GradientStepSize.IntValue;
 
-			if(gI_Gradient.b <= 0)
-			{
-				gI_Gradient.b = 0;
-				gI_GradientDirection = 4;
-			}
-		}
+	// 		if(gI_Gradient.b <= 0)
+	// 		{
+	// 			gI_Gradient.b = 0;
+	// 			gI_GradientDirection = 4;
+	// 		}
+	// 	}
 
-		case 4:
-		{
-			gI_Gradient.r += gCV_GradientStepSize.IntValue;
+	// 	case 4:
+	// 	{
+	// 		gI_Gradient.r += gCV_GradientStepSize.IntValue;
 
-			if(gI_Gradient.r >= 255)
-			{
-				gI_Gradient.r = 255;
-				gI_GradientDirection = 5;
-			}
-		}
+	// 		if(gI_Gradient.r >= 255)
+	// 		{
+	// 			gI_Gradient.r = 255;
+	// 			gI_GradientDirection = 5;
+	// 		}
+	// 	}
 
-		case 5:
-		{
-			gI_Gradient.g -= gCV_GradientStepSize.IntValue;
+	// 	case 5:
+	// 	{
+	// 		gI_Gradient.g -= gCV_GradientStepSize.IntValue;
 
-			if(gI_Gradient.g <= 0)
-			{
-				gI_Gradient.g = 0;
-				gI_GradientDirection = 0;
-			}
-		}
+	// 		if(gI_Gradient.g <= 0)
+	// 		{
+	// 			gI_Gradient.g = 0;
+	// 			gI_GradientDirection = 0;
+	// 		}
+	// 	}
 
-		default:
-		{
-			gI_Gradient.r = 255;
-			gI_GradientDirection = 0;
-		}
-	}
+	// 	default:
+	// 	{
+	// 		gI_Gradient.r = 255;
+	// 		gI_GradientDirection = 0;
+	// 	}
+	// }
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
@@ -1173,12 +1173,12 @@ void Cron()
 			continue;
 		}
 
-		if((gI_Cycle % 50) == 0)
-		{
-			float fSpeed[3];
-			GetEntPropVector(GetSpectatorTarget(i, i), Prop_Data, "m_vecVelocity", fSpeed);
-			gI_PreviousSpeed[i] = RoundToNearest(((gI_HUDSettings[i] & HUD_2DVEL) == 0)? GetVectorLength(fSpeed):(SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0))));
-		}
+		// if((gI_Cycle % 50) == 0)
+		// {
+		// 	float fSpeed[3];
+		// 	GetEntPropVector(GetSpectatorTarget(i, i), Prop_Data, "m_vecVelocity", fSpeed);
+		// 	gI_PreviousSpeed[i] = RoundToNearest(((gI_HUDSettings[i] & HUD_2DVEL) == 0)? GetVectorLength(fSpeed):(SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0))));
+		// }
 
 		TriggerHUDUpdate(i);
 	}
@@ -1355,7 +1355,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			{
 				if(data.iStageCount > 1)
 				{
-					FormatEx(sLine, 128, "%T", "HudStageInfo", client, data.iCurrentStage == 0 ? 1:data.iCurrentStage, data.iStageCount);
+					FormatEx(sLine, 128, "%T", "HudStageInfo", client, data.iCurrentStage, data.iStageCount);
 					AddHUDLine(buffer, maxlen, sLine, iLines);
 				}
 				else if(data.iTrack == Track_Main)
@@ -1420,7 +1420,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				}
 				else
 				{
-					FormatEx(sLine, 128, "%T%s%s", "HudTime", client, sTime);
+					FormatEx(sLine, 128, "%T%s", "HudTime", client, sTime);
 				}
 
 				AddHUDLine(buffer, maxlen, sLine, iLines);
@@ -1444,8 +1444,10 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				{
 					if(Shavit_IsOnlyStageMode(data.iTarget))
 					{
-						FormatEx(sLine, 128, "%s%s%T %d", data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
-						"HudStage", client, data.iCurrentStage);
+						// FormatEx(sLine, 128, "%s%s%T %d", data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
+						// "HudStage", client, data.iCurrentStage);
+						// AddHUDLine(buffer, maxlen, sLine, iLines);
+						FormatEx(sLine, 128, "%T %d", "HudStage", client, data.iCurrentStage);
 						AddHUDLine(buffer, maxlen, sLine, iLines);
 					}
 					else
@@ -1457,17 +1459,26 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 						}
 						else 
 						{
-							FormatEx(sLine, 128, "%s%s%T", 
-							data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
-							"HudStageInfo", client, data.iCurrentStage, data.iStageCount);
+							// FormatEx(sLine, 128, "%s%s%T", 
+							// data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
+							// "HudStageInfo", client, data.iCurrentStage, data.iStageCount);
+							FormatEx(sLine, 128, "%T", "HudStageInfo", client, data.iCurrentStage, data.iStageCount);
 
 							AddHUDLine(buffer, maxlen, sLine, iLines);
 
 							if((gI_HUD2Settings[client] & HUD2_STAGETIME) == 0)
 							{
-								char sStageTime[32];
-								FormatSeconds(data.fStageTime, sStageTime, 32, false);
-								FormatEx(sLine, 128, "%T%s", "HudStageTime", client, sStageTime);
+								if(Shavit_StageTimeValid(data.iTarget))
+								{
+									char sStageTime[32];
+									FormatSeconds(data.fStageTime, sStageTime, 32, false);
+									FormatEx(sLine, 128, "%T%s", "HudStageTime", client, sStageTime);									
+								}
+								else
+								{
+									FormatEx(sLine, 128, "%T", "HudStageTimerStopped", client);	
+								}
+								
 								AddHUDLine(buffer, maxlen, sLine, iLines);
 							}
 						}
@@ -1558,237 +1569,237 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 	}
 }
 
-int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
-{
-	int iLines = 0;
-	char sLine[128];
+// int AddHUDToBuffer_CSGO(int client, huddata_t data, char[] buffer, int maxlen)
+// {
+// 	int iLines = 0;
+// 	char sLine[128];
 
-	StrCat(buffer, maxlen, "<span class='fontSize-l'>");
+// 	StrCat(buffer, maxlen, "<span class='fontSize-l'>");
 
-	if (gI_HUDSettings[client] & HUD_DEBUGTARGETNAME)
-	{
-		char targetname[64], classname[64];
-		GetEntPropString(data.iTarget, Prop_Data, "m_iName", targetname, sizeof(targetname));
-		GetEntityClassname(data.iTarget, classname, sizeof(classname));
+// 	if (gI_HUDSettings[client] & HUD_DEBUGTARGETNAME)
+// 	{
+// 		char targetname[64], classname[64];
+// 		GetEntPropString(data.iTarget, Prop_Data, "m_iName", targetname, sizeof(targetname));
+// 		GetEntityClassname(data.iTarget, classname, sizeof(classname));
 
-		char speedmod[33];
+// 		char speedmod[33];
 
-		if (IsValidClient(data.iTarget) && !IsFakeClient(data.iTarget))
-		{
-			timer_snapshot_t snapshot;
-			Shavit_SaveSnapshot(data.iTarget, snapshot, sizeof(snapshot));
-			FormatEx(speedmod, sizeof(speedmod), " sm=%.2f lm=%.2f", snapshot.fplayer_speedmod, GetEntPropFloat((data.iTarget), Prop_Send, "m_flLaggedMovementValue"));
-		}
+// 		if (IsValidClient(data.iTarget) && !IsFakeClient(data.iTarget))
+// 		{
+// 			timer_snapshot_t snapshot;
+// 			Shavit_SaveSnapshot(data.iTarget, snapshot, sizeof(snapshot));
+// 			FormatEx(speedmod, sizeof(speedmod), " sm=%.2f lm=%.2f", snapshot.fplayer_speedmod, GetEntPropFloat((data.iTarget), Prop_Send, "m_flLaggedMovementValue"));
+// 		}
 
-		FormatEx(sLine, sizeof(sLine), "t='%s' c='%s'%s", targetname, classname, speedmod);
-		AddHUDLine(buffer, maxlen, sLine, iLines);
-	}
+// 		FormatEx(sLine, sizeof(sLine), "t='%s' c='%s'%s", targetname, classname, speedmod);
+// 		AddHUDLine(buffer, maxlen, sLine, iLines);
+// 	}
 
-	if(data.bReplay)
-	{
-		StrCat(buffer, maxlen, "<pre>");
+// 	if(data.bReplay)
+// 	{
+// 		StrCat(buffer, maxlen, "<pre>");
 
-		if(data.iStyle != -1 && Shavit_GetReplayStatus(data.iTarget) != Replay_Idle && Shavit_GetReplayCacheFrameCount(data.iTarget) > 0)
-		{
-			char sPlayerName[MAX_NAME_LENGTH];
-			Shavit_GetReplayCacheName(data.iTarget, sPlayerName, sizeof(sPlayerName));
+// 		if(data.iStyle != -1 && Shavit_GetReplayStatus(data.iTarget) != Replay_Idle && Shavit_GetReplayCacheFrameCount(data.iTarget) > 0)
+// 		{
+// 			char sPlayerName[MAX_NAME_LENGTH];
+// 			Shavit_GetReplayCacheName(data.iTarget, sPlayerName, sizeof(sPlayerName));
 
-			char sTrack[32];
+// 			char sTrack[32];
 
-			if(data.iTrack != Track_Main && (gI_HUD2Settings[client] & HUD2_TRACK) == 0)
-			{
-				GetTrackName(client, data.iTrack, sTrack, 32);
-				Format(sTrack, 32, "(%s) ", sTrack);
-			}
+// 			if(data.iTrack != Track_Main && (gI_HUD2Settings[client] & HUD2_TRACK) == 0)
+// 			{
+// 				GetTrackName(client, data.iTrack, sTrack, 32);
+// 				Format(sTrack, 32, "(%s) ", sTrack);
+// 			}
 
-			FormatEx(sLine, 128, "<u><span color='#%s'>%s %s%T</span></u> <span color='#DB88C2'>%s</span>", gS_StyleStrings[data.iStyle].sHTMLColor, gS_StyleStrings[data.iStyle].sStyleName, sTrack, "ReplayText", client, sPlayerName);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 			FormatEx(sLine, 128, "<u><span color='#%s'>%s %s%T</span></u> <span color='#DB88C2'>%s</span>", gS_StyleStrings[data.iStyle].sHTMLColor, gS_StyleStrings[data.iStyle].sStyleName, sTrack, "ReplayText", client, sPlayerName);
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
 
-			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
-			{
-				char sTime[32];
-				FormatSeconds(data.fTime, sTime, 32, false);
+// 			if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
+// 			{
+// 				char sTime[32];
+// 				FormatSeconds(data.fTime, sTime, 32, false);
 
-				char sWR[32];
-				FormatSeconds(data.fWR, sWR, 32, false);
+// 				char sWR[32];
+// 				FormatSeconds(data.fWR, sWR, 32, false);
 
-				FormatEx(sLine, 128, "%s / %s (%.1f％)", sTime, sWR, ((data.fTime / data.fWR) * 100));
-				AddHUDLine(buffer, maxlen, sLine, iLines);
-			}
+// 				FormatEx(sLine, 128, "%s / %s (%.1f％)", sTime, sWR, ((data.fTime / data.fWR) * 100));
+// 				AddHUDLine(buffer, maxlen, sLine, iLines);
+// 			}
 
-			if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
-			{
-				FormatEx(sLine, 128, "%d u/s", data.iSpeed);
-				AddHUDLine(buffer, maxlen, sLine, iLines);
-			}
-		}
-		else
-		{
-			FormatEx(sLine, 128, "%T", "NoReplayData", client);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
+// 			if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
+// 			{
+// 				FormatEx(sLine, 128, "%d u/s", data.iSpeed);
+// 				AddHUDLine(buffer, maxlen, sLine, iLines);
+// 			}
+// 		}
+// 		else
+// 		{
+// 			FormatEx(sLine, 128, "%T", "NoReplayData", client);
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
 
-		StrCat(buffer, maxlen, "</pre></span>");
+// 		StrCat(buffer, maxlen, "</pre></span>");
 
-		return iLines;
-	}
+// 		return iLines;
+// 	}
 
-	char sFirstThing[32];
+// 	char sFirstThing[32];
 
-	if (data.iTrack == Track_Main)
-	{
-		// if (gB_Rankings && (gI_HUD2Settings[client] & HUD2_MAPTIER) == 0)
-		// {
-		// 	FormatEx(sFirstThing, sizeof(sFirstThing), "%T", "HudZoneTier", client, data.iMapTier);
-		// }
-	}
-	else
-	{
-		if ((gI_HUD2Settings[client] & HUD2_TRACK) == 0)
-		{
-			GetTrackName(client, data.iTrack, sFirstThing, sizeof(sFirstThing));
-		}
-	}
+// 	if (data.iTrack == Track_Main)
+// 	{
+// 		// if (gB_Rankings && (gI_HUD2Settings[client] & HUD2_MAPTIER) == 0)
+// 		// {
+// 		// 	FormatEx(sFirstThing, sizeof(sFirstThing), "%T", "HudZoneTier", client, data.iMapTier);
+// 		// }
+// 	}
+// 	else
+// 	{
+// 		if ((gI_HUD2Settings[client] & HUD2_TRACK) == 0)
+// 		{
+// 			GetTrackName(client, data.iTrack, sFirstThing, sizeof(sFirstThing));
+// 		}
+// 	}
 
-	StrCat(buffer, maxlen, sFirstThing);
+// 	StrCat(buffer, maxlen, sFirstThing);
 
-	if ((gI_HUD2Settings[client] & HUD2_STYLE) == 0)
-	{
-		FormatEx(sLine, 128, "%s<span color='#%s'>%s</span>", (sFirstThing[0]) ? " | " : "", gS_StyleStrings[data.iStyle].sHTMLColor, gS_StyleStrings[data.iStyle].sStyleName);
-		StrCat(buffer, maxlen, sLine);
-		//AddHUDLine(buffer, maxlen, sLine, iLines);
-	}
+// 	if ((gI_HUD2Settings[client] & HUD2_STYLE) == 0)
+// 	{
+// 		FormatEx(sLine, 128, "%s<span color='#%s'>%s</span>", (sFirstThing[0]) ? " | " : "", gS_StyleStrings[data.iStyle].sHTMLColor, gS_StyleStrings[data.iStyle].sStyleName);
+// 		StrCat(buffer, maxlen, sLine);
+// 		//AddHUDLine(buffer, maxlen, sLine, iLines);
+// 	}
 
-	StrCat(buffer, maxlen, "<pre>");
+// 	StrCat(buffer, maxlen, "<pre>");
 
-	if (data.iZoneHUD != ZoneHUD_None)
-	{
-		if ((gI_HUDSettings[client] & HUD_ZONEHUD) > 0)
-		{
-			FormatEx(sLine, sizeof(sLine),
-				"<span color='#%06X'>%T</span>",
-				((gI_Gradient.r << 16) + (gI_Gradient.g << 8) + (gI_Gradient.b)),
-				(data.iZoneHUD == ZoneHUD_Start) ? "HudInStartZoneCSGO" : "HudInEndZoneCSGO",
-				client,
-				data.iSpeed
-			);
+// 	if (data.iZoneHUD != ZoneHUD_None)
+// 	{
+// 		if ((gI_HUDSettings[client] & HUD_ZONEHUD) > 0)
+// 		{
+// 			FormatEx(sLine, sizeof(sLine),
+// 				"<span color='#%06X'>%T</span>",
+// 				((gI_Gradient.r << 16) + (gI_Gradient.g << 8) + (gI_Gradient.b)),
+// 				(data.iZoneHUD == ZoneHUD_Start) ? "HudInStartZoneCSGO" : "HudInEndZoneCSGO",
+// 				client,
+// 				data.iSpeed
+// 			);
 
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
-	}
-	else if (data.iTimerStatus == Timer_Stopped)
-	{
-		StrCat(buffer, maxlen, "\n");
-	}
-	else
-	{
-		if(data.bPractice || data.iTimerStatus == Timer_Paused)
-		{
-			FormatEx(sLine, 128, "%T", (data.iTimerStatus == Timer_Paused)? "HudPaused":"HudPracticeMode", client);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
+// 	}
+// 	else if (data.iTimerStatus == Timer_Stopped)
+// 	{
+// 		StrCat(buffer, maxlen, "\n");
+// 	}
+// 	else
+// 	{
+// 		if(data.bPractice || data.iTimerStatus == Timer_Paused)
+// 		{
+// 			FormatEx(sLine, 128, "%T", (data.iTimerStatus == Timer_Paused)? "HudPaused":"HudPracticeMode", client);
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
 
-		if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
-		{
-			int iColor = 0xFF0000; // red, worse than both pb and wr
+// 		if((gI_HUD2Settings[client] & HUD2_TIME) == 0)
+// 		{
+// 			int iColor = 0xFF0000; // red, worse than both pb and wr
 
-			if (false && data.iTimerStatus == Timer_Paused)
-			{
-				iColor = 0xA9C5E8; // blue sky
-			}
-			else if(data.fTime < data.fWR || data.fWR == 0.0)
-			{
-				iColor = GetGradient(0x00FF00, 0x96172C, RoundToZero((data.fTime / data.fWR) * 100));
-			}
-			else if(data.fPB != 0.0 && data.fTime < data.fPB)
-			{
-				iColor = 0xFFA500; // orange
-			}
+// 			if (false && data.iTimerStatus == Timer_Paused)
+// 			{
+// 				iColor = 0xA9C5E8; // blue sky
+// 			}
+// 			else if(data.fTime < data.fWR || data.fWR == 0.0)
+// 			{
+// 				iColor = GetGradient(0x00FF00, 0x96172C, RoundToZero((data.fTime / data.fWR) * 100));
+// 			}
+// 			else if(data.fPB != 0.0 && data.fTime < data.fPB)
+// 			{
+// 				iColor = 0xFFA500; // orange
+// 			}
 
-			char sTime[32];
-			FormatSeconds(data.fTime, sTime, 32, false);
+// 			char sTime[32];
+// 			FormatSeconds(data.fTime, sTime, 32, false);
 
-			char sTimeDiff[32];
+// 			char sTimeDiff[32];
 
-			if ((gI_HUD2Settings[client] & HUD2_TIMEDIFFERENCE) == 0 && data.fClosestReplayTime != -1.0)
-			{
-				float fDifference = data.fTime - data.fClosestReplayTime;
-				FormatSeconds(fDifference, sTimeDiff, 32, false, FloatAbs(fDifference) >= 60.0);
-				Format(sTimeDiff, 32, " (%s%s)", (fDifference >= 0.0)? "+":"", sTimeDiff);
-			}
+// 			if ((gI_HUD2Settings[client] & HUD2_TIMEDIFFERENCE) == 0 && data.fClosestReplayTime != -1.0)
+// 			{
+// 				float fDifference = data.fTime - data.fClosestReplayTime;
+// 				FormatSeconds(fDifference, sTimeDiff, 32, false, FloatAbs(fDifference) >= 60.0);
+// 				Format(sTimeDiff, 32, " (%s%s)", (fDifference >= 0.0)? "+":"", sTimeDiff);
+// 			}
 
-			if((gI_HUD2Settings[client] & HUD2_RANK) == 0)
-			{
-				FormatEx(sLine, 128, "<span color='#%06X'>%s%s</span> (#%d)", iColor, sTime, sTimeDiff, data.iRank);
-			}
-			else
-			{
-				FormatEx(sLine, 128, "<span color='#%06X'>%s%s</span>", iColor, sTime, sTimeDiff);
-			}
+// 			if((gI_HUD2Settings[client] & HUD2_RANK) == 0)
+// 			{
+// 				FormatEx(sLine, 128, "<span color='#%06X'>%s%s</span> (#%d)", iColor, sTime, sTimeDiff, data.iRank);
+// 			}
+// 			else
+// 			{
+// 				FormatEx(sLine, 128, "<span color='#%06X'>%s%s</span>", iColor, sTime, sTimeDiff);
+// 			}
 
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
-	}
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
+// 	}
 
-	if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
-	{
-		int iColor = 0xA0FFFF;
+// 	if((gI_HUD2Settings[client] & HUD2_SPEED) == 0)
+// 	{
+// 		int iColor = 0xA0FFFF;
 
-		if((data.iSpeed - data.iPreviousSpeed) < 0)
-		{
-			iColor = 0xFFC966;
-		}
+// 		if((data.iSpeed - data.iPreviousSpeed) < 0)
+// 		{
+// 			iColor = 0xFFC966;
+// 		}
 
-		char sVelDiff[32];
+// 		char sVelDiff[32];
 
-		if (data.iZoneHUD == ZoneHUD_None && data.iTimerStatus != Timer_Stopped && data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
-		{
-			float res = data.fClosestVelocityDifference;
-			FormatEx(sVelDiff, sizeof(sVelDiff), " (%s%.0f)", (res >= 0.0) ? "+":"", res);
-		}
+// 		if (data.iZoneHUD == ZoneHUD_None && data.iTimerStatus != Timer_Stopped && data.fClosestReplayTime != -1.0 && (gI_HUD2Settings[client] & HUD2_VELOCITYDIFFERENCE) == 0)
+// 		{
+// 			float res = data.fClosestVelocityDifference;
+// 			FormatEx(sVelDiff, sizeof(sVelDiff), " (%s%.0f)", (res >= 0.0) ? "+":"", res);
+// 		}
 
-		FormatEx(sLine, 128, "<span color='#%06X'>%s%d u/s%s</span>",
-			iColor,
-			((data.iSpeed<10) ? "     " : (data.iSpeed<100 ? "   " : (data.iSpeed<1000 ? " " : ""))),
-			data.iSpeed,
-			sVelDiff
-		);
+// 		FormatEx(sLine, 128, "<span color='#%06X'>%s%d u/s%s</span>",
+// 			iColor,
+// 			((data.iSpeed<10) ? "     " : (data.iSpeed<100 ? "   " : (data.iSpeed<1000 ? " " : ""))),
+// 			data.iSpeed,
+// 			sVelDiff
+// 		);
 
-		AddHUDLine(buffer, maxlen, sLine, iLines);
-	}
+// 		AddHUDLine(buffer, maxlen, sLine, iLines);
+// 	}
 
-	if (/*data.iZoneHUD == ZoneHUD_None &&*/ data.iTimerStatus != Timer_Stopped)
-	{
-		if((gI_HUD2Settings[client] & HUD2_JUMPS) == 0)
-		{
-			char prebuf[32];
-			FormatEx(prebuf, sizeof(prebuf), "%s", ((data.iJumps<10) ? "     " : (data.iJumps<100 ? "   " : (data.iJumps<1000 ? " " : ""))));
-			FormatEx(sLine, 128, "%s%d %T", prebuf, data.iJumps, "HudJumps", client);
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
+// 	if (/*data.iZoneHUD == ZoneHUD_None &&*/ data.iTimerStatus != Timer_Stopped)
+// 	{
+// 		if((gI_HUD2Settings[client] & HUD2_JUMPS) == 0)
+// 		{
+// 			char prebuf[32];
+// 			FormatEx(prebuf, sizeof(prebuf), "%s", ((data.iJumps<10) ? "     " : (data.iJumps<100 ? "   " : (data.iJumps<1000 ? " " : ""))));
+// 			FormatEx(sLine, 128, "%s%d %T", prebuf, data.iJumps, "HudJumps", client);
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
 
-		if((gI_HUD2Settings[client] & HUD2_STRAFE) == 0)
-		{
-			char prebuf[32];
-			FormatEx(prebuf, sizeof(prebuf), "%s", ((data.iStrafes<10) ? "     " : (data.iStrafes<100 ? "   " : (data.iStrafes<1000 ? " " : ""))));
+// 		if((gI_HUD2Settings[client] & HUD2_STRAFE) == 0)
+// 		{
+// 			char prebuf[32];
+// 			FormatEx(prebuf, sizeof(prebuf), "%s", ((data.iStrafes<10) ? "     " : (data.iStrafes<100 ? "   " : (data.iStrafes<1000 ? " " : ""))));
 
-			if((gI_HUD2Settings[client] & HUD2_SYNC) == 0)
-			{
-				FormatEx(sLine, 128, "%s%d %T (%.1f%%)", prebuf, data.iStrafes, "HudStrafe", client, data.fSync);
-			}
-			else
-			{
-				FormatEx(sLine, 128, "%s%d %T", prebuf, data.iStrafes, "HudStrafe", client);
-			}
+// 			if((gI_HUD2Settings[client] & HUD2_SYNC) == 0)
+// 			{
+// 				FormatEx(sLine, 128, "%s%d %T (%.1f%%)", prebuf, data.iStrafes, "HudStrafe", client, data.fSync);
+// 			}
+// 			else
+// 			{
+// 				FormatEx(sLine, 128, "%s%d %T", prebuf, data.iStrafes, "HudStrafe", client);
+// 			}
 
-			AddHUDLine(buffer, maxlen, sLine, iLines);
-		}
-	}
+// 			AddHUDLine(buffer, maxlen, sLine, iLines);
+// 		}
+// 	}
 
-	StrCat(buffer, maxlen, "</pre></span>");
+// 	StrCat(buffer, maxlen, "</pre></span>");
 
-	return iLines;
-}
+// 	return iLines;
+// }
 
 void UpdateMainHUD(int client)
 {
@@ -1948,10 +1959,10 @@ void UpdateMainHUD(int client)
 		{
 			lines = AddHUDToBuffer_Source2013(client, huddata, sBuffer, sizeof(sBuffer));
 		}
-		else
-		{
-			lines = AddHUDToBuffer_CSGO(client, huddata, sBuffer, sizeof(sBuffer));
-		}
+		// else
+		// {
+		// 	lines = AddHUDToBuffer_CSGO(client, huddata, sBuffer, sizeof(sBuffer));
+		// }
 
 		if (lines < 1)
 		{
