@@ -1,0 +1,81 @@
+"Phrases"
+{
+	// ============== Menu translation ====================
+	"PersonalReplayMenuTitle"
+	{
+		"#format"	"{1:d},{2:d}"
+		"en"		"Personal replay\n({1} / {2})\n "
+	}
+	"RefreshMenu"
+	{
+		"en"		"Refresh"
+	}
+	"NoReplay"
+	{
+		"en"		"No replay cached"
+	}
+	"ReplayInfo"
+	{
+		"#format"	"{1:s},{2:s},{3:s},{4:d}"
+		"en"		"{1} - {2} - {3}\n(finished {4} minutes ago)"
+	}
+	"PersonalReplaySubMenuTitle"
+	{
+		"#format"	"{1:d}"
+		"en"		"Personal replay #{1}"
+	}
+	"Option"
+	{
+		"en"		"Option"
+	}
+	"StartReplay"
+	{
+		"en"		"Start replay"
+	}
+	"DeleteReplay"
+	{
+		"en"		"Delete replay"
+	}
+	"OptionMenuTitle"
+	{
+		"en"		"Personal replay options"
+	}
+	"EnableFeature"
+	{
+		"#format"	"{1:s}"
+		"en"		"[{1}] Enabled feature"
+	}
+	"AutoOverwrite"
+	{
+		"#format"	"{1:s}"
+		"en"		"[{1}] Auto overwrite earliest replay "
+	}
+	"PrintSavedMessage"
+	{
+		"#format"	"{1:s}"
+		"en"		"[{1}] Print message when replay saved "
+	}
+	// ============== Message translation ====================
+	"PersonalReplayCached"
+	{
+		"#format"	"{1:s},{2:d},{3:s},{4:s},{5:s}"
+		"en"		"Your personal replay is saved (#{1}{2}{3}), use {4}!rewatch{5} to watch your most recent run."
+	}
+	"PersonalReplayDeleted"
+	{
+		"en"		"Personal replay deleted."
+	}
+	"BotUnavailable"
+	{
+		"en"		"Replay bot is unavailable, try again later."
+	}
+	// ============== Common translation ====================
+	"StageText"
+	{
+		"en"		"Stage"
+	}
+	"PersonalReplay"
+	{
+		"en"		"[PR] "
+	}	
+}
