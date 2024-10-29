@@ -1153,25 +1153,31 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 
 			if (iStyle == gI_Style[client])
 			{
+				char sMain[32]; char sBonus[32];
+				GetTrackName(client, Track_Main, sMain, 32);
+				GetTrackName(client, Track_Bonus, sBonus, 32, false);
+
 				FormatEx(sStyleInfo, sizeof(sStyleInfo),
 					"%s\n"...
 					"%T: %s\n"...
 					" \n%T:\n" ...
-					"    Main: %d/%d (%0.1f%%)\n"...
-					"    Bonuses: %d/%d (%0.1f%%)\n"...
-					"    Stages: %d/%d (%0.1f%%)\n"...
+					"    %s: %d/%d (%0.1f%%)\n"...
+					"    %s: %d/%d (%0.1f%%)\n"...
+					"    %T: %d/%d (%0.1f%%)\n"...
 					" \n%T:\n"...
-					"    Main WR: %d\n"...
-					"    Bonus WR: %d\n"...
-					"    Stage WR: %d\n ",
+					"    %s%T: %d\n"...
+					"    %s%T: %d\n"...
+					"    %T%T: %d\n ",
 					gS_StyleStrings[iStyle].sStyleName,
 					"Playtime", client, sStylePlaytime,
 					"Completions", client, 
-					iCompletions[0], iMaps[0], ((float(iCompletions[0]) / (iMaps[0] > 0 ? float(iMaps[0]) : 0.0)) * 100.0),
-					iCompletions[1], iMaps[1], ((float(iCompletions[1]) / (iMaps[1] > 0 ? float(iMaps[1]) : 0.0)) * 100.0),
-					iStageCompletions, iStages, ((float(iStageCompletions) / (iStages > 0 ? float(iStages) : 0.0)) * 100.0),
+					sMain, iCompletions[0], iMaps[0], ((float(iCompletions[0]) / (iMaps[0] > 0 ? float(iMaps[0]) : 0.0)) * 100.0),
+					sBonus, iCompletions[1], iMaps[1], ((float(iCompletions[1]) / (iMaps[1] > 0 ? float(iMaps[1]) : 0.0)) * 100.0),
+					"StageText", client, iStageCompletions, iStages, ((float(iStageCompletions) / (iStages > 0 ? float(iStages) : 0.0)) * 100.0),
 					"WorldRecords", client, 
-					iWRs[0], iWRs[1], iStageWRs
+					sMain, "WRCounts", client, iWRs[0], 
+					sBonus, "WRCounts", client, iWRs[1], 
+					"StageText", client, "WRCounts", client, iStageWRs
 				);
 			}
 			else
@@ -1493,7 +1499,7 @@ public int MenuHandler_ShowMaps(Menu menu, MenuAction action, int param1, int pa
 		bool bStageRecord = gI_Track[param1] == 2;
 
 		char sQuery[512];
-		FormatEx(sQuery, 512, "SELECT u.name, p.time, p.%s, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.points FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = '%s' LIMIT 1;", 
+		FormatEx(sQuery, 512, "SELECT u.name, p.time, p.%s, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.points, p.completions FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = '%s' LIMIT 1;", 
 		bStageRecord ? "stage":"track", gS_MySQLPrefix, bStageRecord ? "stagetimes":"playertimes", gS_MySQLPrefix, sInfo);
 
 		QueryLog(gH_SQL, SQL_SubMenu_Callback, sQuery, GetClientSerial(param1));
@@ -1553,6 +1559,9 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 		// 2 - jumps
 		int jumps = results.FetchInt(3);
 		FormatEx(sDisplay, 128, "%T: %d", "Jumps", client, jumps);
+		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
+
+		FormatEx(sDisplay, 128, "%T: %d", "CompletionTimes", client, results.FetchInt(11));
 		hMenu.AddItem("-1", sDisplay, ITEMDRAW_DISABLED);
 
 		// 3 - style

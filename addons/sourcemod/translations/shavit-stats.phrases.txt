@@ -130,6 +130,14 @@
 	{
 		"en"		"World records"
 	}
+	"StageText"
+	{
+		"en"		"Stage"
+	}
+	"WRCounts"
+	{
+		"en"		" WRs"
+	}
 	// ---------- Record Data ---------- //
 	"Date"
 	{
@@ -150,5 +158,9 @@
 	"Time"
 	{
 		"en"		"Time"
+	}
+	"CompletionTimes"
+	{
+		"en"		"Completions"
 	}
 }

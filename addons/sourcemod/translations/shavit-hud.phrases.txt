@@ -99,6 +99,10 @@
 	{
 		"en"		"Linear Map"
 	}
+	"HudStageTimerStopped"
+	{
+		"en"		"Stage Timer Stopped"
+	}
 	"HudStrafe"
 	{
 		"en"		"Strafes"

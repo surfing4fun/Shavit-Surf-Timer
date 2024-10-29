@@ -824,7 +824,7 @@ public void ShowTrackMenu(int client, bool bonus)
 	int iTrackMask = Shavit_GetMapTracks(false, true);
 
 	Menu menu = new Menu(MenuHandler_Track);
-	menu.SetTitle("Select a %s\n ", bonus ? "Bonus":"Track");
+	menu.SetTitle("%T\n ", bonus ? "MenuSelectBonus":"MenuSelectTrack", client);
 
 	char sTrack[32];
 	for(int i = bonus ? 1:0; i < TRACKS_SIZE; i++)
@@ -2664,6 +2664,7 @@ public int Native_RestartTimer(Handle handler, int numParams)
 	}
 
 	SetEntityMoveType(client, MOVETYPE_WALK);
+	gI_LastNoclipTick[client] = 0;
 	gA_Timers[client].bPracticeMode = false;
 
 	Call_StartForward(gH_Forwards_OnRestart);
@@ -3290,6 +3291,7 @@ public void OnClientPutInServer(int client)
 	gB_Auto[client] = true;
 	gA_Timers[client].fStrafeWarning = 0.0;
 	gA_Timers[client].bPracticeMode = false;
+	gA_Timers[client].bOnlyStageMode = false;
 	gA_Timers[client].iKeyCombo = -1;
 	gA_Timers[client].iTimerTrack = 0;
 	gA_Timers[client].bsStyle = 0;

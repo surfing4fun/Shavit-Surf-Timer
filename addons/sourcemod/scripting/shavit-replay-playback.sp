@@ -323,6 +323,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetReplayFolderPath", Native_GetReplayFolderPath);
 	CreateNative("Shavit_GetReplayPlaybackSpeed", Native_GetReplayPlaybackSpeed);
 	CreateNative("Shavit_GetReplayBotInfoIndex", Native_GetReplayBotInfoIndex);
+	
 
 	if (!FileExists("cfg/sourcemod/plugin.shavit-replay-playback.cfg") && FileExists("cfg/sourcemod/plugin.shavit-replay.cfg"))
 	{
@@ -1190,7 +1191,7 @@ public int Native_StartReplayFromFrameCache(Handle handler, int numParams)
 	int type = GetNativeCell(7);
 	bool ignorelimit = view_as<bool>(GetNativeCell(8));
 
-	if(GetNativeCell(9) != sizeof(frame_cache_t))
+	if(GetNativeCell(10) != sizeof(frame_cache_t))
 	{
 		return ThrowNativeError(200, "frame_cache_t does not match latest(got %i expected %i). Please update your includes and recompile your plugins",
 			GetNativeCell(10), sizeof(frame_cache_t));
@@ -2291,7 +2292,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 		}
 		else
 		{
-			FormatEx(sProgress, sizeof(sProgress), "100％", (status == Replay_Start) ? 0.0 : 100.0 );
+			FormatEx(sProgress, sizeof(sProgress), "%.0f％", (status == Replay_Start) ? 0.0 : 100.0 );
 		}		
 	}
 	else

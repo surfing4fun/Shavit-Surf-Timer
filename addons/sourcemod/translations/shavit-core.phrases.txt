@@ -79,6 +79,14 @@
 	{
 		"en"		"[Unranked]"
 	}
+	"MenuSelectBonus"
+	{
+		"en" 		"Select a bonus: "
+	}
+	"MenuSelectTrack"
+	{
+		"en" 		"Select a track: "
+	}
 	// ---------- Misc ---------- //
 	"LeftRightCheat"
 	{

@@ -374,7 +374,7 @@
 	}
 	"ZoneSetTP"
 	{
-		"en"		"Yes (choose teleport destination first)"
+		"en"		"Comfirm (choose teleport destination first)"
 	}
 	"ZoneSetTPZone"
 	{
@@ -383,6 +383,14 @@
 	"ZoneSetYes"
 	{
 		"en"		"Yes"
+	}
+	"ZoneSetComfirm"
+	{
+		"en"		"Comfirm"
+	}
+	"ZoneSetCancel"
+	{
+		"en"		"Cancel"
 	}
 	"ZoneSizeIncrease"
 	{
@@ -439,6 +447,11 @@
 	"TpToZone"
 	{
 		"en"        "Teleport to a zone"
+	}
+	"ZonePrespeedExcceded"
+	{
+		"#format"	"{1:s},{2:s}"
+		"en"		"{1}WARNING:{2} You excceded prespeed limit in start zone, Your current stage time WILL NOT be saved."
 	}
 	// ---------- Custom Zone ---------- //
 	"CustomZone_MainMenuTitle"

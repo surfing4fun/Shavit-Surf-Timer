@@ -239,11 +239,15 @@
 	}
 	"WRMenuTitle"
 	{
-		"en"		"Choose a style:"
+		"en"		"Choose a style:\n "
 	}
 	"WRMenuStageTitle"
 	{
-		"en"		"Choose a stage:"
+		"en"		"Choose a stage:\n "
+	}
+	"WRMenuBonusTitle"
+	{
+		"en"		"Choose a bonus:\n "
 	}
 	"WRPoints"
 	{
