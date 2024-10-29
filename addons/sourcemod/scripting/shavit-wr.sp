@@ -2381,11 +2381,15 @@ public Action Command_WorldRecord(int client, int args)
 			{
 				havemap = true;
 			}
-		}
 
-		if (track < Track_Bonus || track > Track_Bonus_Last)
+			if (track < Track_Bonus || track > Track_Bonus_Last)
+			{
+				track = Track_Bonus;
+			}			
+		}
+		else
 		{
-			track = Track_Bonus;
+			track = -1;
 		}
 	}
 	else if(StrEqual(sCommand, "sm_wrcp", false) || StrContains(sCommand, "sm_cp", false) == 0 || StrContains(sCommand, "sm_s", false) == 0)
@@ -2492,30 +2496,68 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 
 	if (stage == 0)
 	{
-		if (StrEqual(gA_WRCache[client].sClientMap, gS_Map))
+		if(track >= 0)
 		{
-			for (int i = 0; i < gI_Styles; i++)
+			if (StrEqual(gA_WRCache[client].sClientMap, gS_Map))
 			{
-				gA_WRCache[client].fWRs[i] = gF_WRTime[i][track];
-			}
+				for (int i = 0; i < gI_Styles; i++)
+				{
+					gA_WRCache[client].fWRs[i] = gF_WRTime[i][track];
+				}
 
-			if (gA_WRCache[client].bForceStyle)
-			{
-				StartWRMenu(client);
+				if (gA_WRCache[client].bForceStyle)
+				{
+					StartWRMenu(client);
+				}
+				else
+				{
+					ShowWRStyleMenu(client);
+				}
 			}
 			else
 			{
-				ShowWRStyleMenu(client);
+				gA_WRCache[client].bPendingMenu = true;
+				char sQuery[512];
+				FormatEx(sQuery, sizeof(sQuery),
+					"SELECT style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style;",
+					gS_MySQLPrefix, gA_WRCache[client].sClientMap, track, gI_Styles);
+				QueryLog(gH_SQL, SQL_RetrieveWRMenu_Callback, sQuery, GetClientSerial(client));
 			}
 		}
 		else
 		{
-			gA_WRCache[client].bPendingMenu = true;
-			char sQuery[512];
-			FormatEx(sQuery, sizeof(sQuery),
-				"SELECT style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style;",
-				gS_MySQLPrefix, gA_WRCache[client].sClientMap, track, gI_Styles);
-			QueryLog(gH_SQL, SQL_RetrieveWRMenu_Callback, sQuery, GetClientSerial(client));
+			int iTrackMask = Shavit_GetMapTracks(false, true);
+
+			Menu selectbonus = new Menu(MenuHandler_WRSelectBonus);
+			selectbonus.SetTitle("%T", "WRMenuBonusTitle", client);
+			char sTrack[32];
+
+			for(int i = Track_Bonus; i < TRACKS_SIZE; i++)
+			{
+				if(iTrackMask < 0)
+				{
+					break;
+				}
+				
+				if (((iTrackMask >> i) & 1) == 1)
+				{
+					GetTrackName(client, i, sTrack, sizeof(sTrack));
+					
+					char sInfo[8];
+					IntToString(i, sInfo, 8);
+
+					selectbonus.AddItem(sInfo, sTrack, ITEMDRAW_DEFAULT);
+				}
+			}
+
+			if(selectbonus.ItemCount == 0)
+			{
+				delete selectbonus;
+				return;
+			}
+
+			selectbonus.Display(client, MENU_TIME_FOREVER);
+			return;
 		}
 	}
 	else if (stage < 0)
@@ -2562,6 +2604,24 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 			QueryLog(gH_SQL, SQL_RetrieveWRMenu_Callback, sQuery, GetClientSerial(client));
 		}
 	}
+}
+
+public int MenuHandler_WRSelectBonus(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char sTrack[4];
+		menu.GetItem(param2, sTrack, sizeof(sTrack));
+		gA_WRCache[param1].iLastTrack = StringToInt(sTrack);
+
+		RetrieveWRMenu(param1, gA_WRCache[param1].iLastTrack, gA_WRCache[param1].iLastStage);
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
 }
 
 public int MenuHandler_WRSelectStage(Menu menu, MenuAction action, int param1, int param2)
@@ -2804,7 +2864,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 			}
 
 			char sDisplay[128];
-			FormatEx(sDisplay, 128, "#%d - %s - %s (+%s)", iCount, sName, sTime, sDiff);
+			FormatEx(sDisplay, 128, "#%d\t|\t\t\t%s (+%s) \t\t\t\t\t%s ", iCount, sTime, sDiff, sName);
 			hMenu.AddItem(sID, sDisplay);
 		}
 
@@ -3937,13 +3997,23 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 			{
 				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client)	//Print to spectator if target finished and worse
 				{
-					FormatEx(sMessage, 255, "%T",
-						"NotFirstCompletionWorse", i, 
-						gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, 
-						gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-						gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
-						sDifferenceWR, sDifferencePB,
-						gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+					if(bIncrementCompletions && !Shavit_GetStyleSettingInt(style, "unranked"))
+					{
+						FormatEx(sMessage, 255, "%T", "NotFirstCompletionWorse", i, 
+							gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, 
+							gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
+							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+							sDifferenceWR, sDifferencePB,
+							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);						
+					}
+					else
+					{
+						FormatEx(sMessage, 255, "%T", "UnrankedTime", client, 
+							gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
+							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+					}
+
 					
 					Shavit_PrintToChat(i, "%s", sMessage);
 				}
@@ -3968,27 +4038,10 @@ public Action Shavit_OnFinishStagePre(int client, timer_snapshot_t snapshot)
 {
 	if (!snapshot.bStageTimeValid)
 	{
-		char sMessage[255];
-
-		char sTime[32];
-		FormatSeconds(snapshot.fCurrentTime, sTime, 32);
-
-		char sStage[16];
-		Format(sStage, 16, "%T %d", "WRStage", client, snapshot.iLastStage);
-
-		FormatEx(sMessage, 255, "%T",
-			"UnrankedTime", client, 
-			gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
-			gS_ChatStrings.sStyle, gS_StyleStrings[snapshot.bsStyle].sStyleName, gS_ChatStrings.sText);
-
 		if(Shavit_IsOnlyStageMode(client))
 		{
 			Shavit_StopTimer(client, false);
 		}
-		
-		Shavit_PrintToChat(client, sMessage);
-		Shavit_PrintToChat(client, "Your stage run is invalid because you %sexcceded%s prespeed limit in start zone.", gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 
 		return Plugin_Stop;
 	}
@@ -4287,11 +4340,6 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	timer_snapshot_t aSnapshot;
 	Shavit_SaveSnapshot(client, aSnapshot);
 
-	if (!Shavit_GetStyleSettingBool(style, "autobhop"))
-	{
-		FormatEx(sMessage2, sizeof(sMessage2), "%s[%s]%s %T", gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText, "CompletionExtraInfo", LANG_SERVER, gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText, gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText, gS_ChatStrings.sVariable, perfs, gS_ChatStrings.sText);
-	}
-
 	Action aResult = Plugin_Continue;
 	Call_StartForward(gH_OnFinishMessage);
 	Call_PushCell(client);
@@ -4319,20 +4367,24 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 			{
 				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client)	//Print to spectator if target finished and worse
 				{
-					FormatEx(sMessage, sizeof(sMessage), "%T",
-						"NotFirstCompletionWorse", i, 
-						gS_ChatStrings.sVariable2, sName, 
-						gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, 
-						gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
-						gS_ChatStrings.sText, sDifferenceWR, sDifferencePB,
-						gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+					if(bIncrementCompletions && !Shavit_GetStyleSettingInt(style, "unranked"))
+					{
+						FormatEx(sMessage, sizeof(sMessage), "%T", "NotFirstCompletionWorse", i, 
+							gS_ChatStrings.sVariable2, sName, 
+							gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, 
+							gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+							gS_ChatStrings.sText, sDifferenceWR, sDifferencePB,
+							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);						
+					}
+					else
+					{
+						FormatEx(sMessage, 255, "%T", "UnrankedTime", client, 
+							gS_ChatStrings.sVariable, sTrack, 
+							gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+							gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+					}
 					
 					Shavit_PrintToChat(i, "%s", sMessage);
-
-					if (sMessage2[0] != 0)
-					{
-						Shavit_PrintToChat(i, "%s", sMessage2);
-					}
 				}
 			}
 		}
