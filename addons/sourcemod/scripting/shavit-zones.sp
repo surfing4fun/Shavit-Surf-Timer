@@ -157,6 +157,7 @@ Convar gCV_ResetClassnameMain = null;
 Convar gCV_ResetClassnameBonus = null;
 
 ConVar gCV_PrestrafeLimit = null;
+ConVar gCV_PrestrafeZone = null;
 
 // handles
 Handle gH_DrawVisible = null;
@@ -545,6 +546,7 @@ void LoadDHooks()
 public void OnAllPluginsLoaded()
 {
 	gCV_PrestrafeLimit = FindConVar("shavit_misc_prestrafelimit");
+	gCV_PrestrafeZone = FindConVar("shavit_misc_prestrafezones");
 }
 
 public void OnLibraryAdded(const char[] name)
@@ -2680,14 +2682,16 @@ public Action Command_Stages(int client, int args)
 
 	if (iStage > -1)
 	{
-		if(iStage > gI_HighestStage[Track_Main])
-		{
-			Shavit_PrintToChat(client, "%T", "StageCommandNoStage", client, gS_ChatStrings.sVariable, iStage, gS_ChatStrings.sText);
-			return Plugin_Handled;
-		}
+		int iIndex = GetStageZoneIndex(iStage);
 
 		if(!bBack || iStage == 1)
 		{
+			if(iStage > gI_HighestStage[Track_Main] || (iIndex == -1 && iStage > 1))
+			{
+				Shavit_PrintToChat(client, "%T", "StageCommandNoStage", client, gS_ChatStrings.sVariable, iStage, gS_ChatStrings.sText);
+				return Plugin_Handled;
+			}
+
 			Shavit_StopTimer(client);
 			Shavit_SetClientLastStage(client, iStage);
 			Shavit_SetOnlyStageMode(client, true);
@@ -2695,10 +2699,8 @@ public Action Command_Stages(int client, int args)
 			
 			return Plugin_Handled;			
 		}
-		else
+		else	// client use sm_back here
 		{
-			int iIndex = GetStageZoneIndex(Track_Main, iStage);
-
 			if(iIndex != -1)
 			{
 				if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))
@@ -3042,7 +3044,7 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 				| (1 << Zone_Slay)
 			};
 
-			int form = gA_EditCache[param1].iForm;
+			int form = gA_EditCache[param1].iForm == ZoneForm_Box ? ZoneForm_trigger_multiple:gA_EditCache[param1].iForm;
 
 			for (int i = 0; i < 100; i++) // no infinite loops = good :)
 			{
@@ -3166,7 +3168,7 @@ void OpenHookMenu_Editor(int client)
 	FormatEx(display, sizeof(display), "%T", "ZoneHook_Confirm", client);
 	menu.AddItem(
 		"hook", display,
-		((zonetype == -1 && hooktype == -1 && track == -1) || 
+		((zonetype == -1 || hooktype == -1 || track == -1) || 
 		(track != Track_Main && (zonetype == Zone_Stage || zonetype == Zone_Checkpoint))) ? ITEMDRAW_DISABLED : ITEMDRAW_DEFAULT
 	);
 
@@ -4767,7 +4769,7 @@ void CreateEditMenu(int client, bool autostage=false)
 		}
 		else
 		{
-			FormatEx(sMenuItem, 64, "%T", "ZoneSetYes", client);
+			FormatEx(sMenuItem, 64, "%T", "ZoneSetComfirm", client);
 			menu.AddItem("yes", sMenuItem);
 		}
 
@@ -4776,7 +4778,7 @@ void CreateEditMenu(int client, bool autostage=false)
 	}
 	else if (gA_EditCache[client].iType == Zone_Stage)
 	{
-		FormatEx(sMenuItem, 64, "%T", "ZoneSetYes", client);
+		FormatEx(sMenuItem, 64, "%T", "ZoneSetComfirm", client);
 		menu.AddItem("yes", sMenuItem);
 
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetTPZone", client);
@@ -4784,11 +4786,11 @@ void CreateEditMenu(int client, bool autostage=false)
 	}
 	else
 	{
-		FormatEx(sMenuItem, 64, "%T", "ZoneSetYes", client);
+		FormatEx(sMenuItem, 64, "%T", "ZoneSetComfirm", client);
 		menu.AddItem("yes", sMenuItem);
 	}
 
-	FormatEx(sMenuItem, 64, "%T", "ZoneSetNo", client);
+	FormatEx(sMenuItem, 64, "%T", "ZoneSetCancel", client);
 	menu.AddItem("no", sMenuItem);
 
 	if(gA_EditCache[client].iForm == ZoneForm_Box)
@@ -5510,16 +5512,6 @@ void ResetClientTargetNameAndClassName(int client, int track)
 	SetEntPropString(client, Prop_Data, "m_iClassname", classname);
 }
 
-public Action Shavit_OnStart(int client, int track)
-{
-	if(gCV_ForceTargetnameReset.BoolValue)
-	{
-		ResetClientTargetNameAndClassName(client, track);
-	}
-
-	return Plugin_Continue;
-}
-
 public void Shavit_OnRestart(int client, int track, bool tostartzone)
 {
 	if (!IsPlayerAlive(client))
@@ -5539,7 +5531,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 		if (Shavit_IsOnlyStageMode(client) && !tostartzone && stage > 1)
 		{
-			iIndex = GetStageZoneIndex(track, Shavit_GetClientLastStage(client));
+			iIndex = GetStageZoneIndex(Shavit_GetClientLastStage(client));
 
 			if(bCustomStart || iIndex != -1)
 			{
@@ -5564,7 +5556,11 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 				fCenter[2] += 1.0;
 			}
 
-			ResetClientTargetNameAndClassName(client, Track_Main);
+			if(gB_HasSetStart[client][track][stage] || gCV_ResetClassnameMain.BoolValue || gCV_ForceTargetnameReset.BoolValue)
+			{
+				ResetClientTargetNameAndClassName(client, track);		
+			}
+
 			TeleportEntity(client, fCenter, gB_HasSetStart[client][track][stage] ? gF_StartAng[client][track][stage] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
 			return;
 		}
@@ -5599,10 +5595,14 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 			{
 				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][1], gF_StartAng[client][track][stage][1], -1, true);
 			}
+			
+			if(gB_HasSetStart[client][track][1] || gCV_ForceTargetnameReset.BoolValue || (gCV_ResetClassnameMain.BoolValue && track == Track_Main) || (gCV_ResetTargetnameBonus.BoolValue && track >= Track_Bonus))
+			{
+				ResetClientTargetNameAndClassName(client, track);		
+			}
 
 			if (!gB_HasSetStart[client][track][1] || gB_StartAnglesOnly[client][track][1])
 			{
-				ResetClientTargetNameAndClassName(client, track);
 				// normally StartTimer will happen on zone-touch BUT we have this here for zones that are in the air
 				Shavit_StartTimer(client, track);
 			}
@@ -5671,7 +5671,7 @@ public void TeleportToStartZone(int client, int track, int stage)
 	}
 	else if(track == Track_Main)
 	{
-		iIndex = GetStageZoneIndex(track, stage);
+		iIndex = GetStageZoneIndex(stage);
 		
 		if(iIndex != -1)
 		{
@@ -5686,7 +5686,12 @@ public void TeleportToStartZone(int client, int track, int stage)
 		}
 	}
 
-	ResetClientTargetNameAndClassName(client, track);
+
+	if(gCV_ForceTargetnameReset.BoolValue || (gCV_ResetClassnameMain.BoolValue && track == Track_Main) || (gCV_ResetTargetnameBonus.BoolValue && track >= Track_Bonus))
+	{
+		ResetClientTargetNameAndClassName(client, track);
+	}
+
 	// normally StartTimer will happen on zone-touch BUT we have this here for zones that are in the air
 	Shavit_StartTimer(client, track);
 }
@@ -5753,14 +5758,20 @@ int GetZoneIndex(int type, int track, int start = 0)
 	return -1;
 }
 
-int GetStageZoneIndex(int track, int stage, int start = 0)
+int GetStageZoneIndex(int stage, int start = 0)
 {
 	for(int i = start; i < gI_MapZones; i++)
 	{
 		if (gA_ZoneCache[i].iForm == ZoneForm_func_button)
 			continue;
 
-		if ( (gA_ZoneCache[i].iTrack == track || track == -1) && gA_ZoneCache[i].iType == Zone_Stage && gA_ZoneCache[i].iData == stage)
+		if(gA_ZoneCache[i].iTrack != Track_Main)
+			continue;
+
+		if(gA_ZoneCache[i].iType != Zone_Stage)
+			continue;
+
+		if (gA_ZoneCache[i].iData == stage)
 		{
 			return i;
 		}
@@ -6121,9 +6132,10 @@ public void EndTouchPost(int entity, int other)
 				if (curVel >= 15.0 && Shavit_GetClientStageTime(other) < 1.0)
 				{
 					int style = Shavit_GetBhopStyle(other);
-					float limit = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+					float fMaxPrespeed = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+					bool bZoneLimited = !gA_ZoneCache[entityzone].bUseSpeedLimit || (gCV_PrestrafeZone.IntValue == 3) || (gCV_PrestrafeZone.IntValue == 2 && Shavit_IsOnlyStageMode(other));
 
-					bool valid = gA_ZoneCache[entityzone].bUseSpeedLimit ? curVel < limit : true;
+					bool valid = bZoneLimited ? true : curVel < fMaxPrespeed;
 					Shavit_SetStageTimeValid(other, valid);
 
 					if((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0))
@@ -6132,6 +6144,11 @@ public void EndTouchPost(int entity, int other)
 						Shavit_PrintToChat(other, "%T", "ZoneStageStartZonePrespeed", other,
 							gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
 							valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+					}
+
+					if(!valid)
+					{
+						Shavit_PrintToChat(other, "%T", "ZonePrespeedExcceded", other, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 					}
 
 					for(int i = 1; i <= MaxClients; i++)
@@ -6212,8 +6229,11 @@ public void TouchPost(int entity, int other)
 				{
 					if (curr_tick != tick_served[other])
 					{
-						ResetClientTargetNameAndClassName(other, track);
-
+						if(gCV_ForceTargetnameReset.BoolValue || (gCV_ResetClassnameMain.BoolValue && track == Track_Main) || (gCV_ResetTargetnameBonus.BoolValue && track >= Track_Bonus))
+						{
+							ResetClientTargetNameAndClassName(other, track);
+						}
+						
 						PhysicsRemoveTouchedList(other);
 						ClearClientEvents(other);
 						
