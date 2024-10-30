@@ -59,10 +59,10 @@ enum
 	Migration_AddMaptiersMaxvelocity,
 	Migration_AddStartpositionsStage, // 34
 	// TODO: Add start & end speed of records
-	// Migration_AddPlayertimesStartvelAndEndvel,
+	Migration_AddPlayertimesStartvelAndEndvel,
+	Migration_AddStagetimesStartvelAndEndvel,
 	// Migration_AddCpwrsStartvelAndEndvel,
 	// Migration_AddCptimesStartvelAndEndvel,
-	// Migration_AddStagetimesStartvelAndEndvel,
 	MIGRATIONS_END
 };
 
@@ -102,10 +102,10 @@ char gS_MigrationNames[][] = {
 	"FixSQLiteMapzonesROWID",
 	"AddMaptiersMaxvelocity",
 	"AddStartpositionsStage",
-	// "AddPlayertimesStartvelAndEndvel",
+	"AddPlayertimesStartvelAndEndvel",
+	"AddStagetimesStartvelAndEndvel",	
 	// "AddCpwrsStartvelAndEndvel",
 	// "AddCptimesStartvelAndEndvel",
-	// "AddStagetimesStartvelAndEndvel",
 };
 
 static Database gH_SQL;
@@ -435,10 +435,10 @@ void ApplyMigration(int migration)
 		case Migration_FixSQLiteMapzonesROWID: ApplyMigration_FixSQLiteMapzonesROWID();
 		case Migration_AddMaptiersMaxvelocity: ApplyMigration_AddMaptiersMaxvelocity();
 		case Migration_AddStartpositionsStage: ApplyMigration_AddStartpositionsStage();
-		// case Migration_AddPlayertimesStartvelAndEndvel: ApplyMigration_AddPlayertimesStartvelAndEndvel();
+		case Migration_AddPlayertimesStartvelAndEndvel: ApplyMigration_AddPlayertimesStartvelAndEndvel();
+		case Migration_AddStagetimesStartvelAndEndvel: ApplyMigration_AddStagetimesStartvelAndEndvel();
 		// case Migration_AddCpwrsStartvelAndEndvel: ApplyMigration_AddCpwrsStartvelAndEndvel();
 		// case Migration_AddCptimesStartvelAndEndvel: ApplyMigration_AddCptimesStartvelAndEndvel();
-		// case Migration_AddStagetimesStartvelAndEndvel: ApplyMigration_AddStagetimesStartvelAndEndvel();
 	}
 }
 
@@ -606,6 +606,36 @@ void ApplyMigration_DeprecateExactTimeInt()
 	FormatEx(query, sizeof(query), "SELECT id, time, exact_time_int FROM %splayertimes WHERE exact_time_int != 0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_Migration_DeprecateExactTimeInt_Query, query);
 }
+
+void ApplyMigration_AddPlayertimesStartvelAndEndvel()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%splayertimes` ADD COLUMN `startvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddPlayertimesStartvelAndEndvel, DBPrio_High);
+	
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%splayertimes` ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddPlayertimesStartvelAndEndvel, DBPrio_High);
+}
+
+void ApplyMigration_AddStagetimesStartvelAndEndvel()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstagetimes` ADD COLUMN `startvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStagetimesStartvelAndEndvel, DBPrio_High);
+	
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstagetimes` ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStagetimesStartvelAndEndvel, DBPrio_High);
+}
+
+// void ApplyMigration_AddCpwrsStartvelAndEndvel()
+// {
+
+// }
+
+// void ApplyMigration_AddCptimesStartvelAndEndvel()
+// {
+
+// }
 
 public void SQL_Migration_DeprecateExactTimeInt_Query(Database db, DBResultSet results, const char[] error, any data)
 {

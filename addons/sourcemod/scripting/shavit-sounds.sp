@@ -235,7 +235,7 @@ public void Shavit_OnFinish_Post(int client, int style, float time, int jumps, i
 	}
 }
 
-public void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp)
+public void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs)
 {
 	if(!gCV_Enabled.BoolValue)
 	{

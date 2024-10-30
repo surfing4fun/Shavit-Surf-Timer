@@ -112,6 +112,7 @@ enum struct chatstrings_t
 enum struct stagestart_info_t
 {
 	float fStageStartTime;
+	float fStartVelocity;
 	int iFullTicks;
 	int iFractionalTicks;
 	int iJumps;
@@ -140,6 +141,7 @@ enum struct timer_snapshot_t
 	// used as a "tick fraction" basically
 	float fZoneOffset[2];
 	float fDistanceOffset[2];
+	float fStartVelocity;
 	float fAvgVelocity;
 	float fMaxVelocity;
 	float fTimescale;
@@ -728,10 +730,12 @@ forward Action Shavit_OnFinishPre(int client, timer_snapshot_t snapshot);
  * @param perfs						Perfect jump percentage (0.0 to 100.0) or 100.0 when not measured.
  * @param avgvel					Player's average velocity throughout the run.
  * @param maxvel					Player's highest reached velocity.
+ * @param startvel					Player's velocity when left start zone.
+ * @param endvel					Player's velocity when touched end zone.
  * @param timestamp					System time of when player finished.
  * @return							Plugin_Continue to do nothing, Plugin_Changed to change the variables or anything else to stop the timer from finishing.
  */
-forward void Shavit_OnFinish(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp);
+forward void Shavit_OnFinish(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, float startvel, float endvel, int timestamp);
 
 /**
  * Called before a player finishes a stage.
@@ -758,10 +762,12 @@ forward Action Shavit_OnFinishStagePre(int client, timer_snapshot_t snapshot);
  * @param oldtime					The player's best time on the map before this finish.
  * @param avgvel					Player's average velocity throughout the run.
  * @param maxvel					Player's highest reached velocity.
+ * @param startvel					Player's velocity when left start zone.
+ * @param endvel					Player's velocity when touched end zone.
  * @param timestamp					System time of when player finished.
  * @noreturn
  */
-forward void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp);
+forward void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, float startvel, float endvel, int timestamp);
 
 /**
  * Called when a player's timer paused.
@@ -1516,6 +1522,40 @@ native void Shavit_SetAvgVelocity(int client, float vel);
  * @noreturn
  */
 native void Shavit_SetMaxVelocity(int client, float vel);
+
+/**
+ * Gets the start velocity of a player.
+ *
+ * @param client					Client index
+ * @return							Client's average velocity
+ */
+native float Shavit_GetStartVelocity(int client);
+
+/**
+ * Gets the stage start velocity of a player.
+ *
+ * @param client					Client index
+ * @return							Client's highest velocity
+ */
+native float Shavit_GetStageStartVelocity(int client);
+
+/**
+ * Sets the start velocity of a player.
+ *
+ * @param client					Client index
+ * @param vel						Average velocity
+ * @noreturn
+ */
+native void Shavit_SetStartVelocity(int client, float vel);
+
+/**
+ * Sets the stage start velocity a player has reached in a run. (timer_snapshot_t.fMaxVelocity)
+ *
+ * @param client					Client index
+ * @param vel						Max velocity
+ * @noreturn
+ */
+native void Shavit_SetStageStartVelocity(int client, float vel);
 
 /**
  * Sets the client's dynamic timescale (timer_snapshot_t.fTimescale)

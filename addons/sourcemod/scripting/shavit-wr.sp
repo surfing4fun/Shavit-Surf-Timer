@@ -78,22 +78,30 @@ ArrayList gA_ValidMaps = null;
 
 // current wr stats
 float gF_WRTime[STYLE_LIMIT][TRACKS_SIZE];
+float gF_WRStartVelocity[STYLE_LIMIT][TRACKS_SIZE];
+float gF_WREndVelocity[STYLE_LIMIT][TRACKS_SIZE];
 int gI_WRRecordID[STYLE_LIMIT][TRACKS_SIZE];
 int gI_WRSteamID[STYLE_LIMIT][TRACKS_SIZE];
 StringMap gSM_WRNames = null;
 ArrayList gA_Leaderboard[STYLE_LIMIT][TRACKS_SIZE];
 bool gB_LoadedCache[MAXPLAYERS+1];
 float gF_PlayerRecord[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE];
+float gF_PlayerStartVelocity[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE];
+float gF_PlayerEndVelocity[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE];
 int gI_PlayerCompletion[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE];
 
 // stage wr stats
 float gF_StageWRTime[STYLE_LIMIT][MAX_STAGES];
+float gF_StageWRStartVelocity[STYLE_LIMIT][MAX_STAGES];
+float gF_StageWREndVelocity[STYLE_LIMIT][MAX_STAGES];
 int gI_StageWRRecordID[STYLE_LIMIT][MAX_STAGES];
 int gI_StageWRSteamID[STYLE_LIMIT][MAX_STAGES];
 StringMap gSM_StageWRNames = null;
 ArrayList gA_StageLeaderboard[STYLE_LIMIT][MAX_STAGES];
 bool gB_LoadedStageCache[MAXPLAYERS+1];
 float gF_PlayerStageRecord[MAXPLAYERS+1][STYLE_LIMIT][MAX_STAGES];
+float gF_PlayerStageStartVelocity[MAXPLAYERS+1][STYLE_LIMIT][MAX_STAGES];
+float gF_PlayerStageEndVelocity[MAXPLAYERS+1][STYLE_LIMIT][MAX_STAGES];
 int gI_PlayerStageCompletion[MAXPLAYERS+1][STYLE_LIMIT][MAX_STAGES];
 
 // admin menu
@@ -141,10 +149,23 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetClientPB", Native_GetClientPB);
 	CreateNative("Shavit_SetClientPB", Native_SetClientPB);
 	CreateNative("Shavit_GetClientCompletions", Native_GetClientCompletions);
+	CreateNative("Shavit_GetClientStartVelocity", Native_GetClientStartVelocity);
+	CreateNative("Shavit_GetClientEndVelocity", Native_GetClientEndVelocity);
+	CreateNative("Shavit_SetClientStartVelocity", Native_SetClientStartVelocity);
+	CreateNative("Shavit_SetClientEndVelocity", Native_SetClientEndVelocity);
+	CreateNative("Shavit_GetClientStagePB", Native_GetClientStagePB);
+	CreateNative("Shavit_SetClientStagePB", Native_SetClientStagePB);	
+	CreateNative("Shavit_GetClientStageCompletions", Native_GetClientStageCompletions);
+	CreateNative("Shavit_GetClientStageStartVelocity", Native_GetClientStageStartVelocity);
+	CreateNative("Shavit_GetClientStageEndVelocity", Native_GetClientStageEndVelocity);
+	CreateNative("Shavit_SetClientStageStartVelocity", Native_SetClientStageStartVelocity);
+	CreateNative("Shavit_SetClientStageEndVelocity", Native_SetClientStageEndVelocity);
 	CreateNative("Shavit_GetRankForTime", Native_GetRankForTime);
 	CreateNative("Shavit_GetRecordAmount", Native_GetRecordAmount);
 	CreateNative("Shavit_GetTimeForRank", Native_GetTimeForRank);
 	CreateNative("Shavit_GetWorldRecord", Native_GetWorldRecord);
+	CreateNative("Shavit_GetWRStartVelocity", Native_GetWRStartVelocity);
+	CreateNative("Shavit_GettWREndVelocity", Native_GetWREndVelocity);
 	CreateNative("Shavit_GetWRName", Native_GetWRName);
 	CreateNative("Shavit_GetWRRecordID", Native_GetWRRecordID);
 	CreateNative("Shavit_ReloadLeaderboards", Native_ReloadLeaderboards);
@@ -154,14 +175,13 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetStageCPWR", Native_GetStageCPWR);
 	CreateNative("Shavit_GetStageCPPB", Native_GetStageCPPB);
 	CreateNative("Shavit_GetStageWorldRecord", Native_GetStageWorldRecord);
+	CreateNative("Shavit_GetStageWRStartVelocity", Native_GetStageWRStartVelocity);
+	CreateNative("Shavit_GettStageWREndVelocity", Native_GetStageWREndVelocity);
 	CreateNative("Shavit_GetStageWRName", Native_GetStageWRName);
 	CreateNative("Shavit_GetStageWRRecordID", Native_GetStageWRRecordID);
-	CreateNative("Shavit_GetClientStagePB", Native_GetClientStagePB);
-	CreateNative("Shavit_SetClientStagePB", Native_SetClientStagePB);
 	CreateNative("Shavit_GetStageRecordAmount", Native_GetStageRecordAmount);
 	CreateNative("Shavit_GetStageTimeForRank", Native_GetStageTimeForRank);
 	CreateNative("Shavit_GetStageRankForTime", Native_GetStageRankForTime);
-	CreateNative("Shavit_GetClientStageCompletions", Native_GetClientStageCompletions);
 
 	// registers library, check "bool LibraryExists(const char[] name)" in order to use with other plugins
 	RegPluginLibrary("shavit-wr");
@@ -232,7 +252,6 @@ public void OnPluginStart()
 	RegAdminCmd("sm_deletestagerecord", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
 	RegAdminCmd("sm_deletestagerecords", Command_DeleteStageRecord, ADMFLAG_RCON, "Opens a stage record deletion menu interface.");
 	RegAdminCmd("sm_deleteallstage", Command_DeleteAll_Stage, ADMFLAG_RCON, "Deletes all the records for this stage.");
-
 
 	// cvars
 	gCV_RecordsLimit = new Convar("shavit_wr_recordlimit", "50", "Limit of records shown in the WR menu.\nAdvised to not set above 1,000 because scrolling through so many pages is useless.\n(And can also cause the command to take long time to run)", 0, true, 1.0);
@@ -397,6 +416,8 @@ void ResetWRs()
 	for(int i = 0; i < gI_Styles; i++)
 	{
 		gF_WRTime[i] = empty_cells;
+		gF_WRStartVelocity[i] = empty_cells;
+		gF_WREndVelocity[i] = empty_cells;
 		gI_WRRecordID[i] = empty_cells;
 		gI_WRSteamID[i] = empty_cells;
 	}
@@ -411,6 +432,8 @@ void ResetStageWRs()
 	for(int i = 0; i < gI_Styles; i++)
 	{
 		gF_StageWRTime[i] = empty_cells;
+		gF_StageWRStartVelocity[i] = empty_cells;
+		gF_StageWREndVelocity[i] = empty_cells;
 		gI_StageWRRecordID[i] = empty_cells;
 		gI_StageWRSteamID[i] = empty_cells;
 	}
@@ -602,9 +625,13 @@ public void OnClientConnected(int client)
 	for(int i = 0; i < gI_Styles; i++)
 	{
 		gF_PlayerRecord[client][i] = empty_cells;
+		gF_PlayerStartVelocity[client][i] = empty_cells;
+		gF_PlayerEndVelocity[client][i] = empty_cells;
 		gI_PlayerCompletion[client][i] = empty_cells;
 
 		gF_PlayerStageRecord[client][i] = stage_empty_cells;
+		gF_PlayerStageStartVelocity[client][i] = stage_empty_cells;
+		gF_PlayerStageEndVelocity[client][i] = stage_empty_cells;
 		gI_PlayerStageCompletion[client][i] = stage_empty_cells;
 		
 		for(int j = 0; j < TRACKS_SIZE; j++)
@@ -643,11 +670,11 @@ void UpdateClientCache(int client)
 	}
 
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, track, completions FROM %splayertimes WHERE map = '%s' AND auth = %d;",
+	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, track, completions, startvel, endvel FROM %splayertimes WHERE map = '%s' AND auth = %d;",
 		gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", time)", gS_MySQLPrefix, gS_Map, iSteamID);
 	QueryLog(gH_SQL, SQL_UpdateCache_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 
-	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, stage, completions FROM %sstagetimes WHERE map = '%s' AND auth = %d", 
+	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, stage, completions, startvel, endvel FROM %sstagetimes WHERE map = '%s' AND auth = %d", 
 	gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", time)", gS_MySQLPrefix, gS_Map, iSteamID);
 	QueryLog(gH_SQL, SQL_UpdateStagePBCache_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 
@@ -675,6 +702,7 @@ public void SQL_UpdateCache_Callback(Database db, DBResultSet results, const cha
 	OnClientConnected(client);
 	while(results.FetchRow())
 	{
+		float time = results.FetchFloat(0);
 		int style = results.FetchInt(1);
 		int track = results.FetchInt(2);
 
@@ -683,8 +711,11 @@ public void SQL_UpdateCache_Callback(Database db, DBResultSet results, const cha
 			continue;
 		}
 
-		gF_PlayerRecord[client][style][track] = results.FetchFloat(0);
+		gF_PlayerRecord[client][style][track] = time;
 		gI_PlayerCompletion[client][style][track] = results.FetchInt(3);
+
+		gF_PlayerStartVelocity[client][style][track] = results.FetchFloat(4);
+		gF_PlayerEndVelocity[client][style][track] = results.FetchFloat(5);
 
 	}
 
@@ -721,6 +752,8 @@ public void SQL_UpdateStagePBCache_Callback(Database db, DBResultSet results, co
 		gF_PlayerStageRecord[client][style][stage] = time;
 		gI_PlayerStageCompletion[client][style][stage] = results.FetchInt(3);
 
+		gF_PlayerStageStartVelocity[client][style][stage] = results.FetchFloat(4);
+		gF_PlayerStageEndVelocity[client][style][stage] = results.FetchFloat(5);
 	}
 
 	gB_LoadedStageCache[client] = true;
@@ -841,6 +874,16 @@ public int Native_GetWorldRecord(Handle handler, int numParams)
 	return view_as<int>(gF_WRTime[GetNativeCell(1)][GetNativeCell(2)]);
 }
 
+public int Native_GetWRStartVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_WRStartVelocity[GetNativeCell(1)][GetNativeCell(2)]);
+}
+
+public int Native_GetWREndVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_WREndVelocity[GetNativeCell(1)][GetNativeCell(2)]);
+}
+
 public int Native_ReloadLeaderboards(Handle handler, int numParams)
 {
 	UpdateWRCache();
@@ -896,10 +939,36 @@ public int Native_SetClientPB(Handle handler, int numParams)
 	return 1;
 }
 
-public int Native_GetPlayerPB(Handle handler, int numParams)
+public int Native_GetClientStartVelocity(Handle handler, int numParams)
 {
-	SetNativeCellRef(3, gF_PlayerRecord[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(4)]);
-	return -1;
+	return view_as<int>(gF_PlayerStartVelocity[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)]);
+}
+
+public int Native_SetClientStartVelocity(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+	int style = GetNativeCell(2);
+	int track = GetNativeCell(3);
+	float vel = GetNativeCell(4);
+
+	gF_PlayerStartVelocity[client][style][track] = vel;
+	return 1;
+}
+
+public int Native_GetClientEndVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_PlayerEndVelocity[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)]);
+}
+
+public int Native_SetClientEndVelocity(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+	int style = GetNativeCell(2);
+	int track = GetNativeCell(3);
+	float vel = GetNativeCell(4);
+
+	gF_PlayerEndVelocity[client][style][track] = vel;
+	return 1;
 }
 
 public int Native_GetClientCompletions(Handle handler, int numParams)
@@ -1262,6 +1331,16 @@ public int Native_GetStageWorldRecord(Handle plugin, int numParams)
 	return view_as<int>(gF_StageWRTime[GetNativeCell(1)][GetNativeCell(2)]);
 }
 
+public int Native_GetStageWRStartVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_StageWRStartVelocity[GetNativeCell(1)][GetNativeCell(2)]);
+}
+
+public int Native_GetStageWREndVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_StageWREndVelocity[GetNativeCell(1)][GetNativeCell(2)]);
+}
+
 public int Native_GetStageWRRecordID(Handle plugin, int numParams)
 {
 	SetNativeCellRef(2, gI_StageWRRecordID[GetNativeCell(1)][GetNativeCell(3)]);
@@ -1304,6 +1383,38 @@ public int Native_SetClientStagePB(Handle plugin, int numParams)
 {
 	gF_PlayerStageRecord[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)] = GetNativeCell(4);
 	return 0;
+}
+
+public int Native_GetClientStageStartVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_PlayerStageStartVelocity[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)]);
+}
+
+public int Native_SetClientStageStartVelocity(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+	int style = GetNativeCell(2);
+	int stage = GetNativeCell(3);
+	float vel = GetNativeCell(4);
+
+	gF_PlayerStageStartVelocity[client][style][stage] = vel;
+	return 1;
+}
+
+public int Native_GetClientStageEndVelocity(Handle handler, int numParams)
+{
+	return view_as<int>(gF_PlayerStageEndVelocity[GetNativeCell(1)][GetNativeCell(2)][GetNativeCell(3)]);
+}
+
+public int Native_SetClientStageEndVelocity(Handle handler, int numParams)
+{
+	int client = GetNativeCell(1);
+	int style = GetNativeCell(2);
+	int stage = GetNativeCell(3);
+	float vel = GetNativeCell(4);
+
+	gF_PlayerStageEndVelocity[client][style][stage] = vel;
+	return 1;
 }
 
 public void SQL_DeleteMap_Callback(Database db, DBResultSet results, const char[] error, any data)
@@ -3755,7 +3866,7 @@ public void Shavit_OnDatabaseLoaded()
 }
 
 
-public void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, int timestamp)
+public void Shavit_OnFinishStage(int client, int track, int style, int stage, float time, float oldtime, int jumps, int strafes, float sync, float perfs, float avgvel, float maxvel, float startvel, float endvel, int timestamp)
 {
 	if (!gB_LoadedStageCache[client] || !gB_LoadedCache[client])
 	{
@@ -3794,6 +3905,8 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	{
 		float fOldWR = gF_StageWRTime[style][stage];
 		gF_StageWRTime[style][stage] = time;
+		gF_StageWRStartVelocity[style][stage] = startvel;
+		gF_StageWREndVelocity[style][stage] = endvel;
 
 		gI_StageWRSteamID[style][stage] = iSteamID;
 
@@ -3896,8 +4009,8 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);
 
 			FormatEx(sQuery, sizeof(sQuery),
-				"INSERT INTO %sstagetimes (auth, map, time, jumps, date, style, strafes, sync, points, track, stage, perfs) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %d, %.2f);",
-				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, stage, perfs);
+				"INSERT INTO %sstagetimes (auth, map, time, jumps, date, style, strafes, sync, points, track, stage, perfs, startvel, endvel) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %d, %.2f, %f, %f);",
+				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, stage, perfs, startvel, endvel);
 		}
 		else // Better than PB, Maybe Beat the wr
 		{
@@ -3924,8 +4037,8 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 			}
 
 			FormatEx(sQuery, sizeof(sQuery),
-				"UPDATE %sstagetimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1 WHERE map = '%s' AND auth = %d AND style = %d AND track = %d AND stage = %d;",
-				gS_MySQLPrefix, time, jumps, timestamp, strafes, sync, fPoints, perfs, gS_Map, iSteamID, style, track, stage);
+				"UPDATE %sstagetimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1, startvel = %f, endvel = %f WHERE map = '%s' AND auth = %d AND style = %d AND track = %d AND stage = %d;",
+				gS_MySQLPrefix, time, jumps, timestamp, strafes, sync, fPoints, perfs, startvel, endvel, gS_Map, iSteamID, style, track, stage);
 		}
 
 		QueryLog(gH_SQL, SQL_OnFinishStage_Callback, sQuery, GetClientSerial(client), DBPrio_High);
@@ -4029,7 +4142,10 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	// update pb cache only after sending the message so we can grab the old one inside the Shavit_OnFinishMessage forward
 	if(iOverwrite > 0)
 	{
-		gF_PlayerStageRecord[client][style][track] = time;
+		gF_PlayerStageRecord[client][style][stage] = time;
+		gF_PlayerStageStartVelocity[client][style][stage] = startvel;
+		gF_PlayerStageEndVelocity[client][style][stage] = endvel;
+
 	}
 }
 
@@ -4070,7 +4186,7 @@ public void SQL_OnFinishStage_Callback(Database db, DBResultSet results, const c
 }
 
 
-public void Shavit_OnFinish(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, int timestamp)
+public void Shavit_OnFinish(int client, int style, float time, int jumps, int strafes, float sync, int track, float oldtime, float perfs, float avgvel, float maxvel, float startvel, float endvel, int timestamp)
 {
 	// do not risk overwriting the player's data if their PB isn't loaded to cache yet
 	if (!gB_LoadedStageCache[client] || !gB_LoadedCache[client])
@@ -4130,6 +4246,8 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	{
 		float fOldWR = gF_WRTime[style][track];
 		gF_WRTime[style][track] = time;
+		gF_WRStartVelocity[style][track] = startvel;
+		gF_WREndVelocity[style][track] = endvel;
 
 		gI_WRSteamID[style][track] = iSteamID;
 
@@ -4250,8 +4368,8 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);			
 
 			FormatEx(sQuery, sizeof(sQuery),
-				"INSERT INTO %splayertimes (auth, map, time, jumps, date, style, strafes, sync, points, track, perfs) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %.2f);",
-				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, perfs);
+				"INSERT INTO %splayertimes (auth, map, time, jumps, date, style, strafes, sync, points, track, perfs, startvel, endvel) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %.2f, %f, %f);",
+				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, perfs, startvel, endvel);
 		}
 		else // Better than PB, Maybe Beat the wr
 		{
@@ -4278,8 +4396,8 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 			}
 
 			FormatEx(sQuery, sizeof(sQuery),
-				"UPDATE %splayertimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1 WHERE map = '%s' AND auth = %d AND style = %d AND track = %d;",
-				gS_MySQLPrefix, time, jumps, timestamp, strafes, sync, fPoints, perfs, gS_Map, iSteamID, style, track);
+				"UPDATE %splayertimes SET time = %.9f, jumps = %d, date = %d, strafes = %d, sync = %.02f, points = %f, perfs = %.2f, completions = completions + 1, startvel = %f, endvel = %f WHERE map = '%s' AND auth = %d AND style = %d AND track = %d;",
+				gS_MySQLPrefix, time, jumps, timestamp, strafes, sync, fPoints, perfs, startvel, endvel, gS_Map, iSteamID, style, track);
 		}
 
 		ReplaceCPTimes(gH_SQL, client, style, track, cptimes, false);
@@ -4399,6 +4517,8 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	if(iOverwrite > 0)
 	{
 		gF_PlayerRecord[client][style][track] = time;
+		gF_PlayerStartVelocity[client][style][track] = startvel;
+		gF_PlayerEndVelocity[client][style][track] = endvel;
 	}
 }
 
@@ -4505,7 +4625,7 @@ public void Trans_ReplaceCPTimes_Error(Database db, any data, int numQueries, co
 void UpdateLeaderboards()
 {
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "SELECT p.style, p.track, %s, 0, p.id, p.auth, u.name FROM %splayertimes p LEFT JOIN %susers u ON p.auth = u.auth WHERE p.map = '%s' ORDER BY p.time ASC, p.date ASC;", gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", p.time)", gS_MySQLPrefix, gS_MySQLPrefix, gS_Map);
+	FormatEx(sQuery, sizeof(sQuery), "SELECT p.style, p.track, %s, 0, p.id, p.auth, p.startvel, p.endvel, u.name FROM %splayertimes p LEFT JOIN %susers u ON p.auth = u.auth WHERE p.map = '%s' ORDER BY p.time ASC, p.date ASC;", gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", p.time)", gS_MySQLPrefix, gS_MySQLPrefix, gS_Map);
 	QueryLog(gH_SQL, SQL_UpdateLeaderboards_Callback, sQuery);
 }
 
@@ -4540,11 +4660,14 @@ public void SQL_UpdateLeaderboards_Callback(Database db, DBResultSet results, co
 			gI_WRRecordID[style][track] = results.FetchInt(4);
 			gI_WRSteamID[style][track] = results.FetchInt(5);
 
+			gF_WRStartVelocity[style][track] = results.FetchFloat(6);
+			gF_WREndVelocity[style][track] = results.FetchFloat(7);
+
 			char sSteamID[20];
 			IntToString(gI_WRSteamID[style][track], sSteamID, sizeof(sSteamID));
 
 			char sName[MAX_NAME_LENGTH];
-			results.FetchString(6, sName, MAX_NAME_LENGTH);
+			results.FetchString(8, sName, MAX_NAME_LENGTH);
 			ReplaceString(sName, MAX_NAME_LENGTH, "#", "?");
 			gSM_WRNames.SetString(sSteamID, sName, false);
 		}
@@ -4572,7 +4695,7 @@ public void SQL_UpdateLeaderboards_Callback(Database db, DBResultSet results, co
 void UpdateStageLeaderboards()
 {
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "SELECT p.style, p.stage, %s, 0, p.id, p.auth, u.name FROM %sstagetimes p LEFT JOIN %susers u ON p.auth = u.auth WHERE p.map = '%s' ORDER BY p.time ASC, p.date ASC;", gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", p.time)", gS_MySQLPrefix, gS_MySQLPrefix, gS_Map);
+	FormatEx(sQuery, sizeof(sQuery), "SELECT p.style, p.stage, %s, 0, p.id, p.auth, p.startvel, p.endvel, u.name FROM %sstagetimes p LEFT JOIN %susers u ON p.auth = u.auth WHERE p.map = '%s' ORDER BY p.time ASC, p.date ASC;", gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", p.time)", gS_MySQLPrefix, gS_MySQLPrefix, gS_Map);
 	QueryLog(gH_SQL, SQL_UpdateStageLeaderboards_Callback, sQuery);
 }
 
@@ -4609,8 +4732,11 @@ public void SQL_UpdateStageLeaderboards_Callback(Database db, DBResultSet result
 			char sSteamID[20];
 			IntToString(gI_StageWRSteamID[style][stage], sSteamID, sizeof(sSteamID));
 
+			gF_StageWRStartVelocity[style][stage] = results.FetchFloat(6);
+			gF_StageWREndVelocity[style][stage] = results.FetchFloat(7);
+
 			char sName[MAX_NAME_LENGTH];
-			results.FetchString(6, sName, MAX_NAME_LENGTH);
+			results.FetchString(8, sName, MAX_NAME_LENGTH);
 			ReplaceString(sName, MAX_NAME_LENGTH, "#", "?");
 			gSM_StageWRNames.SetString(sSteamID, sName, false);
 		}

@@ -150,6 +150,24 @@ native float Shavit_GetWorldRecord(int style, int track);
 native void Shavit_ReloadLeaderboards();
 
 /**
+ * Retrieves the world record start veloctiy for the given style/track.
+ *
+ * @param style                     Style to get the WR for.
+ * @param track                     Timer track.
+ * @return                          Start velocity for the specified settings.
+ */
+native float Shavit_GetWRStartVelocity(int style, int track);
+
+/**
+ * Retrieves the world record end veloctiy for the given style/track.
+ *
+ * @param style                     Style to get the WR for.
+ * @param track                     Timer track.
+ * @return                          End velocity for the specified settings.
+ */
+native float Shavit_GetWREndVelocity(int style, int track);
+
+/**
  * Saves the WR's record ID for the current map on a variable.
  * Unused in base plugins, as of pre-1.4b.
  *
@@ -201,6 +219,48 @@ native void Shavit_SetClientPB(int client, int style, int track, float time);
  * @return                          Number of the player's Completions for given style/track.
  */
 native int Shavit_GetClientCompletions(int client, int style, int track);
+
+/**
+ * Get the client's pb start velocity of specific track.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param track						Track number for completions.
+ * @return							Start velocity.						
+ */
+native float Shavit_GetClientStartVelocity(int client, int style, int track);
+
+/**
+ * Get the client's pb end velocity of specific track.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param track						Track number.
+ * @return							End velocity.						
+ */
+native float Shavit_GetClientEndVelocity(int client, int style, int track);
+
+/**
+ * Set the client's start velocity of specific track.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param track						Track number.
+ * @param vel						Velocity value to set.
+ * @noreturn					
+ */
+native void Shavit_SetClientStartVelocity(int client, int style, int track, float vel);
+
+/**
+ * Set the client's end velocity of specific track.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param track						Track number.
+ * @param vel						Velocity value to set.
+ * @noreturn
+ */
+native void Shavit_SetClientEndVelocity(int client, int style, int track, float vel);
 
 /**
  * Get the amount of records on the current map/style on a track.
@@ -291,7 +351,6 @@ native void Shavit_DeleteStageWR(int style, int track, int stage, const char[] m
  */
 native void Shavit_WR_DeleteMap(const char[] map);
 
-
 /**
  * Get the stage world record time.
  * 
@@ -300,6 +359,24 @@ native void Shavit_WR_DeleteMap(const char[] map);
  * @return							Stage world record for the specified settings.
  */
 native float Shavit_GetStageWorldRecord(int style, int stage);
+
+/**
+ * Get the stage world record start velocity.
+ * 
+ * @param style						Style to get the WR for.
+ * @param stage						Record stage.
+ * @return							Velocity for the specified settings.
+ */
+native float Shavit_GetStageWRStartVelocity(int style, int stage);
+
+/**
+ * Get the stage world record end velocity.
+ * 
+ * @param style						Style to get the WR for.
+ * @param stage						Record stage.
+ * @return							Velocity for the specified settings.
+ */
+native float Shavit_GetStageWREndVelocity(int style, int stage);
 
 /**
  * Get stage's world record ID in database.
@@ -323,7 +400,7 @@ native void Shavit_GetStageWRRecordID(int style, int& recordid, int stage);
 native void Shavit_GetStageWRName(int style, char[] wrname, int wrmaxlength, int stage);
 
 /**
- * Get the stage world record time.
+ * Get the stage record time of client.
  * 
  * @param client					Client index.
  * @param style						Style to get the WR for.
@@ -344,7 +421,7 @@ native float Shavit_GetClientStagePB(int client, int style, int stage);
 native void Shavit_SetlientStagePB(int client, int style, int stage, float time);
 
 /**
- * Get the stage world record time.
+ * Get the stage record amount of specific track.
  * 
  * @param style						Style to get the WR for.
  * @param stage						Record stage.
@@ -353,7 +430,7 @@ native void Shavit_SetlientStagePB(int client, int style, int stage, float time)
 native int Shavit_GetStageRecordAmount(int style, int stage);
 
 /**
- * Get the stage world record time.
+ * Get stage rank for a specific time.
  * 
  * @param style						Style to get the WR for.
  * @param time						The time for stage rank. 
@@ -363,7 +440,7 @@ native int Shavit_GetStageRecordAmount(int style, int stage);
 native int Shavit_GetStageRankForTime(int style, float time, int stage);
 
 /**
- * Get the stage world record time.
+ * Get stage record time of specific rank.
  * 
  * @param style						Style to get the WR for.
  * @param rank						Rank to retrieve the time from. 
@@ -373,7 +450,7 @@ native int Shavit_GetStageRankForTime(int style, float time, int stage);
 native float Shavit_GetStageTimeForRank(int style, int rank, int stage);
 
 /**
- * Get the stage world record time.
+ * Get client's stage completion times.
  * 
  * @param client					Client index.
  * @param style						Style index. 
@@ -381,6 +458,48 @@ native float Shavit_GetStageTimeForRank(int style, int rank, int stage);
  * @return							Numbers of completions.						
  */
 native int Shavit_GetClientStageCompletions(int client, int style, int stage);
+
+/**
+ * Get the client's stage pb start velocity.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param stage						Stage number for completions.
+ * @return							Start velocity.						
+ */
+native float Shavit_GetClientStageStartVelocity(int client, int style, int stage);
+
+/**
+ * Get the client's stage pb end velocity.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param stage						Stage number.
+ * @return							End velocity.						
+ */
+native float Shavit_GetClientStageEndVelocity(int client, int style, int stage);
+
+/**
+ * Set the client's stage pb start velocity.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param stage						Stage number.
+ * @param vel						Velocity value to set.
+ * @noreturn					
+ */
+native void Shavit_SetClientStageStartVelocity(int client, int style, int stage, float vel);
+
+/**
+ * Set the client's stage pb end velocity.
+ * 
+ * @param client					Client index.
+ * @param style						Style index. 
+ * @param stage						Stage number.
+ * @param vel						Velocity value to set.
+ * @noreturn
+ */
+native void Shavit_SetClientStageEndVelocity(int client, int style, int stage, float vel);
 
 
 public SharedPlugin __pl_shavit_wr =
@@ -416,5 +535,14 @@ public void __pl_shavit_wr_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_GetStageWRName");
 	MarkNativeAsOptional("Shavit_GetClientStagePB");
 	MarkNativeAsOptional("Shavit_SetlientStagePB");
+	MarkNativeAsOptional("Shavit_GetClientStageStartVelocity");
+	MarkNativeAsOptional("Shavit_GetClientStageEndVelocity");
+	MarkNativeAsOptional("Shavit_SetClientStageStartVelocity");
+	MarkNativeAsOptional("Shavit_SetClientStageEndVelocity");
+	MarkNativeAsOptional("Shavit_GetClientStageCompletions");
+	MarkNativeAsOptional("Shavit_GetClientStartVelocity");
+	MarkNativeAsOptional("Shavit_GetClientEndVelocity");
+	MarkNativeAsOptional("Shavit_SetClientStartVelocity");
+	MarkNativeAsOptional("Shavit_SetClientEndVelocity");
 }
 #endif

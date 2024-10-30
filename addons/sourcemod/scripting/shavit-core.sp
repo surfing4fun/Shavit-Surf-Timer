@@ -258,6 +258,10 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetMaxVelocity", Native_GetMaxVelocity);
 	CreateNative("Shavit_SetAvgVelocity", Native_SetAvgVelocity);
 	CreateNative("Shavit_SetMaxVelocity", Native_SetMaxVelocity);
+	CreateNative("Shavit_GetStartVelocity", Native_GetStartVelocity);
+	CreateNative("Shavit_GetStageStartVelocity", Native_GetStageStartVelocity);
+	CreateNative("Shavit_SetStartVelocity", Native_SetStartVelocity);
+	CreateNative("Shavit_SetStageStartVelocity", Native_SetStageStartVelocity);
 	CreateNative("Shavit_ShouldProcessFrame", Native_ShouldProcessFrame);
 	CreateNative("Shavit_GotoEnd", Native_GotoEnd);
 	CreateNative("Shavit_UpdateLaggedMovement", Native_UpdateLaggedMovement);
@@ -284,9 +288,9 @@ public void OnPluginStart()
 	gH_Forwards_Stop = CreateGlobalForward("Shavit_OnStop", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_StopPre = CreateGlobalForward("Shavit_OnStopPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_FinishPre = CreateGlobalForward("Shavit_OnFinishPre", ET_Hook, Param_Cell, Param_Array);
-	gH_Forwards_Finish = CreateGlobalForward("Shavit_OnFinish", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_Finish = CreateGlobalForward("Shavit_OnFinish", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_FinishStagePre = CreateGlobalForward("Shavit_OnFinishStagePre", ET_Event, Param_Cell, Param_Array);
-	gH_Forwards_FinishStage = CreateGlobalForward("Shavit_OnFinishStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
+	gH_Forwards_FinishStage = CreateGlobalForward("Shavit_OnFinishStage", ET_Event, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnRestartPre = CreateGlobalForward("Shavit_OnRestartPre", ET_Event, Param_Cell, Param_Cell);
 	gH_Forwards_OnRestart = CreateGlobalForward("Shavit_OnRestart", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	gH_Forwards_OnEndPre = CreateGlobalForward("Shavit_OnEndPre", ET_Event, Param_Cell, Param_Cell);
@@ -2100,7 +2104,7 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 
 	if(GetTimerStatus(client) == Timer_Stopped && gA_Timers[client].bOnlyStageMode)
 	{
-		gA_Timers[client].iLastStage = stage;	// i dont know why but i need this here to make sure the stage number is right
+		ChangeClientLastStage(client, stage);	// i dont know why but i need this here to make sure the stage number is right
 		StartTimer(client, track);
 	}
 	else if(GetTimerStatus(client) == Timer_Running)
@@ -2328,6 +2332,10 @@ public int Native_FinishMap(Handle handler, int numParams)
 		}
 	}
 
+	float fSpeed[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+	float fEndVelocity = GetVectorLength(fSpeed);
+
 	CalculateRunTime(gA_Timers[client], true);
 
 	if (gA_Timers[client].fCurrentTime <= 0.11)
@@ -2367,6 +2375,8 @@ public int Native_FinishMap(Handle handler, int numParams)
 	Call_PushCell(CalcPerfs(snapshot));
 	Call_PushCell(snapshot.fAvgVelocity);
 	Call_PushCell(snapshot.fMaxVelocity);
+	Call_PushCell(snapshot.fStartVelocity);
+	Call_PushCell(fEndVelocity);
 
 	Call_PushCell(timestamp);
 	Call_Finish();
@@ -2403,6 +2413,10 @@ public int Native_FinishStage(Handle handler, int numParams)
 			Shavit_PrintToChat(client, "%s", sOffsetMessage);
 		}
 	}
+
+	float fSpeed[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+	float fEndVelocity = GetVectorLength(fSpeed);
 
 	CalculateRunTime(gA_Timers[client], true);
 
@@ -2448,6 +2462,8 @@ public int Native_FinishStage(Handle handler, int numParams)
 	Call_PushCell(CalcPerfs(end));
 	Call_PushCell(end.fAvgVelocity);
 	Call_PushCell(end.fMaxVelocity);
+	Call_PushCell(end.aStageStartInfo.fStartVelocity);
+	Call_PushCell(fEndVelocity);
 	Call_PushCell(timestamp);	//13 total
 	Call_Finish();
 
@@ -2971,6 +2987,28 @@ public any Native_SetMaxVelocity(Handle plugin, int numParams)
 	return 1;
 }
 
+public any Native_GetStartVelocity(Handle plugin, int numParams)
+{
+	return gA_Timers[GetNativeCell(1)].fStartVelocity;
+}
+
+public any Native_GetStageStartVelocity(Handle plugin, int numParams)
+{
+	return gA_Timers[GetNativeCell(1)].aStageStartInfo.fStartVelocity;
+}
+
+public any Native_SetStartVelocity(Handle plugin, int numParams)
+{
+	gA_Timers[GetNativeCell(1)].fStartVelocity = GetNativeCell(2);
+	return 1;
+}
+
+public any Native_SetStageStartVelocity(Handle plugin, int numParams)
+{
+	gA_Timers[GetNativeCell(1)].aStageStartInfo.fStartVelocity = GetNativeCell(2);
+	return 1;
+}
+
 public int Native_GetClientLastStage(Handle plugin, int numParams)
 {
 	return gA_Timers[GetNativeCell(1)].iLastStage;
@@ -3113,15 +3151,6 @@ void StartTimer(int client, int track)
 			gA_Timers[client].iTotalMeasures = 0;
 			gA_Timers[client].iGoodGains = 0;
 			
-			//reset stage start stuffs
-			gA_Timers[client].aStageStartInfo.fStageStartTime = 0.0;
-			gA_Timers[client].aStageStartInfo.iFullTicks = 0;
-			gA_Timers[client].aStageStartInfo.iFractionalTicks = 0;
-			gA_Timers[client].aStageStartInfo.iJumps = 0;
-			gA_Timers[client].aStageStartInfo.iStrafes = 0;
-
-			gA_Timers[client].bStageTimeValid = true;
-
 			if (gA_Timers[client].iTimerTrack != track)
 			{
 				CallOnTrackChanged(client, gA_Timers[client].iTimerTrack, track);
@@ -3133,7 +3162,21 @@ void StartTimer(int client, int track)
 			}
 			else
 			{
-				gA_Timers[client].iLastStage = Shavit_GetStageCount(track) > 1 ? 1 : 0; // i use it as last checkpoint number when the map is linear.
+				if(Shavit_GetStageCount(track) > 1)
+				{
+					//reset stage start stuffs
+					ChangeClientLastStage(client, 1);
+					gA_Timers[client].aStageStartInfo.fStageStartTime = 0.0;
+					gA_Timers[client].aStageStartInfo.iFullTicks = 0;
+					gA_Timers[client].aStageStartInfo.iFractionalTicks = 0;
+					gA_Timers[client].aStageStartInfo.iJumps = 0;
+					gA_Timers[client].aStageStartInfo.iStrafes = 0;
+					gA_Timers[client].bStageTimeValid = true;
+				}
+				else
+				{
+					gA_Timers[client].iLastStage = 0; // i use it as last checkpoint number when the map is linear.
+				}
 				
 				//set it -1.0 to make cptime dont need to reset of often
 				if(gA_Timers[client].fCPTimes[1] != -1.0)	
@@ -3308,7 +3351,7 @@ public void OnClientPutInServer(int client)
 	gA_Timers[client].aStageStartInfo.iJumps = 0;
 	gA_Timers[client].aStageStartInfo.iStrafes = 0;
 	gA_Timers[client].aStageStartInfo.iGoodGains = 0;
-	gA_Timers[client].aStageStartInfo.iTotalMeasures = 0;
+	gA_Timers[client].aStageStartInfo.iTotalMeasures = 0;	
 	gA_Timers[client].fCPTimes = empty_times;
 	gS_DeleteMap[client][0] = 0;
 	gI_FirstTouchedGround[client] = 0;
