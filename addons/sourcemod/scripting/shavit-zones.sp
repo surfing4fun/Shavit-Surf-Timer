@@ -6116,7 +6116,7 @@ public void EndTouchPost(int entity, int other)
 						{
 							float fStartVelDiffWR = speed - fStartVelWR;
 
-							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR %s%s%.2f", 
+							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.1f", 
 								fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
 
 							float fStartVelPB = Shavit_GetClientStartVelocity(other, style, track);
@@ -6125,7 +6125,7 @@ public void EndTouchPost(int entity, int other)
 							{
 								float fStartVelDiffPB = speed - fStartVelPB;
 
-								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s | %s%s%.2f", sVelDiff, gS_ChatStrings.sText,
+								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s | PB: %s%s%.1f", sVelDiff, gS_ChatStrings.sText,
 									fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
 							}
 
@@ -6143,7 +6143,7 @@ public void EndTouchPost(int entity, int other)
 							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetHUDSettings(i) & HUD_SPEEDTRAP > 0))
 							{
 								Shavit_StopChatSound();							
-								Shavit_PrintToChat(i, "%T", "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText);
+								Shavit_PrintToChat(i, "%T %s", "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
 							}
 						}						
 					}
@@ -6183,7 +6183,7 @@ public void EndTouchPost(int entity, int other)
 						{
 							float fStartVelDiffWR = speed - fStartVelWR;
 
-							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR %s%s%.2f", 
+							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.1f", 
 								fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
 
 							float fStartVelPB = Shavit_GetClientStageStartVelocity(other, style, stage);
@@ -6192,7 +6192,7 @@ public void EndTouchPost(int entity, int other)
 							{
 								float fStartVelDiffPB = speed - fStartVelPB;
 
-								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s | %s%s%.2f", sVelDiff, gS_ChatStrings.sText,
+								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s | PB: %s%s%.1f", sVelDiff, gS_ChatStrings.sText,
 									fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
 							}
 
@@ -6217,9 +6217,9 @@ public void EndTouchPost(int entity, int other)
 							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetHUDSettings(i) & HUD_SPEEDTRAP > 0))
 							{
 								Shavit_StopChatSound();
-								Shavit_PrintToChat(i, "%T", "ZoneStageStartZonePrespeed", i,
+								Shavit_PrintToChat(i, "%T %s", "ZoneStageStartZonePrespeed", i,
 									gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
-									valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText);
+									valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText, sVelDiff);
 							}
 						}						
 					}
