@@ -22,6 +22,10 @@
 	{
 		"en"		"Bonus"
 	}
+	"StageText"
+	{
+		"en"		"Stage"
+	}
 	// ---------- Commands ---------- //
 	"NoCommandAccess"
 	{

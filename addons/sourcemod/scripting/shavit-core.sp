@@ -118,9 +118,13 @@ float gF_Fraction[MAXPLAYERS + 1];
 // client noclip speed
 float gF_NoclipSpeed[MAXPLAYERS + 1];
 
+// message setting bits
+int gI_MessageSettings[MAXPLAYERS + 1];
+
 // cookies
 Handle gH_StyleCookie = null;
 Handle gH_AutoBhopCookie = null;
+Handle gH_MessageCookie = null;
 Cookie gH_IHateMain = null;
 
 // late load
@@ -270,6 +274,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_SetOnlyStageMode", Native_SetOnlyStageMode);
 	CreateNative("Shavit_IsClientRepeat", Native_IsClientRepeat);
 	CreateNative("Shavit_SetClientRepeat", Native_SetClientRepeat);
+	CreateNative("Shavit_GetMessageSetting", Native_GetMessageSetting);
 
 	// registers library, check "bool LibraryExists(const char[] name)" in order to use with other plugins
 	RegPluginLibrary("shavit");
@@ -406,6 +411,11 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_tsplus", Command_TimescalePlus, "Adds the value to your current timescale.");
 	RegConsoleCmd("sm_timescaleminus", Command_TimescaleMinus, "Subtracts the value from your current timescale.");
 	RegConsoleCmd("sm_tsminus", Command_TimescaleMinus, "Subtracts the value from your current timescale.");
+
+	// Message settings
+	RegConsoleCmd("sm_message", Command_Message, "Open message setting menu.");
+	RegConsoleCmd("sm_msg", Command_Message, "Open message setting menu.");
+	gH_MessageCookie = RegClientCookie("shavit_message", "Message setting cookie", CookieAccess_Protected);
 
 	#if DEBUG
 	RegConsoleCmd("sm_finishtest", Command_FinishTest);
@@ -702,6 +712,10 @@ public Action Command_Timer(int client, int args)
 	Menu menu = new Menu(MenuHandler_Timer);
 	menu.SetTitle("%T", "TimerMenuTitle", client);
 
+	char sMenu[32];
+	FormatEx(sMenu, 32, "%T", "ChatMessageOption", client);
+	menu.AddItem("chat", sMenu);
+
 	Call_StartForward(gH_Forwards_OnTimerMenuCreate);
 	Call_PushCell(client);
 	Call_PushCell(menu);
@@ -727,6 +741,12 @@ public int MenuHandler_Timer(Menu menu, MenuAction action, int param1, int param
 		Call_PushStringEx(sInfo, 16, SM_PARAM_STRING_COPY, SM_PARAM_COPYBACK);
 		Call_PushCell(16);
 		Call_Finish(aResult);
+
+		if(StrEqual(sInfo, "chat"))
+		{
+			ShowMessageSettingMenu(param1, 0);
+			return 0;
+		}
 
 		if(aResult == Plugin_Stop)
 		{
@@ -1056,6 +1076,18 @@ public Action Command_TogglePause(int client, int args)
 
 		Shavit_PrintToChat(client, "%T", "MessagePause", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 	}
+
+	return Plugin_Handled;
+}
+
+public Action Command_Message(int client, int args)
+{
+	if (!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	ShowMessageSettingMenu(client, 0);
 
 	return Plugin_Handled;
 }
@@ -2152,6 +2184,9 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 				gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
 				gA_Timers[client].aStageStartInfo.iGoodGains = gA_Timers[client].iGoodGains;
 				gA_Timers[client].aStageStartInfo.iTotalMeasures = gA_Timers[client].iTotalMeasures;
+				gA_Timers[client].aStageStartInfo.iZoneIncrement = 0;
+				gA_Timers[client].aStageStartInfo.fMaxVelocity = curVel;	
+				gA_Timers[client].aStageStartInfo.fAvgVelocity = curVel;
 			}
 		}
 	}
@@ -2418,19 +2453,23 @@ public int Native_FinishStage(Handle handler, int numParams)
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
 	float fEndVelocity = GetVectorLength(fSpeed);
 
-	CalculateRunTime(gA_Timers[client], true);
-
 	timer_snapshot_t end;
 	Shavit_SaveSnapshot(client, end, sizeof(end));
 
-	if(!gA_Timers[client].bOnlyStageMode)
+	if(!gA_Timers[client].bOnlyStageMode && stage > 1)
 	{
 		end.fCurrentTime -= end.aStageStartInfo.fStageStartTime;
+		end.iFullTicks -= end.aStageStartInfo.iFullTicks;
+		end.iFractionalTicks -= end.aStageStartInfo.iFractionalTicks;
 		end.iJumps -= end.aStageStartInfo.iJumps;
 		end.iStrafes -= end.aStageStartInfo.iStrafes;
 		end.iGoodGains -= end.aStageStartInfo.iGoodGains;
 		end.iTotalMeasures -= end.aStageStartInfo.iTotalMeasures;
+		end.fMaxVelocity = end.aStageStartInfo.fMaxVelocity;
+		end.fAvgVelocity = end.aStageStartInfo.fAvgVelocity;
 	}
+
+	CalculateRunTime(gA_Timers[client], true);
 
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_FinishStagePre);
@@ -2547,6 +2586,11 @@ public int Native_StopChatSound(Handle handler, int numParams)
 {
 	gB_StopChatSound = true;
 	return 1;
+}
+
+public int Native_GetMessageSetting(Handle plugin, int numParams)
+{
+	return gI_MessageSettings[GetNativeCell(1)];
 }
 
 public int Native_PrintToChatAll(Handle plugin, int numParams)
@@ -2755,7 +2799,7 @@ public int Native_SetPracticeMode(Handle handler, int numParams)
 	bool practice = view_as<bool>(GetNativeCell(2));
 	bool alert = view_as<bool>(GetNativeCell(3));
 
-	if(alert && practice && !gA_Timers[client].bPracticeMode && (!gB_HUD || (Shavit_GetHUDSettings(client) & HUD_NOPRACALERT) == 0))
+	if(alert && practice && !gA_Timers[client].bPracticeMode && (gI_MessageSettings[client] & MSG_PRACALERT) == 0)
 	{
 		Shavit_PrintToChat(client, "%T", "PracticeModeAlert", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
 		
@@ -3301,6 +3345,17 @@ public void OnClientCookiesCached(int client)
 
 	gB_Auto[client] = (strlen(sCookie) > 0)? view_as<bool>(StringToInt(sCookie)):true;
 
+	char sMsgSettings[12];
+	GetClientCookie(client, gH_MessageCookie, sMsgSettings, sizeof(sMsgSettings));
+
+	if(strlen(sMsgSettings) == 0)
+	{
+		IntToString(MSG_NONE, sMsgSettings, sizeof(sMsgSettings));
+		SetClientCookie(client, gH_MessageCookie, sMsgSettings);
+	}
+
+	gI_MessageSettings[client] = StringToInt(sMsgSettings);
+
 	int style = gI_DefaultStyle;
 
 	if(gB_StyleCookies && gH_StyleCookie != null)
@@ -3351,10 +3406,8 @@ public void OnClientPutInServer(int client)
 	gA_Timers[client].aStageStartInfo.fStageStartTime = 0.0;
 	gA_Timers[client].aStageStartInfo.iFullTicks = 0;
 	gA_Timers[client].aStageStartInfo.iFractionalTicks = 0;
-	gA_Timers[client].aStageStartInfo.iJumps = 0;
-	gA_Timers[client].aStageStartInfo.iStrafes = 0;
-	gA_Timers[client].aStageStartInfo.iGoodGains = 0;
-	gA_Timers[client].aStageStartInfo.iTotalMeasures = 0;	
+	gA_Timers[client].aStageStartInfo.iZoneIncrement = 0;
+
 	gA_Timers[client].fCPTimes = empty_times;
 	gS_DeleteMap[client][0] = 0;
 	gI_FirstTouchedGround[client] = 0;
@@ -3810,6 +3863,7 @@ public MRESReturn DHook_ProcessMovementPost(Handle hParams)
 	float time = interval * ts;
 
 	gA_Timers[client].iZoneIncrement++;
+	gA_Timers[client].aStageStartInfo.iZoneIncrement++;
 
 	timer_snapshot_t snapshot;
 	BuildSnapshot(client, snapshot);
@@ -4370,6 +4424,14 @@ public void OnPlayerRunCmdPost(int client, int buttons, int impulse, const float
 		gA_Timers[client].fMaxVelocity = (curVel > maxVel) ? curVel : maxVel;
 		// STOLEN from Epic/Disrevoid. Thx :)
 		gA_Timers[client].fAvgVelocity += (curVel - gA_Timers[client].fAvgVelocity) / frameCount;
+
+		if(gA_Timers[client].iLastStage > 1 && !gA_Timers[client].bOnlyStageMode && gA_Timers[client].fCurrentTime != gA_Timers[client].aStageStartInfo.fStageStartTime)
+		{
+			frameCount = float(gA_Timers[client].aStageStartInfo.iZoneIncrement);
+			maxVel = gA_Timers[client].aStageStartInfo.fMaxVelocity;
+			gA_Timers[client].aStageStartInfo.fMaxVelocity = (curVel > maxVel) ? curVel : maxVel;	
+			gA_Timers[client].aStageStartInfo.fAvgVelocity += (curVel - gA_Timers[client].aStageStartInfo.fAvgVelocity) / frameCount;
+		}
 	}
 
 	gA_Timers[client].iLastButtons = buttons;
@@ -4470,4 +4532,92 @@ void UpdateStyleSettings(int client)
 	{
 		UpdateAiraccelerate(client, GetStyleSettingFloat(gA_Timers[client].bsStyle, "airaccelerate"));
 	}
+}
+
+public void ShowMessageSettingMenu(int client, int item)
+{
+	Menu menu = new Menu(MenuHandler_MessageSetting, MENU_ACTIONS_DEFAULT|MenuAction_DisplayItem);
+
+	SetMenuTitle(menu, "%T\n ", "MessageMenuTitle", client);
+
+	char sInfo[16];
+	char sItem[64];
+
+	FormatEx(sInfo, 16, "%d", MSG_FINISHMAP);
+	FormatEx(sItem, 64, "%T", "MsgFinishMap", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_FINISHSTAGE);
+	FormatEx(sItem, 64, "%T", "MsgFinishStage", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_OTHER);
+	FormatEx(sItem, 64, "%T", "MsgOther", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_WORLDRECORD);
+	FormatEx(sItem, 64, "%T", "MsgWorldRecord", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_CHECKPOINT);
+	FormatEx(sItem, 64, "%T", "MsgCheckpoint", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_SPEEDTRAP);
+	FormatEx(sItem, 64, "%T", "MsgSpeedTrap", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_EXTRAFINISHINFO);
+	FormatEx(sItem, 64, "%T", "MsgExtraFinishInfo", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_PRACALERT);
+	FormatEx(sItem, 64, "%T", "MsgPracticeModeAlert", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_POINTINFO);
+	FormatEx(sItem, 64, "%T", "MsgPointInfo", client);
+	menu.AddItem(sInfo, sItem);
+
+	FormatEx(sInfo, 16, "%d", MSG_ADVERTISEMENT);
+	FormatEx(sItem, 64, "%T", "MsgAdvertisement", client);
+	menu.AddItem(sInfo, sItem);
+
+	menu.DisplayAt(client, item, MENU_TIME_FOREVER);
+}
+
+public int MenuHandler_MessageSetting(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char sCookie[16];
+		menu.GetItem(param2, sCookie, 16);
+
+		int iSelection = StringToInt(sCookie);
+
+		gI_MessageSettings[param1] ^= iSelection;
+		IntToString(gI_MessageSettings[param1], sCookie, 16);
+		SetClientCookie(param1, gH_MessageCookie, sCookie);
+
+		ShowMessageSettingMenu(param1, GetMenuSelectionPosition());
+	}
+	else if(action == MenuAction_DisplayItem)
+	{
+		char sInfo[16];
+		char sDisplay[64];
+		int style = 0;
+		
+		menu.GetItem(param2, sInfo, 16, style, sDisplay, 64);
+		int iSelection = StringToInt(sInfo);
+
+		Format(sDisplay, 64, "[%s] %s", ((gI_MessageSettings[param1] & iSelection) == 0) ? "＋":"－", sDisplay);
+
+		return RedrawMenuItem(sDisplay);
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
 }

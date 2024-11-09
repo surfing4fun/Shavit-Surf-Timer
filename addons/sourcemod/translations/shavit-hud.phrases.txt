@@ -265,6 +265,10 @@
 	{
 		"en"        "!keys in the center"
 	}
+	"HUDOptions"
+	{
+		"en"		"Timer HUD Options"
+	}
 	// ---------- Record Bots ---------- //
 	"ReplayText"
 	{

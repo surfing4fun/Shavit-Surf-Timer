@@ -43,7 +43,7 @@ bool gB_Late;
 
 public Plugin myinfo = 
 {
-    name = "shavit-personalreplay",
+    name = "[shavit-surf] Personal replay",
     author = "KikI",
     description = "Save client's most recent replay on cache.",
     version = "1.0",

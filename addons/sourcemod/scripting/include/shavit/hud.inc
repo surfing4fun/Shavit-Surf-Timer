@@ -33,15 +33,13 @@
 #define HUD_KEYOVERLAY          (1 << 5) // show a key overlay
 #define HUD_HIDEWEAPON          (1 << 6) // hide the player's weapon
 #define HUD_WRPB             	(1 << 7) // show top left white HUD with WR/PB times
-#define HUD_SPEEDTRAP           (1 << 8) // shows sync at right side of the screen (css only)
-#define HUD_TIMELEFT            (1 << 9) // shows time left at right tside of the screen (css only)
-#define HUD_2DVEL               (1 << 10) // shows 2d velocity
-#define HUD_NOSOUNDS            (1 << 11) // disables sounds on personal best, world record etc
-#define HUD_NOPRACALERT         (1 << 12) // hides practice mode chat alert
-#define HUD_USP                 (1 << 13) // makes you spawn with a USP
-#define HUD_GLOCK               (1 << 14) // makes you spawn with a Glock
-#define HUD_DEBUGTARGETNAME     (1 << 15) // admin option to show current targetname & classname
-#define HUD_SPECTATORSDEAD      (1 << 16) // for only showing spectators list when you're dead/spectating.
+#define HUD_TIMELEFT            (1 << 8) // shows time left at right tside of the screen (css only)
+#define HUD_2DVEL               (1 << 9) // shows 2d velocity
+#define HUD_NOSOUNDS            (1 << 10) // disables sounds on personal best, world record etc
+#define HUD_USP                 (1 << 11) // makes you spawn with a USP
+#define HUD_GLOCK               (1 << 12) // makes you spawn with a Glock
+#define HUD_DEBUGTARGETNAME     (1 << 13) // admin option to show current targetname & classname
+#define HUD_SPECTATORSDEAD 		(1 << 14) // for only showing spectators list when you're dead/spectating.
 
 // HUD2 - these settings will *disable* elements for the main hud
 #define HUD2_TIME               (1 << 0)
@@ -62,7 +60,7 @@
 #define HUD2_GLOCKBURST         (1 << 15) // spawns glocks with burst
 #define HUD2_CENTERKEYS         (1 << 16) // CSGO option to toggle whether !keys is shown as center-text or in that panel thing.
 
-#define HUD_DEFAULT             (HUD_MASTER|HUD_CENTER|HUD_ZONEHUD|HUD_OBSERVE|HUD_WRPB|HUD_SPEEDTRAP|HUD_TIMELEFT|HUD_2DVEL|HUD_SPECTATORS)
+#define HUD_DEFAULT             (HUD_MASTER|HUD_CENTER|HUD_ZONEHUD|HUD_OBSERVE|HUD_WRPB|HUD_TIMELEFT|HUD_2DVEL|HUD_SPECTATORS)
 #define HUD_DEFAULT2            (HUD2_STRAFE)
 
 stock bool HUD1Enabled(int hudbits, int flag)

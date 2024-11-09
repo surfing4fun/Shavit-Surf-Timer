@@ -3872,7 +3872,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	{
 		return;
 	}
-	
+
 	int iOverwrite = 0;
 	bool bIncrementCompletions = true;
 
@@ -4100,16 +4100,35 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	{
 		if(bEveryone)
 		{
-			Shavit_PrintToChatAll("%s", sMessage);
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(IsValidClient(i))	//Print to spectator if target finished and worse
+				{
+					if(i == client)
+					{
+						if((Shavit_GetMessageSetting(i) & MSG_FINISHSTAGE) == 0)
+						{
+							Shavit_PrintToChat(i, "%s", sMessage);								
+						}
+					}
+					else if((Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)
+					{
+						Shavit_PrintToChat(i, "%s", sMessage);						
+					}
+				}
+			}
 		}
 		else
 		{
-			Shavit_PrintToChat(client, "%s", sMessage);
+			if((Shavit_GetMessageSetting(client) & MSG_FINISHSTAGE) == 0)
+			{
+				Shavit_PrintToChat(client, "%s", sMessage);				
+			}
 
 			for(int i = 1; i <= MaxClients; i++)
 			{
-				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client)	//Print to spectator if target finished and worse
-				{
+				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)	
+				{	//Print to spectator if target finished and worse
 					if(bIncrementCompletions && !Shavit_GetStyleSettingInt(style, "unranked"))
 					{
 						FormatEx(sMessage, 255, "%T", "NotFirstCompletionWorse", i, 
@@ -4126,14 +4145,23 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
 							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 					}
-
 					
 					Shavit_PrintToChat(i, "%s", sMessage);
 				}
 			}
 		}
 
-		if (sMessage2[0] != 0)
+		if ((Shavit_GetMessageSetting(client) & MSG_EXTRAFINISHINFO) == 0)
+		{
+			Shavit_PrintToChat(client, "%T", "ExtraFinishInfo", client, sStage, 
+			gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, startvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, endvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, sync, gS_ChatStrings.sText);
+		}		
+		
+		if (sMessage2[0] != 0 && (Shavit_GetMessageSetting(client) & MSG_POINTINFO) == 0)
 		{
 			Shavit_PrintToChat(client, "%s", sMessage2);
 		}
@@ -4475,15 +4503,31 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	{
 		if(bEveryone)
 		{
-			Shavit_PrintToChatAll("%s", sMessage);
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(i == client)
+				{
+					if((Shavit_GetMessageSetting(i) & MSG_FINISHMAP) == 0)
+					{
+						Shavit_PrintToChat(i, "%s", sMessage);									
+					}
+				}
+				else if((Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)
+				{
+					Shavit_PrintToChat(i, "%s", sMessage);		
+				}
+			}
 		}
 		else
 		{
-			Shavit_PrintToChat(client, "%s", sMessage);
+			if((Shavit_GetMessageSetting(client) & MSG_FINISHMAP) == 0)
+			{
+				Shavit_PrintToChat(client, "%s", sMessage);
+			}
 
 			for(int i = 1; i <= MaxClients; i++)
 			{
-				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client)	//Print to spectator if target finished and worse
+				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)	//Print to spectator if target finished and worse
 				{
 					if(bIncrementCompletions && !Shavit_GetStyleSettingInt(style, "unranked"))
 					{
@@ -4507,7 +4551,17 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 			}
 		}
 
-		if (sMessage2[0] != 0)
+		if ((Shavit_GetMessageSetting(client) & MSG_EXTRAFINISHINFO) == 0)
+		{
+			Shavit_PrintToChat(client, "%T", "ExtraFinishInfo", client, sTrack,	
+			gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, startvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, endvel, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable, sync, gS_ChatStrings.sText);
+		}
+
+		if (sMessage2[0] != 0 && ((Shavit_GetMessageSetting(client) & MSG_POINTINFO) == 0))
 		{
 			Shavit_PrintToChat(client, "%s", sMessage2);
 		}
@@ -4814,12 +4868,25 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 		Format(sDifferencePB, sizeof(sDifferencePB), "%s+%s%s", gS_ChatStrings.sWarning, sDifferencePB, gS_ChatStrings.sText);
 	}
 
-	Shavit_PrintToChat(client, "%T", "WRPBCheckpointTime", client,
-		gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
-		gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
-		gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);
-}
+	if((Shavit_GetMessageSetting(client) & MSG_CHECKPOINT) == 0)
+	{
+		Shavit_PrintToChat(client, "%T", "WRPBCheckpointTime", client,
+			gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);		
+	}
 
+	for(int i = 1; i <= MaxClients; i++)
+	{
+		if(IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_CHECKPOINT) == 0)
+		{
+			Shavit_PrintToChat(client, "%T", "WRPBCheckpointTime", client,
+				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);		
+		}
+	}
+}
 
 int GetRecordAmount(int style, int track)
 {

@@ -87,6 +87,54 @@
 	{
 		"en" 		"Select a track: "
 	}
+	"MessageMenuTitle"
+	{
+		"en"		"Chat Message Options: "
+	}
+	"MsgFinishMap"
+	{
+		"en"		"Finish Map / Bonus Message"
+	}
+	"MsgFinishStage"
+	{
+		"en"		"Finish Stage Message"
+	}
+	"MsgOther"
+	{
+		"en"		"Finish Message from other players"
+	}
+	"MsgCheckpoint"
+	{
+		"en"		"Touch Checkpoint Message"
+	}
+	"MsgSpeedTrap"
+	{
+		"en"		"Zone Speed Trap Message"
+	}
+	"MsgExtraFinishInfo"
+	{
+		"en"		"Extra Finished Info Message"
+	}
+	"MsgPracticeModeAlert"
+	{
+		"en"		"Practice Mode Alert Message"
+	}
+	"MsgPointInfo"
+	{
+		"en"		"Points Gained Message"
+	}
+	"MsgAdvertisement"
+	{
+		"en"		"Advertisement Message"
+	}
+	"MsgWorldRecord"
+	{
+		"en"		"World Record Message"
+	}
+	"ChatMessageOption"
+	{
+		"en"		"Chat Message Options"
+	}
 	// ---------- Misc ---------- //
 	"LeftRightCheat"
 	{

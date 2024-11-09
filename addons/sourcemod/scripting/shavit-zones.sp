@@ -369,7 +369,7 @@ public void OnPluginStart()
 	gCV_ExtraSpawnHeight = new Convar("shavit_zones_extra_spawn_height", "0.0", "YOU DONT NEED TO TOUCH THIS USUALLY. FIX YOUR ACTUAL ZONES.\nUsed to fix some shit prebuilt zones that are in the ground like bhop_strafecontrol");
 	gCV_PrebuiltVisualOffset = new Convar("shavit_zones_prebuilt_visual_offset", "-1.0", "YOU DONT NEED TO TOUCH THIS USUALLY.\nUsed to fix the VISUAL beam offset for prebuilt zones on a map.\nExample maps you'd want to use 16 on: bhop_tranquility and bhop_amaranthglow");
 
-	gCV_ForceTargetnameReset = new Convar("shavit_zones_forcetargetnamereset", "0", "Reset the player's targetname upon timer start?\nRecommended to leave disabled. Enable via per-map configs when necessary.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
+	gCV_ForceTargetnameReset = new Convar("shavit_zones_forcetargetnamereset", "0", "Reset the player's targetname upon timer start?\nRecommended to leave disabled. Enable via per-map configs when necessary.\n0 - Disabled\n1 - Enabled for all tracks\n2 - Enable for Main\n3 - Enable for Bonus", 0, true, 0.0, true, 3.0);
 	gCV_ResetTargetnameMain = new Convar("shavit_zones_resettargetname_main", "", "What targetname to use when resetting the player.\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
 	gCV_ResetTargetnameBonus = new Convar("shavit_zones_resettargetname_bonus", "", "What targetname to use when resetting the player (on bonus tracks).\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
 	gCV_ResetClassnameMain = new Convar("shavit_zones_resetclassname_main", "", "What classname to use when resetting the player.\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
@@ -2389,7 +2389,9 @@ public Action Command_DelSpawn(int client, int args)
 
 public void Shavit_OnTimerMenuMade(int client, Menu menu)
 {
-	menu.AddItem("zone", "Custom Zones Options");
+	char sMenu[32];
+	FormatEx(sMenu, 32, "%T", "CustomZoneOption", client);
+	menu.AddItem("zone", sMenu);
 }
 
 public Action Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
@@ -5503,14 +5505,19 @@ void ResetClientTargetNameAndClassName(int client, int track)
 		gCV_ResetClassnameBonus.GetString(classname, sizeof(classname));
 	}
 
-	DispatchKeyValue(client, "targetname", targetname);
+	if(gCV_ForceTargetnameReset.IntValue == 3 ||
+	  (gCV_ForceTargetnameReset.IntValue == 1 && track == Track_Main) ||
+	  (gCV_ForceTargetnameReset.IntValue == 2 && track >= Track_Bonus))
+	  {
+		DispatchKeyValue(client, "targetname", targetname);
 
-	if (!classname[0])
-	{
-		classname = "player";
-	}
+		if (!classname[0])
+		{
+			classname = "player";
+		}
 
-	SetEntPropString(client, Prop_Data, "m_iClassname", classname);
+		SetEntPropString(client, Prop_Data, "m_iClassname", classname);
+	  }
 }
 
 public void Shavit_OnRestart(int client, int track, bool tostartzone)
@@ -5557,7 +5564,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 				fCenter[2] += 1.0;
 			}
 
-			if(gB_HasSetStart[client][track][stage] || gCV_ResetClassnameMain.BoolValue || gCV_ForceTargetnameReset.BoolValue)
+			if(gB_HasSetStart[client][track][stage] || gCV_ForceTargetnameReset.IntValue > 0)
 			{
 				ResetClientTargetNameAndClassName(client, track);		
 			}
@@ -5597,7 +5604,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][1], gF_StartAng[client][track][stage][1], -1, true);
 			}
 			
-			if(gB_HasSetStart[client][track][1] || gCV_ForceTargetnameReset.BoolValue || (gCV_ResetClassnameMain.BoolValue && track == Track_Main) || (gCV_ResetTargetnameBonus.BoolValue && track >= Track_Bonus))
+			if(gB_HasSetStart[client][track][1] || gCV_ForceTargetnameReset.IntValue > 0)
 			{
 				ResetClientTargetNameAndClassName(client, track);		
 			}
@@ -5688,7 +5695,7 @@ public void TeleportToStartZone(int client, int track, int stage)
 	}
 
 
-	if(gCV_ForceTargetnameReset.BoolValue || (gCV_ResetClassnameMain.BoolValue && track == Track_Main) || (gCV_ResetTargetnameBonus.BoolValue && track >= Track_Bonus))
+	if(gCV_ForceTargetnameReset.IntValue > 0)
 	{
 		ResetClientTargetNameAndClassName(client, track);
 	}
@@ -6116,7 +6123,7 @@ public void EndTouchPost(int entity, int other)
 						{
 							float fStartVelDiffWR = speed - fStartVelWR;
 
-							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.1f", 
+							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.f", 
 								fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
 
 							float fStartVelPB = Shavit_GetClientStartVelocity(other, style, track);
@@ -6125,14 +6132,14 @@ public void EndTouchPost(int entity, int other)
 							{
 								float fStartVelDiffPB = speed - fStartVelPB;
 
-								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s | PB: %s%s%.1f", sVelDiff, gS_ChatStrings.sText,
+								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s | PB: %s%s%.f", sVelDiff, gS_ChatStrings.sText,
 									fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
 							}
 
-							FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s)", sVelDiff, gS_ChatStrings.sText);
+							FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s)", sVelDiff, gS_ChatStrings.sText);
 						}
 
-						if((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0))
+						if((Shavit_GetMessageSetting(other) & MSG_SPEEDTRAP) == 0)
 						{
 							Shavit_StopChatSound();							
 							Shavit_PrintToChat(other, "%T %s", "ZoneStartZonePrespeed", other, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
@@ -6140,7 +6147,7 @@ public void EndTouchPost(int entity, int other)
 
 						for(int i = 1; i <= MaxClients; i++)
 						{
-							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetHUDSettings(i) & HUD_SPEEDTRAP > 0))
+							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
 							{
 								Shavit_StopChatSound();							
 								Shavit_PrintToChat(i, "%T %s", "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
@@ -6183,7 +6190,7 @@ public void EndTouchPost(int entity, int other)
 						{
 							float fStartVelDiffWR = speed - fStartVelWR;
 
-							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.1f", 
+							FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.f", 
 								fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
 
 							float fStartVelPB = Shavit_GetClientStageStartVelocity(other, style, stage);
@@ -6192,14 +6199,14 @@ public void EndTouchPost(int entity, int other)
 							{
 								float fStartVelDiffPB = speed - fStartVelPB;
 
-								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s | PB: %s%s%.1f", sVelDiff, gS_ChatStrings.sText,
+								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s | PB: %s%s%.f", sVelDiff, gS_ChatStrings.sText,
 									fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
 							}
 
-							FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s)", sVelDiff, gS_ChatStrings.sText);
+							FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s)", sVelDiff, gS_ChatStrings.sText);
 						}
 
-						if((Shavit_GetHUDSettings(other) & HUD_SPEEDTRAP > 0))
+						if((Shavit_GetMessageSetting(other) & MSG_SPEEDTRAP) == 0)
 						{
 							Shavit_StopChatSound();							
 							Shavit_PrintToChat(other, "%T %s", "ZoneStageStartZonePrespeed", other,
@@ -6214,7 +6221,7 @@ public void EndTouchPost(int entity, int other)
 
 						for(int i = 1; i <= MaxClients; i++)
 						{
-							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetHUDSettings(i) & HUD_SPEEDTRAP > 0))
+							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
 							{
 								Shavit_StopChatSound();
 								Shavit_PrintToChat(i, "%T %s", "ZoneStageStartZonePrespeed", i,
@@ -6295,7 +6302,7 @@ public void TouchPost(int entity, int other)
 				{
 					if (curr_tick != tick_served[other])
 					{
-						if(gCV_ForceTargetnameReset.BoolValue || (gCV_ResetClassnameMain.BoolValue && track == Track_Main) || (gCV_ResetTargetnameBonus.BoolValue && track >= Track_Bonus))
+						if(gCV_ForceTargetnameReset.IntValue > 0)
 						{
 							ResetClientTargetNameAndClassName(other, track);
 						}

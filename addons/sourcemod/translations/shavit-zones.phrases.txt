@@ -454,6 +454,10 @@
 		"en"		"{1}WARNING:{2} You excceded prespeed limit in start zone, Your current stage time WILL NOT be saved."
 	}
 	// ---------- Custom Zone ---------- //
+	"CustomZoneOption"
+	{
+		"en"		"Custom Zone Options"
+	}
 	"CustomZone_MainMenuTitle"
 	{
 		"en"		"Select the zone you want to customize"

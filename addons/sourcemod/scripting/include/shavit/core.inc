@@ -35,6 +35,19 @@
 // stolen from boosterfix
 #define EXPAND_VECTOR(%1) %1[0], %1[1], %1[2]
 
+#define MSG_NONE                0
+#define MSG_FINISHMAP          (1 << 0) // show message when finish map / bonus
+#define MSG_FINISHSTAGE        (1 << 1) // show message when finish stage
+#define MSG_OTHER       	   (1 << 2) // show finish message from other players
+#define MSG_CHECKPOINT         (1 << 3) // show message when pass a checkpoint
+#define MSG_SPEEDTRAP          (1 << 4) // show message of speed when leave a start zone / stage start zone
+#define MSG_EXTRAFINISHINFO    (1 << 5) // show message of avg speed / max speed / end speed / start speed when finish a stage / map / bonus
+#define MSG_PRACALERT          (1 << 6) // show message when practice mode are enabled
+#define MSG_POINTINFO          (1 << 7) // show message when gained points
+#define MSG_ADVERTISEMENT 	   (1 << 8) // show advertisement message
+#define MSG_WORLDRECORD 	   (1 << 9) // show message when player set a new record
+
+
 #include <shavit/bhopstats-timerified>
 
 // status
@@ -112,13 +125,18 @@ enum struct chatstrings_t
 enum struct stagestart_info_t
 {
 	float fStageStartTime;
-	float fStartVelocity;
 	int iFullTicks;
 	int iFractionalTicks;
+	int iZoneIncrement;
+
 	int iJumps;
 	int iStrafes;
 	int iTotalMeasures;
 	int iGoodGains;
+
+	float fStartVelocity;
+	float fAvgVelocity;
+	float fMaxVelocity;
 }
 
 enum struct timer_snapshot_t
@@ -579,6 +597,11 @@ stock void TrimDisplayString(const char[] str, char[] outstr, int outstrlen, int
 
 	if(count > max_allowed_length)
 		Format(outstr, outstrlen, "%s...", outstr);
+}
+
+stock bool MessageSettingEnabled(int bits, int flag)
+{
+	return (bits & flag) == 0;
 }
 
 /**
@@ -1665,6 +1688,14 @@ native bool Shavit_IsClientRepeat(int client);
  * @noreturn
  */
 native void Shavit_SetClientRepeat(int client, bool repeat);
+
+/**
+ * Gets the Message settings of a player.
+ *
+ * @param client                    Client index.
+ * @return                          Message settings.
+ */
+native int Shavit_GetMessageSetting(int client);
 
 
 public SharedPlugin __pl_shavit_core =

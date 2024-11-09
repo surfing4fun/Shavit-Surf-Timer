@@ -309,29 +309,18 @@
 	}
 	"WRNotice"
 	{
-		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s}"
-		"en"		"{1}{2}{3} beat a {4}{5} record!"
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"{1}{2}{3} set a new map record!"
 	}
-	"WRNoticeFirstCompletion"
+	"WRNoticeStage"
 	{
-		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s},{6:s},{7:s}"
-		"en"		"{1}{2}{3} is the first one completes the {4} by {5}{6}{7}. Well done!"
+		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s},{6:s}"
+		"en"		"{1}{2}{3} set a new stage [{4}{5}{6}] record!"
 	}
-	"StageText"
+	"WRNoticeBonus"
 	{
-		"en"		"Stage"
-	}
-	"StageTextLowerCase"
-	{
-		"en"		"stage"
-	}
-	"BonusText"
-	{
-		"en"		"bonus"
-	}
-	"MapText"
-	{
-		"en"		"map"
+		"#format"	"{1:s},{2:s},{3:s},{4:s},{5:s},{6:s}"
+		"en"		"{1}{2}{3} set a new bonus [{4}{5}{6}] record!"
 	}
 	"AdvertisementsEnabled"
 	{

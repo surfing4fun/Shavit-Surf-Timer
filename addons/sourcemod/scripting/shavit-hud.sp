@@ -220,14 +220,12 @@ public void OnPluginStart()
 		..."HUD_KEYOVERLAY			32\n"
 		..."HUD_HIDEWEAPON			64\n"
 		..."HUD_WRPB				128\n"
-		..."HUD_SPEEDTRAP					256\n"
-		..."HUD_TIMELEFT				512\n"
-		..."HUD_2DVEL				1024\n"
-		..."HUD_NOSOUNDS				2048\n"
-		..."HUD_NOPRACALERT			4096\n"
-		..."HUD_USP                  8192\n"
-		..."HUD_GLOCK                16384\n"
-		..."HUD_SPECTATORSDEAD       65536\n"
+		..."HUD_TIMELEFT			256\n"
+		..."HUD_2DVEL				512\n"
+		..."HUD_NOSOUNDS			1024\n"
+		..."HUD_USP                 4096\n"
+		..."HUD_GLOCK               8192\n"
+		..."HUD_SPECTATORSDEAD      16384\n"
 	);
 
 	IntToString(HUD_DEFAULT2, defaultHUD, 8);
@@ -240,15 +238,15 @@ public void OnPluginStart()
 		..."HUD2_STYLE				32\n"
 		..."HUD2_RANK				64\n"
 		..."HUD2_TRACK				128\n"
-		..."HUD2_SPLITPB				256\n"
-		..."HUD2_RAMPSPEED				512\n"
+		..."HUD2_SPLITPB			256\n"
+		..."HUD2_RAMPSPEED			512\n"
 		..."HUD2_TIMEDIFFERENCE		1024\n"
-		..."HUD2_STAGEWRPB				2048\n"
-		..."HUD2_STAGETIME		4096\n"
+		..."HUD2_STAGEWRPB			2048\n"
+		..."HUD2_STAGETIME			4096\n"
 		..."HUD2_VELOCITYDIFFERENCE	8192\n"
-		..."HUD2_USPSILENCER         16384\n"
-		..."HUD2_GLOCKBURST          32768\n"
-		..."HUD2_CENTERKEYS          65536\n"
+		..."HUD2_USPSILENCER        16384\n"
+		..."HUD2_GLOCKBURST         32768\n"
+		..."HUD2_CENTERKEYS         65536\n"
 	);
 
 	Convar.AutoExecConfig();
@@ -591,7 +589,9 @@ void FillerHintText(int client)
 
 public void Shavit_OnTimerMenuMade(int client, Menu menu)
 {
-	menu.AddItem("hud", "Timer HUD Options");
+	char sMenu[32];
+	FormatEx(sMenu, 32, "%T", "HUDOptions", client);
+	menu.AddItem("hud", sMenu);
 }
 
 public Action Shavit_OnTimerMenuSelect(int client, int position, char[] info, int maxlength)
@@ -631,11 +631,9 @@ void ToggleHUD(int client, int hud, bool chat)
 			case HUD_KEYOVERLAY: FormatEx(sHUDSetting, 64, "%T", "HudKeyOverlay", client);
 			case HUD_HIDEWEAPON: FormatEx(sHUDSetting, 64, "%T", "HudHideWeapon", client);
 			case HUD_WRPB: FormatEx(sHUDSetting, 64, "%T", "HudTopLeft", client);
-			case HUD_SPEEDTRAP: FormatEx(sHUDSetting, 64, "%T", "HudSpeedTrap", client);
 			case HUD_TIMELEFT: FormatEx(sHUDSetting, 64, "%T", "HudTimeLeft", client);
 			case HUD_2DVEL: FormatEx(sHUDSetting, 64, "%T", "Hud2dVel", client);
 			case HUD_NOSOUNDS: FormatEx(sHUDSetting, 64, "%T", "HudNoRecordSounds", client);
-			case HUD_NOPRACALERT: FormatEx(sHUDSetting, 64, "%T", "HudPracticeModeAlert", client);
 		}
 
 		if((gI_HUDSettings[client] & hud) > 0)
@@ -832,10 +830,6 @@ Action ShowHUDMenu(int client, int item)
 	FormatEx(sHudItem, 64, "%T", "HudHideWeapon", client);
 	menu.AddItem(sInfo, sHudItem);
 
-	FormatEx(sInfo, 16, "!%d", HUD_SPEEDTRAP);
-	FormatEx(sHudItem, 64, "%T", "HudSpeedTrap", client);
-	menu.AddItem(sInfo, sHudItem);
-
 	FormatEx(sInfo, 16, "!%d", HUD_2DVEL);
 	FormatEx(sHudItem, 64, "%T", "Hud2dVel", client);
 	menu.AddItem(sInfo, sHudItem);
@@ -846,10 +840,6 @@ Action ShowHUDMenu(int client, int item)
 		FormatEx(sHudItem, 64, "%T", "HudNoRecordSounds", client);
 		menu.AddItem(sInfo, sHudItem);
 	}
-
-	FormatEx(sInfo, 16, "!%d", HUD_NOPRACALERT);
-	FormatEx(sHudItem, 64, "%T", "HudPracticeModeAlert", client);
-	menu.AddItem(sInfo, sHudItem);
 
 	if (gEV_Type != Engine_TF2)
 	{

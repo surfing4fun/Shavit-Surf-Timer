@@ -77,7 +77,6 @@ int gI_LastStopInfo[MAXPLAYERS+1];
 // cookies
 Handle gH_HideCookie = null;
 Handle gH_AutoRestartCookie = null;
-Cookie gH_BlockAdvertsCookie = null;
 
 // floats
 float gF_PauseOrigin[MAXPLAYERS+1][3];
@@ -263,8 +262,7 @@ public void OnPluginStart()
 	gA_Advertisements = new ArrayList(ByteCountToCells(300));
 	hostname = FindConVar("hostname");
 	hostport = FindConVar("hostport");
-	RegConsoleCmd("sm_toggleadverts", Command_ToggleAdverts, "Toggles visibility of advertisements");
-	gH_BlockAdvertsCookie = new Cookie("shavit-blockadverts", "whether to block shavit-misc advertisements", CookieAccess_Private);
+
 	RegConsoleCmd("sm_adverts", Command_PrintAdverts, "Prints all the adverts to your chat");
 
 	// cvars and stuff
@@ -1111,15 +1109,9 @@ public Action Timer_Advertisement(Handle timer)
 	{
 		if(IsClientConnected(i) && IsClientInGame(i))
 		{
-			if(AreClientCookiesCached(i))
+			if ((Shavit_GetMessageSetting(i) & MSG_ADVERTISEMENT) != 0)
 			{
-				char sCookie[2];
-				gH_BlockAdvertsCookie.Get(i, sCookie, sizeof(sCookie));
-
-				if (sCookie[0] == '1')
-				{
-					continue;
-				}
+				continue;
 			}
 
 			char sName[MAX_NAME_LENGTH];
@@ -1780,19 +1772,6 @@ public Action Command_Spec(int client, int args)
 	if(IsValidClient(target, true))
 	{
 		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", target);
-	}
-
-	return Plugin_Handled;
-}
-
-public Action Command_ToggleAdverts(int client, int args)
-{
-	if (IsValidClient(client))
-	{
-		char sCookie[4];
-		gH_BlockAdvertsCookie.Get(client, sCookie, sizeof(sCookie));
-		gH_BlockAdvertsCookie.Set(client, (sCookie[0] == '1') ? "0" : "1");
-		Shavit_PrintToChat(client, "%T", (sCookie[0] == '1') ? "AdvertisementsEnabled" : "AdvertisementsDisabled", client);
 	}
 
 	return Plugin_Handled;
@@ -2549,42 +2528,40 @@ public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, i
 	GetClientName(client, sName, sizeof(sName));
 
 	char sTrack[32];
-	GetTrackName(LANG_SERVER, track, sTrack, 32);
-	if(stage == 0)
-	{
-		Format(sTrack, 32, "[%s%s%s]", gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
-	}
-	else
-	{
-		Format(sTrack, 32, "[%s%T %d%s]", gS_ChatStrings.sVariable, "StageText", LANG_SERVER, stage, gS_ChatStrings.sText);
-	}
+	char sMessage[256];
 
-	char sMessage[16];
-
-	for(int i = 1; i <= gCV_WRMessages.IntValue; i++)
+	for(int i = 1; i <= MaxClients; i++)
 	{
+		if(IsValidClient(i) || (Shavit_GetMessageSetting(i) & MSG_WORLDRECORD) != 0)
+		{
+			continue;
+		}
+
 		if(stage == 0)
 		{
-			if(track == 0)
+			if(track == Track_Main)
 			{
-				FormatEx(sMessage, 16, "%T", "MapText", LANG_SERVER);
+				FormatEx(sMessage, sizeof(sMessage), "%T", "WRNotice", i,
+					gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText);				
 			}
 			else
 			{
-				FormatEx(sMessage, 16, "%T ", "BonusText", LANG_SERVER);
+				GetTrackName(i, track, sTrack, 32);
+				FormatEx(sMessage, sizeof(sMessage), "%T", "WRNoticeBonus", i,
+					gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);	
 			}
-			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, sMessage, track == 0 ? "":sTrack);
 		}
 		else
 		{
-			FormatEx(sMessage, 16, "%T ", "StageTextLowerCase", LANG_SERVER);
-			Shavit_PrintToChatAll("%T", "WRNotice", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, sMessage, sTrack);
+			FormatEx(sTrack, 32, "%T %d", "StageText", i, stage);
+			FormatEx(sMessage, sizeof(sMessage), "%T", "WRNoticeStage", i, 
+				gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
 		}
-	}
 
-	if (oldwr == 0.0)
-	{
-		Shavit_PrintToChatAll("%T", "WRNoticeFirstCompletion", LANG_SERVER, gS_ChatStrings.sVariable, sName, gS_ChatStrings.sText, sTrack, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
+		for(int j = 1; j <= gCV_WRMessages.IntValue; j++)
+		{
+			Shavit_PrintToChat(i, sMessage);
+		}
 	}
 }
 

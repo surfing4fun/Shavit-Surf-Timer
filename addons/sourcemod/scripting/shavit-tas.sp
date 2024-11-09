@@ -206,12 +206,12 @@ public void OnWishSpeedChanged(ConVar convar, const char[] oldValue, const char[
 
 public void OnClientConnected(int client)
 {
-	gB_Autostrafer[client] = true;
+	gB_Autostrafer[client] = false;
 	gI_Override[client] = AutostrafeOverride_Surf_W_Okay;
 	gI_Type[client] = AutostrafeType_1Tick;
-	gB_AutoJumpOnStart[client] = true;
-	gB_EdgeJump[client] = true;
-	gB_Prestrafe[client] = true;
+	gB_AutoJumpOnStart[client] = false;
+	gB_EdgeJump[client] = false;
+	gB_Prestrafe[client] = false;
 	g_fPower[client] = 1.0;
 	gB_AutogainBasicStrafer[client] = true;
 }
