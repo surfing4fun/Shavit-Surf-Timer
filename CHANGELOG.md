@@ -1,7 +1,7 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
-# Shavit SurfTimer - Change log - 2024-7-22 -
+# Shavit SurfTimer - Change log - 2024-11-9 -
 * Update [`v1.0.3...v1.0.4`]
 
 ## New plugin
