@@ -2,6 +2,47 @@ CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
 # Shavit SurfTimer - Change log - 2024-7-22 -
+* Update [`v1.0.3...v1.0.4`]
+
+## New plugin
+* New plugin shavit-persenoalreplay, save 5 replay in cache for players and allow them to watch.
+
+## New point caculate System
+* Change the way to caculate point for finish map / bonus / stage.
+* See more details [HERE](https://github.com/bhopppp/Shavit-Surf-Timer/commit/82f8dc2a68ff0fd856e01867f1fd35d2300867b7)
+
+## Chat Message Options
+* Add new menu to change chat message options instead in HUD option menu.
+* Add Extra Finish Message for more details of your run.
+* Add Points gained info when player gained points.
+
+## New features
+* Caculate And Save Max / Avg / Start / End Velocity and Sync for each stages.
+* New Option `Lock Axis` for zone creation, much more better to create a zone for not square-shaped platform.
+* Add start speed comparison to WR and PB.
+* New command `sm_help` to show all commands and description in menu.
+* Stop player prespeed with noclip.
+* Convar `shavit_zones_forcetargetnamereset` able to handle main / bonus track separately 
+* A LOT OF New translations
+
+## Bug fixes
+* Fix HUD Formating BUG.
+* Fix SQL Error.
+* Fix bug that cause player teleport to NULL_VECTOR on restart.
+* Fix bug cause timer incidently start in wrong stage start zone.
+* Fix bug of Shavit_StartReplayFromFrameCache Get Native Cell uncorrectly 
+
+
+## Merge stuffs from shavit bhoptimer
+* [rename FillBoxMinMax to BoxPointsToMinsMaxs](https://github.com/shavitush/bhoptimer/commit/f96a57412bbdc7225881195d9ee69b8b00b05c3f)
+* [fix bad casts that broke Custom Airaccelerate & Custom Speed Limit zones from 7aca875](https://github.com/shavitush/bhoptimer/commit/ee0fe65b01b7fd616092f3b2998123480dc2dca2)
+* [Add no-jump and autobhop zones.](https://github.com/shavitush/bhoptimer/commit/c9cfbefa277b703529f47d3e64106cd5fca4c1fe)
+* [do something to not error on negative sv_friction and negative sv_accelerate](https://github.com/shavitush/bhoptimer/commit/187bd2c97541503bcf5421770f7baf040b6000ef)
+* [edit the DeprecateExactInt sql error handling a bit for #1218](https://github.com/shavitush/bhoptimer/commit/9434dc943866b3891dd18ea936e1e35e156c6f94)
+
+
+
+# Shavit SurfTimer - Change log - 2024-7-22 -
 * Update [`v1.0.2...v1.0.3`]
 
 ## New features
