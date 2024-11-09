@@ -1,24 +1,33 @@
 # Shavit Surf timer (CS:S ONLY) 
 
-#### 　[Version 1.0.3](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.3/Shavit-SurfTimer-v1.0.3.zip)　 is ready to use, hopefully useful for someone
-[(click to download)](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.3/Shavit-SurfTimer-v1.0.3.zip)
+#### 　[Version 1.0.4](https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.4/Shavit-SurfTimer-v1.0.4.zip)
+[(click to download)]https://github.com/bhopppp/Shavit-Surf-Timer/releases/download/v1.0.4/Shavit-SurfTimer-v1.0.4.zip
 
 ## About this surf timer
 - This timer is based on [Shavit BhopTimer](https://github.com/shavitush/bhoptimer).
-- [Sourcemod v1.11](https://www.sourcemod.net/downloads.php?branch=stable) or higher version required.
+
+# Requirements:
+- [Sourcemod v1.12](https://www.sourcemod.net/downloads.php?branch=stable) or higher version required.
 - [Metamod v1.11](https://www.sourcemm.net/downloads.php?branch=stable) or higher version required.
+- Extension `sm_closestpos` for shavit-ghost2 plugin. [Github](https://github.com/rtldg/sm_closestpos)
+- Extension `sm-ripext` for shavit-wrsh plugin. [Github](https://github.com/ErikMinekus/sm-ripext)
+
 
 ## Whats different from shavit bhop timer?
 
 ### - Multi-functionality stage system for staged maps
 - Save stage replay separately for WR
-- Save stage record separately
+- Save stage record, and calculate every data separately
 - Use stage zone as a start zone, which allow player finish each stage separately
 　
 　
 ### - Checkpoint zone for linear maps
 - Save checkpoint times
 - Enable to check checkpoint time for each record
+
+
+### - New shavit-personalreplay plugin
+- Save 5 replays in cache for players and allow them to watch.
 
 
 ### - New shavit-wrsh plugin
@@ -39,6 +48,10 @@
 - Teleport player back to stage start zone: Use command `!back` to back to stage start
 - Customize noclip speed: Use `!noclipspeed` to change noclip speed
 - Allow to set max velocity for each map
+
+
+### - Separate message optional
+- Control most of chat message in a menu. use `sm_message` to open it. 
 
 
 ### - Better zone creation style
