@@ -1063,6 +1063,19 @@ public int Native_WR_DeleteMap(Handle handler, int numParams)
 
 void DeleteWRFinal(int style, int track, const char[] map, int steamid, int recordid, bool update_cache)
 {
+	if(track == 0)
+	{
+		DataPack hPack = new DataPack();
+		hPack.WriteCell(style);
+		hPack.WriteCell(track);
+		hPack.WriteString(map);
+
+		char sQuery[256];
+		FormatEx(sQuery, sizeof(sQuery),
+			"DELETE FROM %scpwrs WHERE map = '%s' AND style = %d AND track = %d;", gS_MySQLPrefix, map, style, track);
+		QueryLog(gH_SQL, DeleteWRCPTimes_First_Callback, sQuery, hPack, DBPrio_High);		
+	}
+
 	Call_StartForward(gH_OnWRDeleted);
 	Call_PushCell(style);
 	Call_PushCell(recordid);
@@ -1083,6 +1096,71 @@ void DeleteWRFinal(int style, int track, const char[] map, int steamid, int reco
 
 		UpdateWRCache();
 	}
+}
+
+void DeleteWRCPTimes_First_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
+{
+	if(results == null)
+	{
+		LogError("Timer (WR DeleteCPTimes First) SQL query failed. Reason: %s", error);
+		delete hPack;
+		return;
+	}
+
+	hPack.Reset();
+	int style = hPack.ReadCell();
+	int track = hPack.ReadCell();
+	char map[PLATFORM_MAX_PATH];
+	hPack.ReadString(map, sizeof(map));
+
+	char sQuery[256];
+	FormatEx(sQuery, sizeof(sQuery), "SELECT auth FROM %splayertimes WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC LIMIT 1", gS_MySQLPrefix, map, style, track);
+
+	QueryLog(gH_SQL, DeleteWRCPTimes_Second_Callback, sQuery, hPack, DBPrio_High);
+}
+
+void DeleteWRCPTimes_Second_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
+{
+	if(results == null)
+	{
+		LogError("Timer (WR DeleteCPTimes Second) SQL query failed. Reason: %s", error);
+		delete hPack;
+		return;
+	}
+
+	hPack.Reset();
+	int style = hPack.ReadCell();
+	int track = hPack.ReadCell();
+	char map[PLATFORM_MAX_PATH];
+	hPack.ReadString(map, sizeof(map));
+	
+	delete hPack;
+
+	if(results.FetchRow())
+	{
+		int steamID = results.FetchInt(0);
+
+		char sQuery[512];
+		FormatEx(sQuery, sizeof(sQuery), 
+			"INSERT INTO %scpwrs (style, track, map, checkpoint, auth, time) "...
+			"SELECT style, track, map, checkpoint, auth, time FROM %scptimes "...
+			"WHERE map = '%s' AND style = %d AND track = %d AND auth = %d; ",
+			gS_MySQLPrefix, gS_MySQLPrefix, map, style, track, steamID);
+
+		QueryLog(gH_SQL, ReplaceWRCPTimes_Callback, sQuery, 0, DBPrio_High);
+
+		UpdateStageCPWR();
+	}
+}
+
+public void ReplaceWRCPTimes_Callback(Database db, DBResultSet results, const char[] error, any data)
+{
+	if(results == null)
+	{
+		LogError("Timer (WR ReplaceWRCPTimes) SQL query failed. Reason: %s", error);
+	}
+
+	return;
 }
 
 public void DeleteWR_Callback(Database db, DBResultSet results, const char[] error, DataPack hPack)
@@ -1148,7 +1226,7 @@ void DeleteWR(int style, int track, const char[] map, int steamid, int recordid,
 		{
 			FormatEx(sQuery, sizeof(sQuery),			// idk what are this suppose to do, maybe some one use it without record id?
 				"SELECT id, auth FROM %swrs WHERE map = '%s' AND style = %d AND track = %d;",
-				gS_MySQLPrefix, map, style, track, gS_MySQLPrefix, map, style, track);
+				gS_MySQLPrefix, map, style, track);
 			QueryLog(gH_SQL, DeleteWRGetID_Callback, sQuery, hPack, DBPrio_High);
 		}
 		else
@@ -2297,8 +2375,8 @@ public void GetRecordDetails_Callback(Database db, DBResultSet results, const ch
 			
 			//Delete stage pb as well
 			FormatEx(sQuery, sizeof(sQuery),
-				"DELETE FROM `%scptimes` WHERE style = %d AND track = %d AND map = '%s';",
-				gS_MySQLPrefix, iStyle, iTrack, gS_Map);
+				"DELETE FROM `%scptimes` WHERE style = %d AND track = %d AND map = '%s' AND auth = %d;",
+				gS_MySQLPrefix, iStyle, iTrack, gS_Map, iSteamID);
 			
 			QueryLog(gH_SQL, DeleteConfirm_DeleteCPPB_Callback, sQuery, 0, DBPrio_High);
 		}
