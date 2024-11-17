@@ -4612,11 +4612,11 @@ public void ReplaceCPTimes(Database db, int client, int style, int track, float[
 		return;
 	}
 
-	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "DELETE FROM `%s%s` WHERE style = %d AND track = %d AND map = '%s';",
-	gS_MySQLPrefix, wr ? "cpwrs" : "cptimes", style, track, gS_Map);
-
 	int steamid = GetSteamAccountID(client);
+
+	char sQuery[512];
+	FormatEx(sQuery, sizeof(sQuery), "DELETE FROM `%s%s` WHERE style = %d AND track = %d AND auth = %d AND map = '%s';",
+	gS_MySQLPrefix, wr ? "cpwrs" : "cptimes", style, track, steamid, gS_Map);
 
 	int iCheckpointCounts = Shavit_GetCheckpointCount(track);
 	QueryLog(db, SQL_ReplaceCPTimesFirst_Callback, sQuery, 0, DBPrio_High);
