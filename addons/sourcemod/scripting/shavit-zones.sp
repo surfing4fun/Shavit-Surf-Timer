@@ -5570,6 +5570,11 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 				ResetClientTargetNameAndClassName(client, track);		
 			}
 
+			if (gB_ReplayRecorder && gB_HasSetStart[client][track][stage])
+			{
+				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][0], gF_StartAng[client][track][stage][1], -1, true);
+			}
+
 			TeleportEntity(client, fCenter, gB_HasSetStart[client][track][stage] ? gF_StartAng[client][track][stage] : NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
 			return;
 		}
@@ -5602,7 +5607,7 @@ public void Shavit_OnRestart(int client, int track, bool tostartzone)
 
 			if (gB_ReplayRecorder && gB_HasSetStart[client][track][1])
 			{
-				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][1], gF_StartAng[client][track][stage][1], -1, true);
+				Shavit_HijackAngles(client, gF_StartAng[client][track][stage][0], gF_StartAng[client][track][stage][1], -1, true);
 			}
 			
 			if(gB_HasSetStart[client][track][1] || gCV_ForceTargetnameReset.IntValue > 0)
