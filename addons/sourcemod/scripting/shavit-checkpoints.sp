@@ -1044,7 +1044,7 @@ void OpenCPMenu(int client)
 
 		FormatEx(sInfo, sizeof(sInfo), "%T\n", "MiscCheckpointMenu", client);
 
-		if (!bKzcheckpoints)
+		if (!bKzcheckpoints && !Shavit_IsPaused(client))
 		{
 			FormatEx(sInfo, sizeof(sInfo), "%s%T\n ", sInfo, "MiscCheckpointWarning", client);
 		}
@@ -1455,7 +1455,7 @@ bool SaveCheckpoint(int client, bool duplicate = false)
 		return false;
 	}
 
-	if(Shavit_IsPaused(client) || Shavit_IsPaused(target))
+	if((Shavit_IsPaused(client) || Shavit_IsPaused(target)) && Shavit_GetStyleSettingBool(gI_Style[client], "kzcheckpoints"))
 	{
 		Shavit_PrintToChat(client, "%T", "CommandNoPause", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 
@@ -1682,13 +1682,18 @@ void SaveCheckpointCache(int saver, int target, cp_cache_t cpcache, int index, H
 	}
 	else
 	{
-		Shavit_SaveSnapshot(target, snapshot);
+		Shavit_SaveSnapshot(target, snapshot);		
+	}
+	
+	if (Shavit_IsPaused(target))
+	{
+		snapshot.bTimerEnabled = false;
 	}
 
 	cpcache.aSnapshot = snapshot;
 	cpcache.bSegmented = CanSegment(target);
 
-	if (cpcache.bSegmented && gB_ReplayRecorder && index != -1 && cpcache.aFrames == null)
+	if (snapshot.bTimerEnabled == true && cpcache.bSegmented && snapshot.bPracticeMode == false && gB_ReplayRecorder && index != -1 && cpcache.aFrames == null)
 	{
 		ArrayList frames = Shavit_GetReplayData(target, false);
 
@@ -1762,7 +1767,7 @@ void TeleportToCheckpoint(int client, int index, bool suppressMessage, int targe
 		return;
 	}
 
-	if(Shavit_IsPaused(client))
+	if(Shavit_IsPaused(client) && Shavit_GetStyleSettingBool(gI_Style[client], "kzcheckpoints"))
 	{
 		Shavit_PrintToChat(client, "%T", "CommandNoPause", client, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
 
@@ -1819,8 +1824,6 @@ void TeleportToCheckpoint(int client, int index, bool suppressMessage, int targe
 	{
 		return;
 	}
-
-	Shavit_ResumeTimer(client);
 
 	Call_StartForward(gH_Forwards_OnTeleport);
 	Call_PushCell(client);
@@ -1888,6 +1891,22 @@ bool LoadCheckpointCache(int client, cp_cache_t cpcache, int index, bool force =
 	if(!isPersistentData && Shavit_GetStyleSettingInt(gI_Style[client], "kzcheckpoints"))
 	{
 		TeleportEntity(client, cpcache.fPosition, cpcache.fAngles, view_as<float>({ 0.0, 0.0, 0.0 }));
+
+		Call_StartForward(gH_Forwards_OnCheckpointCacheLoaded);
+		Call_PushCell(client);
+		Call_PushArray(cpcache, sizeof(cp_cache_t));
+		Call_PushCell(index);
+		Call_Finish();
+
+		return true;
+	}
+
+	if(Shavit_IsPaused(client))
+	{
+		Shavit_UpdateLaggedMovement(client, true);
+		TeleportEntity(client, cpcache.fPosition,
+			((gI_CheckpointsSettings[client] & CP_ANGLES)   > 0 || cpcache.bSegmented || isPersistentData) ? cpcache.fAngles   : NULL_VECTOR,
+			((gI_CheckpointsSettings[client] & CP_VELOCITY) > 0 || cpcache.bSegmented || isPersistentData) ? cpcache.fVelocity : NULL_VECTOR);
 
 		Call_StartForward(gH_Forwards_OnCheckpointCacheLoaded);
 		Call_PushCell(client);
