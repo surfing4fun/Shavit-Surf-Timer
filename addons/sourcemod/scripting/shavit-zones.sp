@@ -2767,6 +2767,7 @@ public int MenuHandler_SelectStage(Menu menu, MenuAction action, int param1, int
 
 		Shavit_StopTimer(param1);
 		Shavit_SetPracticeMode(param1, false, false);
+		SetEntityMoveType(param1, MOVETYPE_WALK);
 		Shavit_SetOnlyStageMode(param1, true);
 
 		if (!EmptyVector(gA_ZoneCache[iIndex].fDestination))

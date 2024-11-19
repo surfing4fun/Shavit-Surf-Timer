@@ -2751,11 +2751,19 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 	}
 	else if (stage < 0)
 	{
+		int iStageCount = Shavit_GetStageCount(Track_Main);
+
+		if(iStageCount == 0)
+		{
+			return;
+		}
+
 		Menu selectstage = new Menu(MenuHandler_WRSelectStage);
 		selectstage.SetTitle("%T", "WRMenuStageTitle", client);
 		char sSelection[4];
 		char sMenu[16];
-		for(int i = 1; i < MAX_STAGES; i++)
+
+		for(int i = 1; i < iStageCount; i++)
 		{
 			IntToString(i, sSelection, sizeof(sSelection));
 			FormatEx(sMenu, sizeof(sMenu), "%T %d", "WRStage", client, i);
@@ -4693,8 +4701,13 @@ public void ReplaceCPTimes(Database db, int client, int style, int track, float[
 	int steamid = GetSteamAccountID(client);
 
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "DELETE FROM `%s%s` WHERE style = %d AND track = %d AND auth = %d AND map = '%s';",
-	gS_MySQLPrefix, wr ? "cpwrs" : "cptimes", style, track, steamid, gS_Map);
+	FormatEx(sQuery, sizeof(sQuery), "DELETE FROM `%s%s` WHERE style = %d AND track = %d AND map = '%s'",
+	gS_MySQLPrefix, wr ? "cpwrs" : "cptimes", style, track, gS_Map);
+
+	if(!wr)
+	{
+		FormatEx(sQuery, sizeof(sQuery), "%s AND auth = %d; ", sQuery, steamid);
+	}
 
 	int iCheckpointCounts = Shavit_GetCheckpointCount(track);
 	QueryLog(db, SQL_ReplaceCPTimesFirst_Callback, sQuery, 0, DBPrio_High);
