@@ -223,7 +223,7 @@
 	}
 	"HudRampSpeed"
 	{
-		"en"		"Show speed when borad / leave a ramp"
+		"en"		"Show speed when board / leave a ramp"
 	}
 	"HudTimeDifference"
 	{
