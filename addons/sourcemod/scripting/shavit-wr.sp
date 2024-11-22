@@ -2763,7 +2763,7 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 		char sSelection[4];
 		char sMenu[16];
 
-		for(int i = 1; i < iStageCount; i++)
+		for(int i = 1; i <= iStageCount; i++)
 		{
 			IntToString(i, sSelection, sizeof(sSelection));
 			FormatEx(sMenu, sizeof(sMenu), "%T %d", "WRStage", client, i);
