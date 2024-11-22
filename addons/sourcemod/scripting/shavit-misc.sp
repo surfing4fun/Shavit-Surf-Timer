@@ -214,6 +214,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_noclipme", Command_Noclip, "Toggles noclip. (sm_nc alias)");
 
 	RegConsoleCmd("sm_help", Command_Help, "Shows command menu to client.");
+	RegConsoleCmd("sm_mapinfo", Command_MapInfo, "Shows map info to client.");
 
 	// qol
 	RegConsoleCmd("sm_autorestart", Command_AutoRestart, "Toggles auto-restart.");
@@ -1063,15 +1064,20 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 	}
 	
 	int iStageCount = Shavit_GetStageCount(Track_Main);
+	char sType[16];	
 	char sStageInfo[16];
 
 	if(iStageCount > 1)
 	{
+		FormatEx(sType, 16, "Staged");
 		FormatEx(sStageInfo, 16, "%d Stages", iStageCount);
 	}
 	else
 	{
-		FormatEx(sStageInfo, 16, "Linear");
+		iStageCount = Shavit_GetCheckpointCount(Track_Main);
+
+		FormatEx(sType, 16, "Linear");
+		FormatEx(sStageInfo, 16, "%d Checkpoint%s", iStageCount, iStageCount > 2 ? "s":"");
 	}
 
 	int iBonusCount = Shavit_GetMapTracks(true, false);
@@ -1090,6 +1096,7 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 	ReplaceString(buf, buflen, "{hostname}", sHostname);
 	ReplaceString(buf, buflen, "{serverip}", sIPAddress);
 	ReplaceString(buf, buflen, "{map}", gS_Map);
+	ReplaceString(buf, buflen, "{type}", sStageInfo);
 	ReplaceString(buf, buflen, "{stage}", sStageInfo);
 	ReplaceString(buf, buflen, "{bonus}", sTrackInfo);
 	ReplaceString(buf, buflen, "{tier}", sTier);
@@ -2367,6 +2374,43 @@ public Action CommandListener_Real_Noclip(int client, const char[] command, int 
 
 		gI_LastNoclipTick[client] = GetGameTickCount();
 	}
+
+	return Plugin_Continue;
+}
+
+public Action Command_MapInfo(int client, int args)
+{
+	int iStageCount = Shavit_GetStageCount(Track_Main);
+	char sType[16];	
+	char sStageInfo[16];
+
+	if(iStageCount > 1)
+	{
+		FormatEx(sType, 16, "Staged");
+		FormatEx(sStageInfo, 16, "%d Stages", iStageCount);
+	}
+	else
+	{
+		iStageCount = Shavit_GetCheckpointCount(Track_Main);
+
+		FormatEx(sType, 16, "Linear");
+		FormatEx(sStageInfo, 16, "%d Checkpoint%s", iStageCount, iStageCount > 2 ? "s":"");
+	}
+
+	int iBonusCount = Shavit_GetMapTracks(true, false);
+	char sTrackInfo[32];
+
+	FormatEx(sTrackInfo, 32, "%d Bonus%s", iBonusCount, iBonusCount > 1 ? "es":"");
+
+	int iTier = gB_Rankings ? Shavit_GetMapTier(gS_Map):0;
+	char sTier[8];
+	FormatEx(sTier, 8, "Tier %d", iTier);
+
+	Shavit_PrintToChat(client, "Map: %s%s%s - %s | %s%s%s | %s%s%s | %s%s%s |",
+		gS_ChatStrings.sVariable2, gS_Map, gS_ChatStrings.sText, sType,
+		gS_ChatStrings.sVariable, sTier, gS_ChatStrings.sText,
+		gS_ChatStrings.sVariable, sStageInfo, gS_ChatStrings.sText,
+		gS_ChatStrings.sVariable, sTrackInfo, gS_ChatStrings.sText);
 
 	return Plugin_Continue;
 }
