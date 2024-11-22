@@ -11,6 +11,7 @@ Convar gCV_MaxRankingTime;
 Convar gCV_MaxRequest;
 Convar gCV_RetryInterval;
 Convar gCV_RankingCoolDown;
+Convar gCV_MapNameFix;
 // Convar gCV_RefreshRecordInterval;
 
 wrinfo_t gA_MapWorldRecord[TRACKS_SIZE];
@@ -92,6 +93,8 @@ public void OnPluginStart()
 	gCV_RetryInterval = new Convar("shavit_wrsh_retryinterval", "10.0", "The interval between sending requests if records are not cached.", 0, true, 10.0, false, 0.0);
 	gCV_RankingCoolDown = new Convar("shavit_wrsh_rankingcooldown", "30.0", "The interval (in seconds) allow client use rank command again.", 0, true, 30.0, false, 0.0);
 
+	gCV_MapNameFix = new Convar("shavit_wrsh_mapnamefix", "", "The map name to fetch data. ", 0, false, 0.0, false, 0.0)
+
 	// gCV_RefreshRecordInterval = new Convar("shavit_wrsh_refreshinterval", "30", "How often (in minutes) should refresh records.", 0, true, -1, false, 0);
 	Convar.AutoExecConfig();
 
@@ -99,7 +102,7 @@ public void OnPluginStart()
 	{
 		Shavit_OnChatConfigLoaded();
 		Shavit_OnStyleConfigLoaded(Shavit_GetStyleCount());
-		OnMapStart();
+		OnConfigsExecuted();
 
 		for(int i = 1; i <= MaxClients; i++)
 		{
@@ -121,6 +124,26 @@ public void Shavit_OnStyleConfigLoaded(int styles)
 	for(int i = 0; i < styles; i++)
 	{
 		Shavit_GetStyleStringsStruct(i, gS_StyleStrings[i]);
+	}
+}
+
+public void OnConfigsExecuted()
+{
+	gCV_MapNameFix.GetString(gS_Map, sizeof(gS_Map));
+
+	if(strlen(gS_Map) == 0)
+	{
+		GetLowercaseMapName(gS_Map);		
+	}
+
+	gB_Fetching = false;
+	gI_RequestTimes = 0;
+	
+	if (!StrEqual(gS_Map, gS_PreviousMap))
+	{
+		gB_Stop = false;
+		ResetWRCache();
+		CreateTimer(gCV_RetryInterval.FloatValue, Timer_CacheWorldRecord, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
@@ -283,20 +306,6 @@ public Action Timer_CacheWorldRecord(Handle timer)
 	}
 
 	return Plugin_Continue;
-}
-
-public void OnMapStart()
-{
-	GetLowercaseMapName(gS_Map);
-	gB_Fetching = false;
-	gI_RequestTimes = 0;
-	
-	if (!StrEqual(gS_Map, gS_PreviousMap))
-	{
-		gB_Stop = false;
-		ResetWRCache();
-		CreateTimer(gCV_RetryInterval.FloatValue, Timer_CacheWorldRecord, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
-	}
 }
 
 public void OnMapEnd()
@@ -658,7 +667,7 @@ public int Native_GetSHStageRecordName(Handle handler, int numParams)
 public void GetSHSMapRank(int client, float time, int track)
 {
 	char sUrl[256];
-	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_MAPRECORD_URL, gS_Map);
+	FormatEx(sUrl, sizeof(sUrl), "%s%s/%d", SH_MAPRECORD_URL, gS_Map, track);
 
 	gB_Fetching = true;
 
@@ -705,41 +714,37 @@ public void GetSHMapRank_Callback(HTTPResponse response, DataPack pack, const ch
 	for (int i = 0; i < array.Length; i++)
 	{
 		JSONObject record = view_as<JSONObject>(array.Get(i))
-		int iTrack = record.GetInt("track");
-		
-		if (track == iTrack)
+
+		float fTime = record.GetFloat("time");
+		int iRank = record.GetInt("rank");
+
+		if (iRank > maxrank || iRank < minrank)
 		{
-			float fTime = record.GetFloat("time");
-			int iRank = record.GetInt("rank");
+			delete record;
+			continue;
+		}
+		else if(maxrank - 1 == minrank)
+		{
+			CallOnFinishRanking(client, track, 0, maxrank, time);
+			delete record;
+			delete array;
+			return;
+		}
 
-			if (iRank > maxrank || iRank < minrank)
-			{
-				delete record;
-				continue;
-			}
-			else if(maxrank - 1 == minrank)
-			{
-				CallOnFinishRanking(client, track, 0, maxrank, time);
-				delete record;
-				delete array;
-				return;
-			}
-
-			if(fTime < time)
-			{
-				minrank = iRank;
-			}
-			else if(fTime > time)
-			{
-				maxrank = iRank;
-			}
-			else if(time == fTime)
-			{
-				CallOnFinishRanking(client, track, 0, iRank, time);
-				delete record;
-				delete array;
-				return;
-			}
+		if(fTime < time)
+		{
+			minrank = iRank;
+		}
+		else if(fTime > time)
+		{
+			maxrank = iRank;
+		}
+		else if(time == fTime)
+		{
+			CallOnFinishRanking(client, track, 0, iRank, time);
+			delete record;
+			delete array;
+			return;
 		}
 
 		delete record;
