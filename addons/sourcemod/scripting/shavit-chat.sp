@@ -885,7 +885,7 @@ Action ShowChatRanksMenu(int client, int item)
 		}
 
 		char sMenuDisplay[MAXLENGTH_DISPLAY];
-		FormatEx(sMenuDisplay, sizeof(sMenuDisplay), "%s\n ", cache.sDisplay);
+		FormatEx(sMenuDisplay, sizeof(sMenuDisplay), "%s%s\n ", gI_ChatSelection[client] == i ? "[Equipped] ":"",cache.sDisplay);
 
 		char sInfo[8];
 		IntToString(i, sInfo, 8);
@@ -1034,7 +1034,7 @@ bool HasRankAccess(int client, int rank)
 
 		if(FindFlagByChar(sFlag[0], afFlag))
 		{
-			bFlagAccess = GetAdminFlag(GetUserAdmin(client), afFlag);
+			bFlagAccess = GetAdminFlag(GetUserAdmin(client), afFlag);			
 		}
 	}
 	else
@@ -1054,7 +1054,7 @@ bool HasRankAccess(int client, int rank)
 
 	if(/*!gB_Rankings ||*/ !gCV_RankingsIntegration.BoolValue)
 	{
-		return false;
+		return bFlagAccess;
 	}
 
 	if ((!gB_Rankings && (cache.iRequire == Require_Rank || cache.iRequire == Require_Points))
