@@ -1833,7 +1833,7 @@ public void SQL_RefreshZones_Callback(Database db, DBResultSet results, const ch
 		cache.iDatabaseID = results.FetchInt(11);
 		cache.iFlags = results.FetchInt(12);
 		cache.iData = results.FetchInt(13);
-		cache.bUseSpeedLimit = view_as<bool>(results.FetchFloat(14));
+		cache.bUseSpeedLimit = view_as<bool>(results.FetchInt(14));
 		cache.iForm = results.FetchInt(15);
 		results.FetchString(16, cache.sTarget, sizeof(cache.sTarget));
 		cache.sSource = "sql";
