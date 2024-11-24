@@ -3061,7 +3061,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 			}
 
 			char sDisplay[128];
-			FormatEx(sDisplay, 128, "#%d\t|\t\t\t%s (+%s) \t\t\t\t\t%s ", iCount, sTime, sDiff, sName);
+			FormatEx(sDisplay, 128, "#%d%s | %s (+%s)   %s", iCount, iCount >= 1000 ? "": iCount >= 100 ? " ": iCount >= 10 ? "  ":"   ", sTime, sDiff, sName);
 			hMenu.AddItem(sID, sDisplay);
 		}
 
