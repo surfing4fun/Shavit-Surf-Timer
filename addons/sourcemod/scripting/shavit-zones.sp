@@ -79,6 +79,12 @@ enum struct zone_settings_t
 	char sBeam[PLATFORM_MAX_PATH];
 }
 
+enum struct stagemenu_info_t
+{
+	int iStage;	
+	char sInfo[8];
+}
+
 // 0 - nothing
 // 1 - wait for E tap to setup first coord
 // 2 - wait for E tap to setup second coord
@@ -2725,28 +2731,38 @@ public Action Command_Stages(int client, int args)
 		menu.SetTitle("%T", "ZoneMenuStage", client);
 
 		char sDisplay[64];
+		ArrayList aStageInfo = new ArrayList(sizeof(stagemenu_info_t));
+		stagemenu_info_t info;
 
 		for(int i = 0; i < gI_MapZones; i++)
 		{
 			if (gA_ZoneCache[i].iType == Zone_Stage)
 			{
-				FormatEx(sDisplay, 64, "#%d - %T", (i + 1), "ZoneSetStage", client, gA_ZoneCache[i].iData);
+				IntToString(i, info.sInfo, 8);
+				info.iStage = gA_ZoneCache[i].iData;
 
-				char sInfo[8];
-				IntToString(i, sInfo, 8);
-
-				menu.AddItem(sInfo, sDisplay);
+				aStageInfo.PushArray(info);
 			}
 			else if (gA_ZoneCache[i].iType == Zone_Start && gA_ZoneCache[i].iTrack == Track_Main)
 			{
-				FormatEx(sDisplay, 64, "#%d - %T", (i + 1), "ZoneSetStage", client, 1);
+				IntToString(i, info.sInfo, 8);
+				info.iStage = 1;
 
-				char sInfo[8];
-				IntToString(i, sInfo, 8);
-
-				menu.AddItem(sInfo, sDisplay);
+				aStageInfo.PushArray(info);
 			}
 		}
+
+		aStageInfo.Sort(Sort_Ascending, Sort_Integer);
+
+		for (int i = 0; i < aStageInfo.Length; i++)
+		{
+			aStageInfo.GetArray(i, info);
+			FormatEx(sDisplay, 64, "%T", "ZoneSetStage", client, info.iStage);
+
+			menu.AddItem(info.sInfo, sDisplay);
+		}
+
+		delete aStageInfo;
 
 		menu.ExitButton = true;
 		menu.Display(client, MENU_TIME_FOREVER);
