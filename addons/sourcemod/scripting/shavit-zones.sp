@@ -4712,7 +4712,7 @@ void UpdateTeleportZone(int client)
 		int iZoneStage;
 		bool InsideStage = Shavit_InsideZoneStage(client, Track_Main, iZoneStage);
 
-		if(InsideStage && iZoneStage != Shavit_GetClientLastStage(client))
+		if(InsideStage && iZoneStage != gA_EditCache[client].iData)
 		{
 			Shavit_PrintToChat(client, "%T", "ZoneTeleportInsideOtherStageZone", client);
 		}
