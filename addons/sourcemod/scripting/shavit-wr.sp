@@ -2598,7 +2598,7 @@ public Action Command_WorldRecord(int client, int args)
 
 		if (stage == 0)	// if the fucking args is 1 and its not a number, the stage will assign to 0. :(
 		{
-			stage = -1;
+			stage = havemap ? 1:-1;
 		}
 	}
 	else
@@ -2771,6 +2771,7 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 		}
 
 		selectstage.Display(client, MENU_TIME_FOREVER);
+
 		return;
 	}
 	else

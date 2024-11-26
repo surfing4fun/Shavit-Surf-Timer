@@ -2757,7 +2757,7 @@ public Action Command_Stages(int client, int args)
 		for (int i = 0; i < aStageInfo.Length; i++)
 		{
 			aStageInfo.GetArray(i, info);
-			FormatEx(sDisplay, 64, "%T", "ZoneSetStage", client, info.iStage);
+			FormatEx(sDisplay, 64, "%T %d", "StageText", client, info.iStage);
 
 			menu.AddItem(info.sInfo, sDisplay);
 		}
