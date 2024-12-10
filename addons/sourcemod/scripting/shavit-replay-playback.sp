@@ -795,7 +795,7 @@ public void AdminMenu_DeleteReplay(Handle topmenu, TopMenuAction action, TopMenu
 {
 	if(action == TopMenuAction_DisplayOption)
 	{
-		FormatEx(buffer, maxlength, "%t", "DeleteReplayAdminMenu");
+		FormatEx(buffer, maxlength, "%t", "DeleteReplayAdminMenu", param);
 	}
 	else if(action == TopMenuAction_SelectOption)
 	{

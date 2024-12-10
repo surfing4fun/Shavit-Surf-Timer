@@ -207,18 +207,15 @@
 	}
 	"RecentRecordsSelectMain"
 	{
-		"#format"	"{1:s}"
-		"en"		"[{1}] Select Main records"
+		"en"		"Select Main records"
 	}
 	"RecentRecordsSelectBonus"
 	{
-		"#format"	"{1:s}"
-		"en"		"[{1}] Select Bonus records"
+		"en"		"Select Bonus records"
 	}
 	"RecentRecordsSelectStage"
 	{
-		"#format"	"{1:s}"
-		"en"		"[{1}] Select Stage records"
+		"en"		"Select Stage records"
 	}
 	// ---------- WR Menu ---------- //
 	"WRDate"

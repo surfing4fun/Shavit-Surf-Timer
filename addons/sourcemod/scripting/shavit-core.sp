@@ -850,6 +850,7 @@ public void ShowTrackMenu(int client, bool bonus)
 	Menu menu = new Menu(MenuHandler_Track);
 	menu.SetTitle("%T\n ", bonus ? "MenuSelectBonus":"MenuSelectTrack", client);
 
+	int iLastTrack;
 	char sTrack[32];
 	for(int i = bonus ? 1:0; i < TRACKS_SIZE; i++)
 	{
@@ -866,8 +867,17 @@ public void ShowTrackMenu(int client, bool bonus)
 			IntToString(i, sInfo, 8);
 
 			menu.AddItem(sInfo, sTrack, ITEMDRAW_DEFAULT);
+
+			iLastTrack = i;
 		}
 	}
+
+	if(bonus && menu.ItemCount == 1)
+	{
+		Shavit_RestartTimer(client, iLastTrack, true, false);
+		delete menu;
+		return;
+	}	
 
 	if(menu.ItemCount == 0)
 	{
@@ -887,7 +897,7 @@ public int MenuHandler_Track(Menu menu, MenuAction action, int param1, int param
 
 		int track = StringToInt(sInfo);
 
-		Shavit_RestartTimer(param1, track, true, true);
+		Shavit_RestartTimer(param1, track, true, false);
 	}
 	else if (action == MenuAction_End)
 	{
@@ -3350,7 +3360,7 @@ public void OnClientCookiesCached(int client)
 
 	if(strlen(sMsgSettings) == 0)
 	{
-		IntToString(MSG_NONE, sMsgSettings, sizeof(sMsgSettings));
+		IntToString(MSG_DEFAULT, sMsgSettings, sizeof(sMsgSettings));
 		SetClientCookie(client, gH_MessageCookie, sMsgSettings);
 	}
 
@@ -4610,7 +4620,7 @@ public int MenuHandler_MessageSetting(Menu menu, MenuAction action, int param1, 
 		menu.GetItem(param2, sInfo, 16, style, sDisplay, 64);
 		int iSelection = StringToInt(sInfo);
 
-		Format(sDisplay, 64, "[%s] %s", ((gI_MessageSettings[param1] & iSelection) == 0) ? "＋":"－", sDisplay);
+		Format(sDisplay, 64, "[%T] %s", ((gI_MessageSettings[param1] & iSelection) == 0) ? "ItemEnabled":"ItemDisabled", param1, sDisplay);
 
 		return RedrawMenuItem(sDisplay);
 	}

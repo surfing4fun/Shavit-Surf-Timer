@@ -1296,7 +1296,7 @@ public int MenuHandler_Checkpoints(Menu menu, MenuAction action, int param1, int
 			return 0;
 		}
 
-		Format(sDisplay, 64, "[%s] %s", ((gI_CheckpointsSettings[param1] & StringToInt(sInfo)) > 0)? "x":" ", sDisplay);
+		Format(sDisplay, 64, "[%T] %s", ((gI_CheckpointsSettings[param1] & StringToInt(sInfo)) > 0)? "ItemEnabled":"ItemDisabled", param1, sDisplay);
 
 		return RedrawMenuItem(sDisplay);
 	}
