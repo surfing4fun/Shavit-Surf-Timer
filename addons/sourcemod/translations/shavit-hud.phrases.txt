@@ -115,6 +115,10 @@
 	{
 		"en"		"Time left"
 	}
+	"HudMapInfo"
+	{
+		"en"		"Map"
+	}
 	"HudPracticeMode"
 	{
 		"en"		"[Practice Mode]"
@@ -168,6 +172,10 @@
 	"HudSpeedText"
 	{
 		"en"		"Speed"
+	}
+	"HudMapInfoText"
+	{
+		"en"		"Map info"
 	}
 	"HudTimeLeftText"
 	{
