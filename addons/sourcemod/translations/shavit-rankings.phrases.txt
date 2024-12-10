@@ -40,4 +40,8 @@
 	{
 		"en"		"No ranked players found."
 	}
+	"UnzonedMap"
+	{
+		"en"		"Map is unzoned."
+	}
 }
