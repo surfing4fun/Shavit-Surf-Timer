@@ -881,6 +881,8 @@ public void ShowTrackMenu(int client, bool bonus)
 
 	if(menu.ItemCount == 0)
 	{
+		Shavit_PrintToChat(client, "%T", bonus ? "MapNoBonus":"UnZonedMap", client);
+
 		delete menu;
 		return;
 	}
