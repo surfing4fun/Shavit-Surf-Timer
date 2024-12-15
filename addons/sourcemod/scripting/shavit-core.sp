@@ -100,6 +100,7 @@ bool gB_Auto[MAXPLAYERS+1];
 int gI_FirstTouchedGround[MAXPLAYERS+1];
 int gI_LastTickcount[MAXPLAYERS+1];
 int gI_LastNoclipTick[MAXPLAYERS+1];
+int gI_LastButtons[MAXPLAYERS+1];
 
 // these are here until the compiler bug is fixed
 float gF_PauseOrigin[MAXPLAYERS+1][3];
@@ -4003,6 +4004,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Changed;
 	}
 
+	int iLastButtons = gI_LastButtons[client]; // buttons without effected by code.
+	gI_LastButtons[client] = buttons;
+
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_OnUserCmdPre);
 	Call_PushCell(client);
@@ -4247,22 +4251,40 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
 	}
 
-	if ((buttons & IN_JUMP) > 0 && mtMoveType == MOVETYPE_WALK && !bInWater)
+	int blockprejump = GetStyleSettingInt(gA_Timers[client].bsStyle, "blockprejump");
+
+	if (blockprejump < 0)
 	{
-		if ( (gB_Auto[client] && GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")) 
+		blockprejump = gCV_BlockPreJump.BoolValue;
+	}
+
+	if ((bInStart && blockprejump && GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 0 && (vel[2] > 0 || (buttons & IN_JUMP) > 0)) 
+	|| (gB_Zones && Shavit_InsideZone(client, Zone_NoJump, gA_Timers[client].iTimerTrack)))
+	{
+		if((iLastButtons & IN_JUMP) == 0 && (buttons & IN_JUMP) > 0)
+		{
+			Shavit_PrintToChat(client, "%T", "NotAllowJump", client);
+		}
+
+		vel[2] = 0.0;
+		buttons &= ~IN_JUMP;
+	}
+	else if ((buttons & IN_JUMP) > 0 && mtMoveType == MOVETYPE_WALK && !bInWater)
+	{
+		if ((gB_Auto[client] && GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")) 
 		|| (gB_Zones && Shavit_InsideZone(client, Zone_Autobhop, gA_Timers[client].iTimerTrack)))
 		{	// just force autobhop enabled in autobhop zone whatever situation
 			SetEntProp(client, Prop_Data, "m_nOldButtons", (iOldButtons &= ~IN_JUMP));			
 		}
 	}
 
-	// perf jump measuring
-	bool bOnGround = (!bInWater && mtMoveType == MOVETYPE_WALK && iGroundEntity != -1);
-
 	if(mtMoveType == MOVETYPE_NOCLIP)
 	{
 		gI_LastNoclipTick[client] = tickcount;
 	}
+
+	// perf jump measuring
+	bool bOnGround = (!bInWater && mtMoveType == MOVETYPE_WALK && iGroundEntity != -1);
 
 	gI_LastTickcount[client] = tickcount;
 
@@ -4289,25 +4311,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				gA_Timers[client].iPerfectJumps++;
 			}
 		}
-	}
-
-	int blockprejump = GetStyleSettingInt(gA_Timers[client].bsStyle, "blockprejump");
-
-	if (blockprejump < 0)
-	{
-		blockprejump = gCV_BlockPreJump.BoolValue;
-	}
-
-	if (bInStart && blockprejump && GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 0 && (vel[2] > 0 || (buttons & IN_JUMP) > 0))
-	{
-		vel[2] = 0.0;
-		buttons &= ~IN_JUMP;
-	}
-
-	if (gB_Zones && Shavit_InsideZone(client, Zone_NoJump, gA_Timers[client].iTimerTrack))
-	{
-		vel[2] = 0.0;
-		buttons &= ~IN_JUMP;
 	}
 
 	// This can be bypassed by spamming +duck on CSS which causes `iGroundEntity` to be `-1` here...
@@ -4346,6 +4349,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		}
 	}
 #endif
+
 
 	gA_Timers[client].bJumped = false;
 	gA_Timers[client].bOnGround = bOnGround;

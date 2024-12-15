@@ -282,4 +282,8 @@
 	{
 		"en"		"Current map is unzoned."
 	}
+	"NotAllowJump"
+	{
+		"en"		"Jumping is not allowed in this zone."
+	}
 }
