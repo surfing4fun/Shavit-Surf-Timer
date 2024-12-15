@@ -188,7 +188,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_saveloc", Command_Save, "Save a checkpoint. Alias for sm_save");
 	RegConsoleCmd("sm_tele", Command_Tele, "Teleports to a checkpoint. Usage: sm_tele [number]");
 	RegConsoleCmd("sm_prevcp", Command_PrevCheckpoint, "Selects the previous checkpoint.");
-	RegConsoleCmd("sm_nextcp", Command_NextCheckpoint, "Selects the next checkpoint.");
+	RegConsoleCmd("sm_teleprev", Command_PrevCheckpoint, "Selects the previous checkpoint.");
+	RegConsoleCmd("sm_telenext", Command_NextCheckpoint, "Selects the next checkpoint.");
 	RegConsoleCmd("sm_deletecp", Command_DeleteCheckpoint, "Deletes the current checkpoint.");
 	gH_CheckpointsCookie = RegClientCookie("shavit_checkpoints", "Checkpoints settings", CookieAccess_Protected);
 	gA_PersistentData = new ArrayList(sizeof(persistent_data_t));
@@ -874,7 +875,7 @@ public Action Command_Save(int client, int args)
 
 	if(SaveCheckpoint(client))
 	{
-		Shavit_PrintToChat(client, "%T", "MiscCheckpointsSaved", client, gI_CurrentCheckpoint[client], gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "MiscCheckpointsSaved", client, gS_ChatStrings.sVariable, gI_CurrentCheckpoint[client], gS_ChatStrings.sText);
 
 		if (ShouldReopenCheckpointMenu(client))
 		{
@@ -943,6 +944,10 @@ public Action Command_PrevCheckpoint(int client, int args)
 		{
 			OpenCheckpointsMenu(client);
 		}
+		else
+		{
+			TeleportToCheckpoint(client, gI_CurrentCheckpoint[client], false, client);
+		}
 	}
 
 	return Plugin_Handled;
@@ -969,6 +974,10 @@ public Action Command_NextCheckpoint(int client, int args)
 		if (ShouldReopenCheckpointMenu(client))
 		{
 			OpenCheckpointsMenu(client);
+		}
+		else
+		{
+			TeleportToCheckpoint(client, gI_CurrentCheckpoint[client], false, client);
 		}
 	}
 
@@ -1839,7 +1848,7 @@ void TeleportToCheckpoint(int client, int index, bool suppressMessage, int targe
 
 	if(!suppressMessage)
 	{
-		Shavit_PrintToChat(client, "%T", "MiscCheckpointsTeleported", client, index, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
+		Shavit_PrintToChat(client, "%T", "MiscCheckpointsTeleported", client, gS_ChatStrings.sVariable, index, gS_ChatStrings.sText);
 	}
 }
 
