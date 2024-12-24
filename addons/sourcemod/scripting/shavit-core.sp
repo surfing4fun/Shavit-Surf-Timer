@@ -4251,6 +4251,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
 	}
 
+	// perf jump measuring
+	bool bOnGround = (!bInWater && mtMoveType == MOVETYPE_WALK && iGroundEntity != -1);
+
+	gI_LastTickcount[client] = tickcount;
+
+
 	int blockprejump = GetStyleSettingInt(gA_Timers[client].bsStyle, "blockprejump");
 
 	if (blockprejump < 0)
@@ -4261,7 +4267,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if ((bInStart && blockprejump && GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 0 && (vel[2] > 0 || (buttons & IN_JUMP) > 0)) 
 	|| (gB_Zones && Shavit_InsideZone(client, Zone_NoJump, gA_Timers[client].iTimerTrack)))
 	{
-		if((iLastButtons & IN_JUMP) == 0 && (buttons & IN_JUMP) > 0)
+		if((iLastButtons & IN_JUMP) == 0 && (buttons & IN_JUMP) > 0 && bOnGround)
 		{
 			Shavit_PrintToChat(client, "%T", "NotAllowJump", client);
 		}
@@ -4282,11 +4288,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		gI_LastNoclipTick[client] = tickcount;
 	}
-
-	// perf jump measuring
-	bool bOnGround = (!bInWater && mtMoveType == MOVETYPE_WALK && iGroundEntity != -1);
-
-	gI_LastTickcount[client] = tickcount;
 
 	if(bOnGround && !gA_Timers[client].bOnGround)
 	{
