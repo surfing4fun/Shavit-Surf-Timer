@@ -2139,7 +2139,7 @@ float Sourcepawn_GetRecordPoints(int track, int stage, int rank, float stylemult
 	else // stage
 	{
 		fMaxRankPoint = min(gCV_MaxRankPoints_Stage.FloatValue, gCV_BasicRankPoints_Stage.FloatValue + fCount * (Pow(tier, 2.0) / max(16.0-tier, 1.0)));
-		fBaiscFinishPoint = gCV_BasicFinishPoints_Stage.FloatValue == 0.0 ? tier : gCV_BasicFinishPoints_Main.FloatValue;
+		fBaiscFinishPoint = gCV_BasicFinishPoints_Stage.FloatValue == 0.0 ? tier : gCV_BasicFinishPoints_Stage.FloatValue;
 	}
 
 	float fRankPoint = fMaxRankPoint / float(rank);
