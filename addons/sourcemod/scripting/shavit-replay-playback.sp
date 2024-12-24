@@ -3295,6 +3295,26 @@ public Action Command_Replay(int client, int args)
 		}
 	}
 
+	int target = 0;
+
+	char sCommand[16];
+	GetCmdArg(0, sCommand, sizeof(sCommand));
+
+	if(StrContains(sCommand, "sm_specbot", false) == 0)
+	{
+		target = Shavit_GetReplayBotIndex(0, -1);
+	}
+
+	if (target < 1)
+	{
+		target = gI_CentralBot;
+	}
+
+	if(IsValidClient(target, true))
+	{
+		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", target);
+	}
+
 	OpenReplayMenu(client);
 	return Plugin_Handled;
 }
@@ -3511,9 +3531,22 @@ void OpenTrackTypeMenu(int client)
 		}
 	}
 
-	menu.AddItem("m", "Map Replay", records ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
-	menu.AddItem("s", "Stage Replay");
-	menu.AddItem("b", "Bonus Replay");
+	char sMenu[64];
+	
+	FormatEx(sMenu, sizeof(sMenu), "%T", "Main_Replay", client);
+	menu.AddItem("m", sMenu, records ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+
+	if(Shavit_GetStageCount(Track_Main) > 1)
+	{
+		FormatEx(sMenu, sizeof(sMenu), "%T", "Stage_Replay", client);
+		menu.AddItem("s", sMenu);		
+	}
+
+	if(Shavit_GetMapTracks(true, false) > 0)
+	{
+		FormatEx(sMenu, sizeof(sMenu), "%T", "Bonus_Replay", client);
+		menu.AddItem("b", sMenu);		
+	}
 
 	menu.Display(client, MENU_TIME_FOREVER);
 }
@@ -3541,8 +3574,9 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 			if(StrEqual("s", sInfo, false))
 			{
 				submenu.SetTitle("%T\n ", "CentralReplayStage", param1);
+				int iStageCount = Shavit_GetStageCount(Track_Main);
 
-				for (int i = 1; i < MAX_STAGES; i++)
+				for (int i = 1; i <= iStageCount; i++)
 				{
 					records = false;
 
