@@ -7,6 +7,7 @@
 #include <shavit/wr>
 #include <shavit/replay-playback>
 #include <shavit/replay-recorder>
+#include <convar_class>
 
 #define MAX_REPLAY 5
 #undef REQUIRE_EXTENSIONS
@@ -22,14 +23,29 @@ enum struct replayinfo_t
     frame_cache_t aCache;
 }
 
+enum struct persistent_replaydata_t
+{
+    int iSteamID;
+    int iDisconnectTime;
+    int iLastIndex;
+    ArrayList aReplayInfo;
+}
+
 Handle gH_Cookie_Enabled;
 Handle gH_Cookie_AutoOverWrite;
 Handle gH_Cookie_PrintSavedMessage;
 
+Convar gCV_PersistDataExpireTime = null;
+
 replayinfo_t gA_ReplayInfo[MAXPLAYERS + 1][MAX_REPLAY];
+
+ArrayList gA_PersisReplayInfo;
 
 chatstrings_t gS_ChatStrings;
 stylestrings_t gS_StyleStrings[STYLE_LIMIT];
+
+char gS_Map[PLATFORM_MAX_PATH];
+char gS_PreviousMap[PLATFORM_MAX_PATH];
 
 int gI_LastSavedIndex[MAXPLAYERS + 1];
 int gI_PlayerFinishFrame[MAXPLAYERS + 1];
@@ -59,9 +75,17 @@ public void OnPluginStart()
     gH_Cookie_AutoOverWrite = RegClientCookie("shavit_personalreplay_autooverwrite", "auto overwrite", CookieAccess_Public);
     gH_Cookie_PrintSavedMessage = RegClientCookie("shavit_personalreplay_printsavedmessage", "print savedmessage", CookieAccess_Public);
 
-    RegConsoleCmd("sm_personalreplay", Command_PersonalReplay);
-    RegConsoleCmd("sm_myreplay", Command_PersonalReplay);
-    RegConsoleCmd("sm_rewatch", Command_Rewatch);
+    gCV_PersistDataExpireTime = new Convar("shavit_personalreplay_persistdata_expiredtime", "600", "How long persist data expire for disconnected users in seconds?\n 0 - Disable persist data\n -1 - Until map changed", 0, true, -1.0);
+
+    RegConsoleCmd("sm_personalreplay", Command_PersonalReplay, "Open personal replay menu.");
+    RegConsoleCmd("sm_myreplay", Command_PersonalReplay, "Open personal replay menu.");
+    RegConsoleCmd("sm_rewatch", Command_Rewatch, "Watch client's most recent replay.");
+
+    gA_PersisReplayInfo = new ArrayList(sizeof(persistent_replaydata_t));
+
+    Convar.AutoExecConfig();
+
+    CreateTimer(1.0, Timer_PersistData, 0, TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 
     if (gB_Late)
     {
@@ -116,14 +140,50 @@ public void Shavit_OnChatConfigLoaded()
 	Shavit_GetChatStringsStruct(gS_ChatStrings);
 }
 
+public void OnClientAuthorized(int client, const char[] auth)
+{
+    if(gCV_PersistDataExpireTime.IntValue != 0)
+    {
+        LoadPersistentData(client);
+    }
+}
+
 public void OnClientDisconnect(int client)
 {
+    if(gCV_PersistDataExpireTime.IntValue != 0)
+    {
+        SavePersistentData(client);
+    }
+    
     for(int i = 0; i < MAX_REPLAY; i++)
     {
-        ResetReplayData(gA_ReplayInfo[client][i]);
+        ResetReplayData(gA_ReplayInfo[client][i], false);
     }
 
+    gI_LastSavedIndex[client] = 0;
     gI_PlayerFinishFrame[client] = -1;
+}
+
+public void OnMapStart()
+{
+	GetLowercaseMapName(gS_Map);
+
+	if (!StrEqual(gS_Map, gS_PreviousMap, false))
+	{
+		int iLength = gA_PersisReplayInfo.Length;
+
+		for(int i = iLength - 1; i >= 0; i--)
+		{
+			persistent_replaydata_t aData;
+			gA_PersisReplayInfo.GetArray(i, aData);
+			DeletePersistentData(i, aData, true);
+		}
+	}
+}
+
+public void OnMapEnd()
+{
+	gS_PreviousMap = gS_Map;
 }
 
 public Action Command_PersonalReplay(int client, int args)
@@ -261,7 +321,7 @@ public int StartReplay_MenuHanlder(Menu menu, MenuAction action, int param1, int
             }
             case 1:
             {
-                ResetReplayData(gA_ReplayInfo[param1][index]);
+                ResetReplayData(gA_ReplayInfo[param1][index], true);
                 Shavit_PrintToChat(param1, "%T", "PersonalReplayDeleted", param1);
                 ShowPersonaReplayMenu(param1);                
             }
@@ -371,7 +431,7 @@ public Action Shavit_ShouldSaveReplayCopy(int client, int style, float time, int
         return Plugin_Continue;
     }
 
-    ResetReplayData(gA_ReplayInfo[client][index]);
+    ResetReplayData(gA_ReplayInfo[client][index], true);
 
     if(!SaveReplayData(client, index, style, time, track, stage, timestamp))
     {
@@ -474,42 +534,156 @@ stock bool SaveReplayData(int client, int index, int style, float time, int trac
     return true;
 }
 
-stock void ResetReplayData(replayinfo_t info)
+stock void ResetReplayData(replayinfo_t info, bool bDelete)
 {
-    info.bHasReplay = false;
-    info.iTrack = -1;
-    info.iStage = -1;   
-    info.iStyle = -1;
+	info.bHasReplay = false;
+	info.iTrack = -1;
+	info.iStage = -1;   
+	info.iStyle = -1;
 
-    info.aCache.fTime = -1.0;
-    info.aCache.iPreFrames = 0;
-    info.aCache.iFrameCount = 0;
-    info.aCache.fTickrate = 0.0;
-    info.aCache.iSteamID = 0;
+	info.aCache.fTime = -1.0;
+	info.aCache.iPreFrames = 0;
+	info.aCache.iFrameCount = 0;
+	info.aCache.fTickrate = 0.0;
+	info.aCache.iSteamID = 0;
 
-    delete info.aCache.aFrames;
+	if(bDelete)
+	{
+		delete info.aCache.aFrames;
+	}
+	else
+	{
+		info.aCache.aFrames = null;
+	}
+}
+
+stock void SavePersistentData(int client)
+{
+	int iSteamID = GetSteamAccountID(client);
+    
+	if(iSteamID == 0)
+	{
+		return;
+	}
+
+	persistent_replaydata_t aData;
+	aData.iSteamID = iSteamID;
+	aData.iDisconnectTime = GetTime();
+
+	aData.aReplayInfo = new ArrayList(sizeof(replayinfo_t));
+
+	bool bSaved = false;
+    
+	for(int i = 0; i < MAX_REPLAY; i++)
+	{
+		if(gA_ReplayInfo[client][i].bHasReplay)
+		{
+			aData.aReplayInfo.PushArray(gA_ReplayInfo[client][i]);
+			bSaved = true;
+		}
+	}
+
+	if(!bSaved)
+	{
+		delete aData.aReplayInfo;
+		return;
+	}
+
+	gA_PersisReplayInfo.PushArray(aData);
+}
+
+void LoadPersistentData(int client)
+{
+	if(client == 0 || GetSteamAccountID(client) == 0)
+	{
+		return;
+	}
+
+	persistent_replaydata_t aData;
+	int iIndex = -1;
+	int iSteamID;
+
+	if((iSteamID = GetSteamAccountID(client)) != 0)
+	{
+		iIndex = gA_PersisReplayInfo.FindValue(iSteamID, 0);
+
+		if (iIndex != -1)
+		{
+			gA_PersisReplayInfo.GetArray(iIndex, aData);
+		}
+	}
+
+	if(iIndex == -1)
+	{
+		return;
+	}
+
+	gI_LastSavedIndex[client] = aData.iLastIndex;
+
+	for(int i = 0; i < aData.aReplayInfo.Length; i++)
+	{
+		aData.aReplayInfo.GetArray(i, gA_ReplayInfo[client][i]);
+	}
+
+	DeletePersistentData(iIndex, aData, false);
+}
+
+void DeletePersistentData(int index, persistent_replaydata_t data, bool bDelete)
+{
+	gA_PersisReplayInfo.Erase(index);
+    
+	for (int i = 0; i < data.aReplayInfo.Length; i++)
+	{
+		replayinfo_t ReplayInfo;
+		data.aReplayInfo.GetArray(i, ReplayInfo);
+		ResetReplayData(ReplayInfo, bDelete);
+	}
+}
+
+public Action Timer_PersistData(Handle timer)
+{
+	int time = GetTime();
+	int iExpiredTime = gCV_PersistDataExpireTime.IntValue;
+
+	if(iExpiredTime == -1 || iExpiredTime == 0)
+	{
+		return Plugin_Continue;
+	}
+
+	for (int i = 0; i < gA_PersisReplayInfo.Length; i++)
+	{
+		persistent_replaydata_t aData;
+		gA_PersisReplayInfo.GetArray(i, aData);
+
+		if(time - aData.iDisconnectTime > iExpiredTime)
+		{
+			DeletePersistentData(i, aData, true);
+		}
+	}
+
+	return Plugin_Continue;
 }
 
 stock bool IsValidClient2(int client)
 {
-    return (client >= 1 && client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
+	return (client >= 1 && client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
 }
 
 stock void SetClientCookieBool(int client, Handle cookie, bool value)
 {
-    SetClientCookie(client, cookie, value ? "1" : "0");
+	SetClientCookie(client, cookie, value ? "1" : "0");
 }
 
 stock bool GetClientCookieBool(int client, Handle cookie, bool& value)
 {
-    char buffer[8];
-    GetClientCookie(client, cookie, buffer, sizeof(buffer));
+	char buffer[8];
+	GetClientCookie(client, cookie, buffer, sizeof(buffer));
 
-    if (buffer[0] == '\0')
-    {
-        return false;
-    }
+	if (buffer[0] == '\0')
+	{
+		return false;
+	}
 
-    value = StringToInt(buffer) != 0;
-    return true;
+	value = StringToInt(buffer) != 0;
+	return true;
 }
