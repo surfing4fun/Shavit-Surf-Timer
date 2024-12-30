@@ -1095,7 +1095,7 @@ void FillAdvertisementBuffer(char[] buf, int buflen, int index)
 	ReplaceString(buf, buflen, "{hostname}", sHostname);
 	ReplaceString(buf, buflen, "{serverip}", sIPAddress);
 	ReplaceString(buf, buflen, "{map}", gS_Map);
-	ReplaceString(buf, buflen, "{type}", sStageInfo);
+	ReplaceString(buf, buflen, "{type}", sType);
 	ReplaceString(buf, buflen, "{stage}", sStageInfo);
 	ReplaceString(buf, buflen, "{bonus}", sTrackInfo);
 	ReplaceString(buf, buflen, "{tier}", sTier);
@@ -2566,7 +2566,7 @@ public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, i
 
 		for(int j = 1; j <= gCV_WRMessages.IntValue; j++)
 		{
-			Shavit_PrintToChat(i, sMessage);
+			Shavit_PrintToChat(client, sMessage);
 		}
 	}
 }
