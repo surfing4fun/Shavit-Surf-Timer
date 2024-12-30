@@ -128,6 +128,7 @@ Convar gCV_TicksPerUpdate = null;
 Convar gCV_SpectatorList = null;
 Convar gCV_UseHUDFix = null;
 Convar gCV_SpecNameSymbolLength = null;
+Convar gCV_RecordNameSymbolLength = null;
 Convar gCV_BlockYouHaveSpottedHint = null;
 Convar gCV_DefaultHUD = null;
 Convar gCV_DefaultHUD2 = null;
@@ -208,7 +209,8 @@ public void OnPluginStart()
 	gCV_TicksPerUpdate = new Convar("shavit_hud_ticksperupdate", "5", "How often (in ticks) should the HUD update?\nPlay around with this value until you find the best for your server.\nThe maximum value is your tickrate.\nNote: You should probably avoid 1-2 on CSS since players will probably feel stuttery FPS due to all the usermessages.", 0, true, 1.0, true, (1.0 / GetTickInterval()));
 	gCV_SpectatorList = new Convar("shavit_hud_speclist", "1", "Who to show in the specators list?\n0 - everyone\n1 - all admins (admin_speclisthide override to bypass)\n2 - players you can target", 0, true, 0.0, true, 2.0);
 	gCV_UseHUDFix = new Convar("shavit_hud_csgofix", "1", "Apply the csgo color fix to the center hud?\nThis will add a dollar sign and block sourcemod hooks to hint message", 0, true, 0.0, true, 1.0);
-	gCV_SpecNameSymbolLength = new Convar("shavit_hud_specnamesymbollength", "32", "Maximum player name length that should be displayed in spectators panel", 0, true, 0.0, true, float(MAX_NAME_LENGTH));
+	gCV_RecordNameSymbolLength = new Convar("shavit_hud_recordnamesymbollength", "10", "Maximum player name length that should be displayed in record section", 0, true, 0.0, true, float(MAX_NAME_LENGTH));
+	gCV_SpecNameSymbolLength = new Convar("shavit_hud_specnamesymbollength", "10", "Maximum player name length that should be displayed in spectators section", 0, true, 0.0, true, float(MAX_NAME_LENGTH));
 	gCV_BlockYouHaveSpottedHint = new Convar("shavit_hud_block_spotted_hint", "1", "Blocks the hint message for spotting an enemy or friendly (which covers the center HUD)", 0, true, 0.0, true, 1.0);
 
 	char defaultHUD[8];
@@ -2468,6 +2470,8 @@ void UpdateKeyHint(int client, bool force = false)
 						char sSHWRName[32];
 						Shavit_GetSHMapRecordName(track, sSHWRName, 32);
 
+						TrimDisplayString(sSHWRName, sSHWRName, sizeof(sSHWRName), gCV_RecordNameSymbolLength.IntValue);
+
 						Format(sMessage, sizeof(sMessage), "%s%sSH: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sSHWRTime, sSHWRName);
 					}
 					else if(fSHWRTime == -1.0)
@@ -2483,6 +2487,8 @@ void UpdateKeyHint(int client, bool force = false)
 						char sWRName[MAX_NAME_LENGTH];
 						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
 
+						TrimDisplayString(sWRName, sWRName, sizeof(sWRName), gCV_RecordNameSymbolLength.IntValue);
+
 						Format(sMessage, sizeof(sMessage), "%s%s%T: %s (%s)", sMessage, ((strlen(sMessage) > 0) && fSHWRTime == 0.0)? "\n\n":"\n", "HudRecord", client, sWRTime, sWRName);
 					}
 				}
@@ -2496,6 +2502,8 @@ void UpdateKeyHint(int client, bool force = false)
 
 						char sWRName[MAX_NAME_LENGTH];
 						Shavit_GetWRName(style, sWRName, MAX_NAME_LENGTH, track);
+
+						TrimDisplayString(sWRName, sWRName, sizeof(sWRName), gCV_RecordNameSymbolLength.IntValue);
 
 						Format(sMessage, sizeof(sMessage), "%s%s%T: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudRecord", client, sWRTime, sWRName);
 					}
@@ -2548,6 +2556,8 @@ void UpdateKeyHint(int client, bool force = false)
 						char sSHStageWRName[32];
 						Shavit_GetSHStageRecordName(stage, sSHStageWRName, 32);
 
+						TrimDisplayString(sSHStageWRName, sSHStageWRName, sizeof(sSHStageWRName), gCV_RecordNameSymbolLength.IntValue);
+
 						Format(sMessage, sizeof(sMessage), "%s\nSH: %s (%s)", sMessage, sSHStageWRTime, sSHStageWRName);
 					}
 					else if(fSHStageWRTime == -1.0)
@@ -2566,6 +2576,8 @@ void UpdateKeyHint(int client, bool force = false)
 						char sStageWRName[MAX_NAME_LENGTH];
 						Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
 
+						TrimDisplayString(sStageWRName, sStageWRName, sizeof(sStageWRName), gCV_RecordNameSymbolLength.IntValue);
+
 						char sStageWR[16];
 						FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
 
@@ -2580,6 +2592,8 @@ void UpdateKeyHint(int client, bool force = false)
 						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
 						char sStageWRName[MAX_NAME_LENGTH];
 						Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
+
+						TrimDisplayString(sStageWRName, sStageWRName, sizeof(sStageWRName), gCV_RecordNameSymbolLength.IntValue);
 
 						char sStageWR[16];
 						FormatSeconds(fStageWR, sStageWR, sizeof(sStageWR));
@@ -2644,7 +2658,7 @@ void UpdateKeyHint(int client, bool force = false)
 
 			if(iSpectators > 0)
 			{
-				Format(sMessage, 256, "%s%s%spectators (%d):", sMessage, (strlen(sMessage) > 0)? "\n\n":"", (client == target)? "S":"Other S", iSpectators);
+				Format(sMessage, 256, "%s%s%T (%d):", sMessage, (strlen(sMessage) > 0)? "\n\n":"", (client == target) ? "SpectatorPersonal":"SpectatorWatching", client, iSpectators);
 				char sName[MAX_NAME_LENGTH];
 
 				for(int i = 0; i < iSpectators; i++)
@@ -2658,7 +2672,7 @@ void UpdateKeyHint(int client, bool force = false)
 
 					GetClientName(iSpectatorClients[i], sName, sizeof(sName));
 					ReplaceString(sName, sizeof(sName), "#", "?");
-					TrimDisplayString(sName, sName, sizeof(sName), gCV_SpecNameSymbolLength.IntValue);
+					TrimDisplayString(sName, sName, sizeof(sName), gCV_RecordNameSymbolLength.IntValue);
 					Format(sMessage, 256, "%s\n%s", sMessage, sName);
 				}
 			}
