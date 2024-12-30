@@ -238,6 +238,7 @@ Convar gCV_DynamicTimeCheap = null;
 Convar gCV_DynamicTimeTick = null;
 Convar gCV_EnableDynamicTimeDifference = null;
 Convar gCV_DisableHibernation = null;
+Convar gCV_PlayerNameSymbolLength = null;
 ConVar sv_duplicate_playernames_ok = null;
 ConVar bot_join_after_player = null;
 ConVar mp_randomspawn = null;
@@ -443,6 +444,7 @@ public void OnPluginStart()
 	gCV_DynamicTimeCheap = new Convar("shavit_replay_timedifference_cheap", "1", "0 - Disabled\n1 - only clip the search ahead to shavit_replay_timedifference_search\n2 - only clip the search behind to players current frame\n3 - clip the search to +/- shavit_replay_timedifference_search seconds to the players current frame", 0, true, 0.0, true, 3.0);
 	gCV_DynamicTimeSearch = new Convar("shavit_replay_timedifference_search", "60.0", "Time in seconds to search the players current frame for dynamic time differences\n0 - Full Scan\nNote: Higher values will result in worse performance", 0, true, 0.0);
 	gCV_EnableDynamicTimeDifference = new Convar("shavit_replay_timedifference", "1", "Enabled dynamic time/velocity differences for the hud", 0, true, 0.0, true, 1.0);
+	gCV_PlayerNameSymbolLength = new Convar("shavit_replay_playernamesymbollength", "10", "Maximum player name length that should be displayed in bot name", 0, true, 0.0, true, float(MAX_NAME_LENGTH));
 
 	if (gEV_Type == Engine_CSS)
 	{
@@ -2266,6 +2268,8 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 		ReplaceString(temp, sizeof(temp), "{style}", gS_StyleStrings[style].sStyleName);
 		ReplaceString(temp, sizeof(temp), "{styletag}", gS_StyleStrings[style].sClanTag);
 	}
+
+	TrimDisplayString(sName, sName, sizeof(sName), gCV_PlayerNameSymbolLength.IntValue);
 
 	char sType[32];
 	if (type == Replay_Central)
