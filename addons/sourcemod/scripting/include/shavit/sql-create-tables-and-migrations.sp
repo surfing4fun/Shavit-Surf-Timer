@@ -52,8 +52,8 @@ enum
 	Migration_NormalizeMapzonePoints,
 	Migration_AddMapzonesForm, 
 	Migration_AddMapzonesTarget,
-	Migration_AddMapZonesSpeelimit,
-	Migration_DeprecateExactTimeInt, // 30
+	Migration_DeprecateExactTimeInt,
+	Migration_AddMapZonesSpeelimit, // 30	
 	Migration_AddPlayertimesAuthFK,
 	Migration_FixSQLiteMapzonesROWID,
 	Migration_AddMaptiersMaxvelocity,
@@ -96,8 +96,8 @@ char gS_MigrationNames[][] = {
 	"NormalizeMapzonePoints",
 	"AddMapzonesForm",
 	"AddMapzonesTarget",
-	"AddMapzonesSpeedlimit",
 	"DeprecateExactTimeInt",
+	"AddMapzonesSpeedlimit",
 	"AddPlayertimesAuthFK",
 	"FixSQLiteMapzonesROWID",
 	"AddMaptiersMaxvelocity",
@@ -429,8 +429,8 @@ void ApplyMigration(int migration)
 		case Migration_NormalizeMapzonePoints: ApplyMigration_NormalizeMapzonePoints();
 		case Migration_AddMapzonesForm: ApplyMigration_AddMapzonesForm();
 		case Migration_AddMapzonesTarget: ApplyMigration_AddMapzonesTarget();
-		case Migration_AddMapZonesSpeelimit: ApplyMigration_AddMapzonesSpeedlimit();
 		case Migration_DeprecateExactTimeInt: ApplyMigration_DeprecateExactTimeInt();
+		case Migration_AddMapZonesSpeelimit: ApplyMigration_AddMapzonesSpeedlimit();
 		case Migration_AddPlayertimesAuthFK: ApplyMigration_AddPlayertimesAuthFK();
 		case Migration_FixSQLiteMapzonesROWID: ApplyMigration_FixSQLiteMapzonesROWID();
 		case Migration_AddMaptiersMaxvelocity: ApplyMigration_AddMaptiersMaxvelocity();
@@ -595,7 +595,7 @@ void ApplyMigration_AddMapzonesTarget()
 void ApplyMigration_AddMapzonesSpeedlimit()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smapzones` ADD COLUMN `speedlimit` TINYINT;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smapzones` ADD COLUMN `speedlimit` TINYINT NOT NULL DEFAULT 1;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddMapZonesSpeelimit, DBPrio_High);
 }
 

@@ -348,6 +348,7 @@ public void OnPluginStart()
 
 	// commands START
 	RegConsoleCmd("sm_timer", Command_Timer, "Show timer menu");
+	RegConsoleCmd("sm_surftimer", Command_Timer, "Show timer menu");
 
 	// style
 	RegConsoleCmd("sm_style", Command_Style, "Choose your bhop style.");
