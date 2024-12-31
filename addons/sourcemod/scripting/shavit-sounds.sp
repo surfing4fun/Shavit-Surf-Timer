@@ -38,6 +38,7 @@ bool gB_HUD;
 ArrayList gA_FirstSounds = null;
 ArrayList gA_PersonalSounds = null;
 ArrayList gA_WorldSounds = null;
+ArrayList gA_WRCPSounds = null;
 ArrayList gA_WorstSounds = null;
 ArrayList gA_NoImprovementSounds = null;
 StringMap gSM_RankSounds = null;
@@ -72,6 +73,7 @@ public void OnPluginStart()
 	gA_FirstSounds = new ArrayList(cells);
 	gA_PersonalSounds = new ArrayList(cells);
 	gA_WorldSounds = new ArrayList(cells);
+	gA_WRCPSounds = new ArrayList(cells);
 	gA_WorstSounds = new ArrayList(cells);
 	gA_NoImprovementSounds = new ArrayList(cells);
 	gSM_RankSounds = new StringMap();
@@ -109,6 +111,7 @@ public void OnMapStart()
 	gA_FirstSounds.Clear();
 	gA_PersonalSounds.Clear();
 	gA_WorldSounds.Clear();
+	gA_WRCPSounds.Clear();
 	gA_WorstSounds.Clear();
 	gA_NoImprovementSounds.Clear();
 	gSM_RankSounds.Clear();
@@ -152,6 +155,10 @@ public void OnMapStart()
 			else if(StrEqual(sExploded[0], "world"))
 			{
 				gA_WorldSounds.PushString(sExploded[1]);
+			}
+			else if(StrEqual(sExploded[0], "wrcp"))
+			{
+				gA_WRCPSounds.PushString(sExploded[1]);
 			}
 			else if(StrEqual(sExploded[0], "worst"))
 			{
@@ -273,11 +280,11 @@ public void Shavit_OnFinishStage_Post(int client, int style, float time, int jum
 	{
 		bEveryone = true;
 	}
-	else if(gA_WorldSounds.Length != 0 && rank == 1)
+	else if(gA_WRCPSounds.Length != 0 && rank == 1)
 	{
 		bEveryone = true;
 
-		gA_WorldSounds.GetString(GetRandomInt(0, gA_WorldSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
+		gA_WRCPSounds.GetString(GetRandomInt(0, gA_WRCPSounds.Length - 1), sSound, PLATFORM_MAX_PATH);
 	}
 	else if(gA_PersonalSounds.Length != 0 && time < oldtime)
 	{
