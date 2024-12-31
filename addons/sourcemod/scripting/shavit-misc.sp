@@ -2538,7 +2538,7 @@ public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, i
 
 	for(int i = 1; i <= MaxClients; i++)
 	{
-		if(IsValidClient(i) || (Shavit_GetMessageSetting(i) & MSG_WORLDRECORD) != 0)
+		if(!IsValidClient(i) || (Shavit_GetMessageSetting(i) & MSG_WORLDRECORD) != 0)
 		{
 			continue;
 		}
@@ -2564,9 +2564,9 @@ public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, i
 				gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
 		}
 
-		for(int j = 1; j <= gCV_WRMessages.IntValue; j++)
+		for(int j = 0; j < gCV_WRMessages.IntValue; j++)
 		{
-			Shavit_PrintToChat(client, sMessage);
+			Shavit_PrintToChat(i, sMessage);
 		}
 	}
 }
