@@ -263,6 +263,26 @@
 	{
 		"en"		"Checkpoint records"
 	}
+	"CheckpointRecordsMenuTitle"
+	{
+		"en"		"Checkpoint records"
+	}
+	"CheckpointReachTime"
+	{
+		"en"		"Time"
+	}
+	"StageFinishTime"
+	{
+		"en"		"Stage Finish Time"
+	}
+	"StageAttempts"
+	{
+		"en"		"Attempts"
+	}
+	"NoCheckpointRecords"
+	{
+		"en"		"No Checkpoint Records."
+	}
 	"WRDeleteRecord"
 	{
 		"en"		"Delete record"

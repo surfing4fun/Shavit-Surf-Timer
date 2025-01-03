@@ -188,6 +188,8 @@ enum struct timer_snapshot_t
 	stagestart_info_t aStageStartInfo;
 
 	float fCPTimes[MAX_STAGES];
+	float fStageFinishTimes[MAX_STAGES];
+	int iStageAttempts[MAX_STAGES];
 
 	float fplayer_speedmod;
 	float fNextFrameTime;
@@ -1094,7 +1096,7 @@ native int Shavit_GetClientTrack(int client);
 native int Shavit_GetClientLastStage(int client);
 
 /**
- * Returns the zone index for the entity if available.
+ * Set the client's last reach stage number.
  *
  * @param client                    Client index.
  * @param stagenum                  Stage to set.
@@ -1103,7 +1105,7 @@ native int Shavit_GetClientLastStage(int client);
 native void Shavit_SetClientLastStage(int client, int stagenum);
 
 /**
- * Returns the zone index for the entity if available.
+ * Returns the checkpoint times of client's current run.
  *
  * @param client                    Client index.
  * @param cpTimes                   Any float array to hold the checkpoint times.
@@ -1112,7 +1114,7 @@ native void Shavit_SetClientLastStage(int client, int stagenum);
 native void Shavit_GetClientCPTimes(int client, float[] cpTimes);
 
 /**
- * Returns the zone index for the entity if available.
+ * Set the checkpoint times of client's current run.
  *
  * @param client                    Client index.
  * @param cpTimes                   Any float array of checkpoint times.
@@ -1121,7 +1123,7 @@ native void Shavit_GetClientCPTimes(int client, float[] cpTimes);
 native void Shavit_SetClientCPTimes(int client, float[] cpTimes);
 
 /**
- * Returns the zone index for the entity if available.
+ * Get the specific checkpoint time of client's current run.
  *
  * @param client                    Client index.
  * @param checkpoint				Checkpoint number.
@@ -1130,7 +1132,7 @@ native void Shavit_SetClientCPTimes(int client, float[] cpTimes);
 native float Shavit_GetClientCPTime(int client, int checkpoint);
 
 /**
- * Returns the zone index for the entity if available.
+ * Returns the specific checkpoint time of client's current run.
  *
  * @param client                    Client index.
  * @param checkpoint				Checkpoint number.
@@ -1138,6 +1140,80 @@ native float Shavit_GetClientCPTime(int client, int checkpoint);
  * @noreturn                          
  */
 native void Shavit_SetClientCPTime(int client, int checkpoint, float time);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param times                   	Any float array to hold the stage finish times.
+ * @noreturn                          
+ */
+native void Shavit_GetClientStageFinishTimes(int client, float[] times);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param times                   	Any float array of stage finish times.
+ * @noreturn                          
+ */
+native void Shavit_SetClientStageFinishTimes(int client, float[] times);
+
+/**
+ * Returns the specific stage finish time of client's current run.
+ *
+ * @param client                    Client index.
+ * @param stage						Stage number.
+ * @return							The time of specific stage.                          
+ */
+native float Shavit_GetClientStageFinishTime(int client, int stage);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param stage						Stage number.
+ * @param time                   	The specific time to set.
+ * @noreturn                          
+ */
+native void Shavit_SetClientStageFinishTime(int client, int stage, float time);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param attempts                   	Any int array to hold the stage attempts.
+ * @noreturn                          
+ */
+native void Shavit_GetClientStageAttempts(int client, int[] attempts);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param attempts                   	Any int array of stage attempts.
+ * @noreturn                          
+ */
+native void Shavit_SetClientStageAttempts(int client, int[] attempts);
+
+/**
+ * Returns the specific stage finish time of client's current run.
+ *
+ * @param client                    Client index.
+ * @param stage						Stage number.
+ * @return							The attempts of specific stage.                          
+ */
+native float Shavit_GetClientStageAttempt(int client, int stage);
+
+/**
+ * Returns the zone index for the entity if available.
+ *
+ * @param client                    Client index.
+ * @param stage						Stage number.
+ * @param attempts                  The specific attempt number to set, if attempts lower than 1, attempt times plus one.
+ * @noreturn                          
+ */
+native void Shavit_SetClientStageAttempt(int client, int stage, int attempts);
 
 /**
  * Returns if client's current stage run is valid.

@@ -6034,6 +6034,14 @@ public void StartTouchPost(int entity, int other)
 							Call_Finish();
 
 							Shavit_SetClientLastStage(other, stage);
+							Shavit_SetClientStageAttempt(other, stage, 1);
+						}
+					}
+					else if(stage == iLastStage)
+					{
+						if (!Shavit_IsOnlyStageMode(other) && Shavit_GetClientStageTime(other) > 0.8)
+						{
+							Shavit_SetClientStageAttempt(other, stage, -1);							
 						}
 					}
 				}
@@ -6186,7 +6194,7 @@ public void EndTouchPost(int entity, int other)
 							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
 							{
 								Shavit_StopChatSound();							
-								Shavit_PrintToChat(i, "%T %s", "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
+								Shavit_PrintToChat(i, "%s*%N*%s %T %s", gS_ChatStrings.sImproving, other, gS_ChatStrings.sText, "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
 							}
 						}						
 					}
@@ -6260,7 +6268,7 @@ public void EndTouchPost(int entity, int other)
 							if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
 							{
 								Shavit_StopChatSound();
-								Shavit_PrintToChat(i, "%T %s", "ZoneStageStartZonePrespeed", i,
+								Shavit_PrintToChat(i, "%s*%N*%s %T %s", gS_ChatStrings.sImproving, other, gS_ChatStrings.sText, "ZoneStageStartZonePrespeed", i,
 									gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
 									valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText, sVelDiff);
 							}

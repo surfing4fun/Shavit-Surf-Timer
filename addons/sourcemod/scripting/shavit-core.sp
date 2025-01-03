@@ -141,6 +141,7 @@ bool gB_AdminMenu = false;
 
 // use to clear players checkpoint times
 float empty_times[MAX_STAGES] = {-1.0, ...};
+int empty_attempts[MAX_STAGES] = {0, ...};
 
 TopMenu gH_AdminMenu = null;
 TopMenuObject gH_TimerCommands = INVALID_TOPMENUOBJECT;
@@ -231,6 +232,14 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_SetClientCPTimes", Native_SetClientCPTimes);
 	CreateNative("Shavit_GetClientCPTime", Native_GetClientCPTime);
 	CreateNative("Shavit_SetClientCPTime", Native_SetClientCPTime);
+	CreateNative("Shavit_GetClientStageFinishTimes", Native_GetClientStageFinishTimes);
+	CreateNative("Shavit_SetClientStageFinishTimes", Native_SetClientStageFinishTimes);
+	CreateNative("Shavit_GetClientStageFinishTime", Native_GetClientStageFinishTime);
+	CreateNative("Shavit_SetClientStageFinishTime", Native_SetClientStageFinishTime);
+	CreateNative("Shavit_GetClientStageAttempts", Native_GetClientStageAttempts);
+	CreateNative("Shavit_SetClientStageAttempts", Native_SetClientStageAttempts);
+	CreateNative("Shavit_GetClientStageAttempt", Native_GetClientStageAttempt);
+	CreateNative("Shavit_SetClientStageAttempt", Native_SetClientStageAttempt);
 	CreateNative("Shavit_StageTimeValid", Native_StageTimeValid);
 	CreateNative("Shavit_SetStageTimeValid", Native_SetStageTimeValid);
 	CreateNative("Shavit_GetDatabase", Native_GetDatabase);
@@ -2387,6 +2396,11 @@ public int Native_FinishMap(Handle handler, int numParams)
 
 	CalculateRunTime(gA_Timers[client], true);
 
+	if(gA_Timers[client].iTimerTrack == Track_Main && Shavit_GetStageCount(Track_Main) > 1)
+	{
+		gA_Timers[client].fCPTimes[gA_Timers[client].iLastStage] = gA_Timers[client].fCurrentTime;		
+	}
+
 	if (gA_Timers[client].fCurrentTime <= 0.11)
 	{
 		Shavit_StopTimer(client);
@@ -2539,6 +2553,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 		gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
 		gA_Timers[client].aStageStartInfo.iGoodGains = gA_Timers[client].iGoodGains;
 		gA_Timers[client].aStageStartInfo.iTotalMeasures = gA_Timers[client].iTotalMeasures;
+		gA_Timers[client].fStageFinishTimes[stage] = end.fCurrentTime;
 	}
 
 	return 1;
@@ -2983,6 +2998,72 @@ public int Native_SetClientTimescale(Handle handler, int numParams)
 	return 1;
 }
 
+public int Native_GetClientStageFinishTimes(Handle plugin, int numParams)
+{
+	return SetNativeArray(2, gA_Timers[GetNativeCell(1)].fStageFinishTimes, MAX_STAGES);
+}
+
+public int Native_SetClientStageFinishTimes(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	float times[MAX_STAGES];
+
+	GetNativeArray(2, times, MAX_STAGES);
+	gA_Timers[client].fStageFinishTimes = times;
+
+	return 0;
+}
+
+public int Native_GetClientStageFinishTime(Handle plugin, int numParams)
+{
+	return view_as<int>(gA_Timers[GetNativeCell(1)].fStageFinishTimes[GetNativeCell(2)]);
+}
+
+public int Native_SetClientStageFinishTime(Handle plugin, int numParams)
+{
+	gA_Timers[GetNativeCell(1)].fStageFinishTimes[GetNativeCell(2)] = GetNativeCell(3);
+
+	return 0;
+}
+
+public int Native_GetClientStageAttempts(Handle plugin, int numParams)
+{
+	return SetNativeArray(2, gA_Timers[GetNativeCell(1)].iStageAttempts, MAX_STAGES);
+}
+
+public int Native_SetClientStageAttempts(Handle plugin, int numParams)
+{
+	int client = GetNativeCell(1);
+	int attempts[MAX_STAGES];
+
+	GetNativeArray(2, attempts, MAX_STAGES);
+	gA_Timers[client].iStageAttempts = attempts;
+
+	return 0;
+}
+
+public int Native_GetClientStageAttempt(Handle plugin, int numParams)
+{
+	return view_as<int>(gA_Timers[GetNativeCell(1)].iStageAttempts[GetNativeCell(2)]);
+}
+
+public int Native_SetClientStageAttempt(Handle plugin, int numParams)
+{
+	int attempts = GetNativeCell(3);
+
+	if(attempts <= 0)
+	{
+		gA_Timers[GetNativeCell(1)].iStageAttempts[GetNativeCell(2)]++;
+	}
+	else
+	{
+		gA_Timers[GetNativeCell(1)].iStageAttempts[GetNativeCell(2)] = attempts;
+	}
+
+	return 0;
+}
+
+
 public int Native_GetClientCPTimes(Handle plugin, int numParams)
 {
 	return SetNativeArray(2, gA_Timers[GetNativeCell(1)].fCPTimes, MAX_STAGES);
@@ -3225,6 +3306,15 @@ void StartTimer(int client, int track)
 			{
 				if(Shavit_GetStageCount(track) > 1)
 				{
+					if(gA_Timers[client].fCPTimes[1] != -1.0)	
+					{
+						gA_Timers[client].fCPTimes = empty_times;//set it -1.0 to make cptime dont need to reset every tick
+						gA_Timers[client].fStageFinishTimes = empty_times;
+						gA_Timers[client].iStageAttempts = empty_attempts;
+					}
+
+					gA_Timers[client].iStageAttempts[1] = 1;
+
 					//reset stage start stuffs
 					ChangeClientLastStage(client, 1);
 					gA_Timers[client].aStageStartInfo.fStageStartTime = 0.0;
@@ -3233,16 +3323,16 @@ void StartTimer(int client, int track)
 					gA_Timers[client].aStageStartInfo.iJumps = 0;
 					gA_Timers[client].aStageStartInfo.iStrafes = 0;
 					gA_Timers[client].bStageTimeValid = true;
+
+
 				}
 				else
 				{
 					gA_Timers[client].iLastStage = 0; // i use it as last checkpoint number when the map is linear.
-				}
-				
-				//set it -1.0 to make cptime dont need to reset of often
-				if(gA_Timers[client].fCPTimes[1] != -1.0)	
-				{
-					gA_Timers[client].fCPTimes = empty_times;					
+					if(gA_Timers[client].fCPTimes[1] != -1.0)	//kinda duplicated, but i really dont want to reset 3 of them in linear map.
+					{
+						gA_Timers[client].fCPTimes = empty_times;
+					}
 				}
 			}
 
@@ -3421,8 +3511,9 @@ public void OnClientPutInServer(int client)
 	gA_Timers[client].aStageStartInfo.iFullTicks = 0;
 	gA_Timers[client].aStageStartInfo.iFractionalTicks = 0;
 	gA_Timers[client].aStageStartInfo.iZoneIncrement = 0;
-
 	gA_Timers[client].fCPTimes = empty_times;
+	gA_Timers[client].fStageFinishTimes = empty_times;
+	gA_Timers[client].iStageAttempts = empty_attempts;
 	gS_DeleteMap[client][0] = 0;
 	gI_FirstTouchedGround[client] = 0;
 	gI_LastNoclipTick[client] = 0;

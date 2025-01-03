@@ -57,10 +57,11 @@ enum
 	Migration_AddPlayertimesAuthFK,
 	Migration_FixSQLiteMapzonesROWID,
 	Migration_AddMaptiersMaxvelocity,
-	Migration_AddStartpositionsStage, // 34
-	// TODO: Add start & end speed of records
-	Migration_AddPlayertimesStartvelAndEndvel,
+	Migration_AddStartpositionsStage, 
+	Migration_AddPlayertimesStartvelAndEndvel, // 35
 	Migration_AddStagetimesStartvelAndEndvel,
+	Migration_AddCptimesStagetimeAndAttempts,
+	Migration_AddCpwrsStagetimeAndAttempts, //38
 	// Migration_AddCpwrsStartvelAndEndvel,
 	// Migration_AddCptimesStartvelAndEndvel,
 	MIGRATIONS_END
@@ -104,6 +105,8 @@ char gS_MigrationNames[][] = {
 	"AddStartpositionsStage",
 	"AddPlayertimesStartvelAndEndvel",
 	"AddStagetimesStartvelAndEndvel",	
+	"AddCptimesStagetimeAndAttempts",
+	"AddCpwrsStagetimeAndAttempts",	
 	// "AddCpwrsStartvelAndEndvel",
 	// "AddCptimesStartvelAndEndvel",
 };
@@ -248,12 +251,12 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	AddQueryLog(trans, sQuery);
 
 	FormatEx(sQuery, sizeof(sQuery),
-		"CREATE TABLE IF NOT EXISTS `%scpwrs` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `checkpoint` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `checkpoint`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%scpwrs` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `checkpoint` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL,  `stage_time` FLOAT NOT NULL, `attempts` SMALLINT NOT NULL, PRIMARY KEY (`style`, `track`, `map`, `checkpoint`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
 	FormatEx(sQuery, sizeof(sQuery),
-		"CREATE TABLE IF NOT EXISTS `%scptimes` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `checkpoint` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `checkpoint`)) %s;",
+		"CREATE TABLE IF NOT EXISTS `%scptimes` (`style` TINYINT NOT NULL, `track` TINYINT NOT NULL DEFAULT 0, `map` VARCHAR(255) NOT NULL, `checkpoint` TINYINT NOT NULL, `auth` INT NOT NULL, `time` FLOAT NOT NULL, `stage_time` FLOAT NOT NULL, `attempts` SMALLINT NOT NULL, PRIMARY KEY (`style`, `track`, `auth`, `map`, `checkpoint`)) %s;",
 		gS_SQLPrefix, sOptionalINNODB);
 	AddQueryLog(trans, sQuery);
 
@@ -437,6 +440,8 @@ void ApplyMigration(int migration)
 		case Migration_AddStartpositionsStage: ApplyMigration_AddStartpositionsStage();
 		case Migration_AddPlayertimesStartvelAndEndvel: ApplyMigration_AddPlayertimesStartvelAndEndvel();
 		case Migration_AddStagetimesStartvelAndEndvel: ApplyMigration_AddStagetimesStartvelAndEndvel();
+		case Migration_AddCptimesStagetimeAndAttempts: ApplyMigration_AddCptimesStagetimeAndAttempts();
+		case Migration_AddCpwrsStagetimeAndAttempts: ApplyMigration_AddCpwrsStagetimeAndAttempts();
 		// case Migration_AddCpwrsStartvelAndEndvel: ApplyMigration_AddCpwrsStartvelAndEndvel();
 		// case Migration_AddCptimesStartvelAndEndvel: ApplyMigration_AddCptimesStartvelAndEndvel();
 	}
@@ -625,6 +630,26 @@ void ApplyMigration_AddStagetimesStartvelAndEndvel()
 	
 	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstagetimes` ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStagetimesStartvelAndEndvel, DBPrio_High);
+}
+
+void ApplyMigration_AddCptimesStagetimeAndAttempts()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scptimes` ADD COLUMN `stage_time` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCptimesStagetimeAndAttempts, DBPrio_High);
+	
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scptimes` ADD COLUMN `attempts` SMALLINT NOT NULL DEFAULT 0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCptimesStagetimeAndAttempts, DBPrio_High);
+}
+
+void ApplyMigration_AddCpwrsStagetimeAndAttempts()
+{
+	char sQuery[192];
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scpwrs` ADD COLUMN `stage_time` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCpwrsStagetimeAndAttempts, DBPrio_High);
+	
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scpwrs` ADD COLUMN `attempts` SMALLINT NOT NULL DEFAULT 0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCpwrsStagetimeAndAttempts, DBPrio_High);
 }
 
 // void ApplyMigration_AddCpwrsStartvelAndEndvel()

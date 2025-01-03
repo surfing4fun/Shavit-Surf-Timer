@@ -26,6 +26,10 @@
 	{
 		"en"		"Stage"
 	}
+	"CheckpointText"
+	{
+		"en"		"Checkpoint"
+	}
 	// ---------- Commands ---------- //
 	"NoCommandAccess"
 	{
@@ -79,10 +83,11 @@
 	}
 	"ItemEnabled"
 	{
-		"en"		"＋"
+		"en"		"✓"
+		
 	}
 	"ItemDisabled"
 	{
-		"en"		"－"
+		"en"		"　"
 	}
 }
