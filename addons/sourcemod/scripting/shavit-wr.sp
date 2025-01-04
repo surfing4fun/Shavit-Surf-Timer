@@ -36,6 +36,9 @@
 #pragma semicolon 1
 
 // #define DEBUG
+#define CPRMODE_WR 1
+#define CPRMODE_PB 2
+#define CPRMODE_CWR 3
 
 enum struct wrcache_t
 {
@@ -43,6 +46,8 @@ enum struct wrcache_t
 	int iLastTrack;
 	int iLastStage;
 	int iPagePosition;
+	int iCPRMode;	// 0 - disabled, 1 - cpwr, 2 - cppb, 3 - ccpr
+	int iRecordID[STYLE_LIMIT];	// for cpr
 	bool bForceStyle;
 	bool bPendingMenu;
 	char sClientMap[PLATFORM_MAX_PATH];
@@ -221,7 +226,6 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_wr", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_wr [map]");
 	RegConsoleCmd("sm_worldrecord", Command_WorldRecord, "View the leaderboard of a map. Usage: sm_worldrecord [map]");
 
-	RegConsoleCmd("sm_cpwr", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
 	RegConsoleCmd("sm_swr", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
 	RegConsoleCmd("sm_stagewr", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
 	RegConsoleCmd("sm_stageworldrecord", Command_WorldRecord, "View the leaderboard of a map's stage. Usage: sm_wrcp [map] [stage number]");
@@ -241,6 +245,12 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_time", Command_PersonalBest, "View a player's time on a specific map.");
 	RegConsoleCmd("sm_pb", Command_PersonalBest, "View a player's time on a specific map.");
 	RegConsoleCmd("sm_pr", Command_PersonalBest, "View a player's time on a specific map.");
+
+	// checkpoint records stuffs
+	RegConsoleCmd("sm_cpwr", Command_CheckpointRecord, "View world record's checkpoint records on a specific map.");
+	RegConsoleCmd("sm_cppr", Command_CheckpointRecord, "View a player's checkpoint records on a specific map.");
+	RegConsoleCmd("sm_cpr", Command_CheckpointRecord, "View a player's checkpoint record comparison with world record on a specific map.");
+	RegConsoleCmd("sm_ccpr", Command_CheckpointRecord, "View a player's checkpoint record comparison with world record on a specific map.");
 
 	// delete records
 	RegAdminCmd("sm_delete", Command_Delete, ADMFLAG_RCON, "Opens a record deletion menu interface.");
@@ -2526,6 +2536,294 @@ public void DeleteAll_Callback(Database db, DBResultSet results, const char[] er
 	}
 }
 
+public Action Command_CheckpointRecord(int client, int args)
+{
+	if(!IsValidClient(client))
+	{
+		return Plugin_Handled;
+	}
+
+	gA_WRCache[client].bForceStyle = false;
+
+	char sCommand[16];
+	GetCmdArg(0, sCommand, 16);
+
+	bool havemap = (args >= 1);
+
+	if(StrEqual(sCommand, "sm_cpwr", false))
+	{
+		gA_WRCache[client].iCPRMode = CPRMODE_WR;
+	}
+	else if(StrEqual(sCommand, "sm_cppr", false))
+	{
+		gA_WRCache[client].iCPRMode = CPRMODE_PB;
+	}
+	else if(StrContains(sCommand, "cpr", false) != -1)
+	{
+		gA_WRCache[client].iCPRMode = CPRMODE_CWR;
+	}
+
+	if(!havemap)	// no map argument
+	{
+		gA_WRCache[client].sClientMap = gS_Map;
+	}
+	else
+	{
+		GetCmdArg(1, gA_WRCache[client].sClientMap, sizeof(wrcache_t::sClientMap));
+		LowercaseString(gA_WRCache[client].sClientMap);
+
+		Menu wrmatches = new Menu(CPRRMatchesMenuHandler);
+		wrmatches.SetTitle("%T", "Choose Map", client);
+
+		int length = gA_ValidMaps.Length;
+		for (int i = 0; i < length; i++)
+		{
+			char entry[PLATFORM_MAX_PATH];
+			gA_ValidMaps.GetString(i, entry, PLATFORM_MAX_PATH);
+
+			if (StrContains(entry, gA_WRCache[client].sClientMap) != -1)
+			{
+				wrmatches.AddItem(entry, entry);
+			}
+		}
+
+		switch (wrmatches.ItemCount)
+		{
+			case 0:
+			{
+				delete wrmatches;
+				Shavit_PrintToChat(client, "%t", "Map was not found", gA_WRCache[client].sClientMap);
+				return Plugin_Handled;
+			}
+			case 1:
+			{
+				wrmatches.GetItem(0, gA_WRCache[client].sClientMap, sizeof(wrcache_t::sClientMap));
+				delete wrmatches;
+			}
+			default:
+			{
+				wrmatches.Display(client, MENU_TIME_FOREVER);
+				return Plugin_Handled;
+			}
+		}
+	}
+	
+	RetrieveCPRMenu(client);
+	return Plugin_Handled;
+}
+
+
+public int CPRRMatchesMenuHandler(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char map[PLATFORM_MAX_PATH];
+		menu.GetItem(param2, map, sizeof(map));
+		gA_WRCache[param1].sClientMap = map;
+
+		RetrieveCPRMenu(param1);
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+
+public void RetrieveCPRMenu(int client)
+{
+	if(gA_WRCache[client].iCPRMode == CPRMODE_WR)
+	{
+		if (StrEqual(gA_WRCache[client].sClientMap, gS_Map))
+		{
+			for (int i = 0; i < gI_Styles; i++)
+			{
+				gA_WRCache[client].fWRs[i] = gF_WRTime[i][Track_Main];
+				gA_WRCache[client].iRecordID[i] = gI_WRRecordID[i][Track_Main];
+			}
+
+			ShowCPRStyleMenu(client);
+		}
+		else
+		{
+			char sQuery[256];
+			FormatEx(sQuery, sizeof(sQuery), 
+				"SELECT id, style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style; ", 
+				gS_MySQLPrefix, gA_WRCache[client].sClientMap, Track_Main, gI_Styles);
+			QueryLog(gH_SQL, SQL_RetrieveCPRMenu_Callback, sQuery, GetClientSerial(client));
+		}
+	}
+	else if(gA_WRCache[client].iCPRMode == CPRMODE_PB || gA_WRCache[client].iCPRMode == CPRMODE_CWR)
+	{
+		int iSteamID = GetSteamAccountID(client);
+
+		char sQuery[256];
+		FormatEx(sQuery, sizeof(sQuery), 
+			"SELECT id, style, time FROM %splayertimes WHERE map = '%s' AND track = %d AND auth = %d AND style < %d ORDER BY style; ", 
+			gS_MySQLPrefix, gA_WRCache[client].sClientMap, Track_Main, iSteamID, gI_Styles);
+		QueryLog(gH_SQL, SQL_RetrieveCPRMenu_Callback, sQuery, GetClientSerial(client));
+	}
+}
+
+public void SQL_RetrieveCPRMenu_Callback(Database db, DBResultSet results, const char[] error, any data)
+{
+	if(results == null)
+	{
+		LogError("Timer (WR RetrieveCPRMenu) SQL query failed. Reason: %s", error);
+		return;
+	}
+
+	int client = GetClientFromSerial(data);
+
+	if(client == 0)
+	{
+		return;
+	}
+
+	for (int i = 0; i < gI_Styles; i++)
+	{
+		gA_WRCache[client].fWRs[i] = 0.0;
+		gA_WRCache[client].iRecordID[i] = 0;
+	}
+
+	while(results.FetchRow())
+	{
+		int id = results.FetchInt(0);
+		int style = results.FetchInt(1);
+		float time = results.FetchFloat(2);
+
+		gA_WRCache[client].fWRs[style] = time;
+		gA_WRCache[client].iRecordID[style] = id;
+	}
+
+	ShowCPRStyleMenu(client);
+}
+
+public void ShowCPRStyleMenu(int client)
+{
+	Menu menu = new Menu(MenuHandler_CPRStyleChooser);
+	menu.SetTitle("%T", "WRMenuTitle", client);
+
+	int[] styles = new int[gI_Styles];
+	Shavit_GetOrderedStyles(styles, gI_Styles);
+
+	for(int i = 0; i < gI_Styles; i++)
+	{
+		int iStyle = styles[i];
+
+		if(Shavit_GetStyleSettingInt(iStyle, "unranked") || Shavit_GetStyleSettingInt(iStyle, "enabled") == -1)
+		{
+			continue;
+		}
+
+		char sInfo[16];
+		FormatEx(sInfo, sizeof(sInfo), "%d;%d", gA_WRCache[client].iRecordID[i], i);
+
+		char sDisplay[64];
+
+		if (gA_WRCache[client].fWRs[iStyle] > 0.0)
+		{
+			char sTime[32];
+			FormatSeconds(gA_WRCache[client].fWRs[iStyle], sTime, 32, false);
+
+			FormatEx(sDisplay, 64, "%s - WR: %s", gS_StyleStrings[iStyle].sStyleName, sTime);
+		}
+		else
+		{
+			strcopy(sDisplay, 64, gS_StyleStrings[iStyle].sStyleName);
+		}
+
+		menu.AddItem(sInfo, sDisplay, (gA_WRCache[client].fWRs[iStyle] > 0.0) ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
+	}
+
+	// should NEVER happen
+	if(menu.ItemCount == 0)
+	{
+		char sMenuItem[64];
+		FormatEx(sMenuItem, 64, "%T", "WRStyleNothing", client);
+		menu.AddItem("-1", sMenuItem);
+	}
+
+	menu.ExitButton = true;
+	menu.DisplayAt(client, 0, MENU_TIME_FOREVER);
+}
+
+public int MenuHandler_CPRStyleChooser(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		if(!IsValidClient(param1))
+		{
+			return 0;
+		}
+		
+		char sInfo[16];
+		menu.GetItem(param2, sInfo, 16);
+		char sExploded[2][16];
+		ExplodeString(sInfo, ";", sExploded, 2, 16);
+
+		int id = StringToInt(sExploded[0]);
+
+		if(gA_WRCache[param1].iCPRMode == CPRMODE_WR || gA_WRCache[param1].iCPRMode == CPRMODE_PB)
+		{
+			OpenCheckpointRecordsMenu(param1, id, -1);			
+		}
+		else if(gA_WRCache[param1].iCPRMode == CPRMODE_CWR)
+		{
+			int style = StringToInt(sExploded[1]);
+
+			if(StrEqual(gA_WRCache[param1].sClientMap, gS_Map))
+			{
+				OpenCheckpointRecordsMenu(param1, id, gI_WRRecordID[style][Track_Main]);		
+			}
+			else
+			{
+				char sQuery[256];
+				FormatEx(sQuery, sizeof(sQuery), "SELECT id FROM %swrs WHERE map = '%s' AND style = %d AND track = %d", gS_MySQLPrefix, gA_WRCache[param1].sClientMap, style, Track_Main);
+				DataPack data = new DataPack();
+				data.WriteCell(GetClientSerial(param1));
+				data.WriteCell(id);
+
+				QueryLog(gH_SQL, SQL_RetrieveCCPRMenu_Callback, sQuery, data);
+			}
+		}
+
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+public void SQL_RetrieveCCPRMenu_Callback(Database db, DBResultSet results, const char[] error, DataPack data)
+{
+	if(results == null)
+	{
+		LogError("Timer (WR RetrieveCCPRMenu) SQL query failed. Reason: %s", error);
+		delete data;
+		return;
+	}
+
+	data.Reset();
+	int client = GetClientFromSerial(data.ReadCell());
+	int id_1 = data.ReadCell();
+	delete data;
+
+	if(client == 0)
+	{
+		return;
+	}
+
+	if(results.FetchRow())
+	{
+		int id_2 = results.FetchInt(0);
+		OpenCheckpointRecordsMenu(client, id_1, id_2);	
+	}
+}
 
 public Action Command_WorldRecord_Style(int client, int args)
 {
@@ -2882,7 +3180,7 @@ public void SQL_RetrieveWRMenu_Callback(Database db, DBResultSet results, const 
 
 void ShowWRStyleMenu(int client, int first_item=0)
 {
-	Menu menu = new Menu(MenuHandler_StyleChooser);
+	Menu menu = new Menu(MenuHandler_WRStyleChooser);
 	menu.SetTitle("%T", "WRMenuTitle", client);
 
 	int[] styles = new int[gI_Styles];
@@ -2929,7 +3227,7 @@ void ShowWRStyleMenu(int client, int first_item=0)
 	menu.DisplayAt(client, first_item, MENU_TIME_FOREVER);
 }
 
-public int MenuHandler_StyleChooser(Menu menu, MenuAction action, int param1, int param2)
+public int MenuHandler_WRStyleChooser(Menu menu, MenuAction action, int param1, int param2)
 {
 	if(action == MenuAction_Select)
 	{
@@ -3585,7 +3883,8 @@ public void SQL_PersonalBest_Callback(Database db, DBResultSet results, const ch
 		Format(display, sizeof(display), "%s - %s - %s", track_name, gS_StyleStrings[style].sStyleName, formated_time);
 
 		char info[16];
-		IntToString(id, info, sizeof(info));
+
+		FormatEx(info, sizeof(info), "%s%d", stage == 0 ? "":"s", id);
 		menu.AddItem(info, display);
 	}
 
@@ -3604,9 +3903,16 @@ public int PersonalBestMenu_Handler(Menu menu, MenuAction action, int param1, in
 	{
 		char info[16];
 		menu.GetItem(param2, info, sizeof(info));
+		int stage = 0;
+		if(StrContains(info, "s") != -1)
+		{
+			stage = 1;
+			ReplaceString(info, sizeof(info), "s", "");
+		}
+
 		gI_PBMenuPos[param1] = GetMenuSelectionPosition();
 		int record_id = StringToInt(info);
-		OpenSubMenu(param1, record_id);
+		OpenSubMenu(param1, record_id, stage);
 	}
 	else if(action == MenuAction_Cancel)
 	{
@@ -3658,6 +3964,8 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 	{
 		return;
 	}
+
+	gA_WRCache[client].iCPRMode = 0;
 
 	Menu hMenu = new Menu(SubMenu_Handler);
 
@@ -3826,7 +4134,7 @@ public int SubMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 				}
 				case 3:
 				{
-					OpenCheckpointRecordsMenu(param1, StringToInt(sExploded[1]));
+					OpenCheckpointRecordsMenu(param1, StringToInt(sExploded[1]), -1);
 				}
 			}
 		}
@@ -3861,17 +4169,35 @@ public int SubMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-public void OpenCheckpointRecordsMenu(int client, int id)
+public void OpenCheckpointRecordsMenu(int client, int id_1, int id_2)
 {
-	char sQuery[512];
-	DataPack pack = new DataPack();
-	pack.WriteCell(GetClientSerial(client));
-	pack.WriteCell(id);
+	char sQuery[1024];
 
-	FormatEx(sQuery, sizeof(sQuery), 
-		"SELECT a.time, a.checkpoint, a.stage_time, a.attempts FROM %scptimes a JOIN %splayertimes b ON a.map = b.map AND a.track = b.track AND a.style = b.style AND a.auth = b.auth AND b.id = %d;",
-		gS_MySQLPrefix, gS_MySQLPrefix, id);
-	QueryLog(gH_SQL, SQL_CheckpointRecordsMenu_Callback, sQuery, pack, DBPrio_High);
+	if(id_2 == -1 || id_1 == id_2)
+	{
+		DataPack pack = new DataPack();
+		pack.WriteCell(GetClientSerial(client));
+		pack.WriteCell(id_1);
+
+		FormatEx(sQuery, sizeof(sQuery), 
+			"SELECT u.name as name, pt.time as time, 0 as checkpoint, 0.0 as stage_time, 0 as attempts FROM %splayertimes pt JOIN %susers u ON pt.auth = u.auth AND pt.id = %d "...
+			"UNION ALL SELECT '' as name, cpt.time, cpt.checkpoint, cpt.stage_time, cpt.attempts "...
+			"FROM %scptimes cpt JOIN %splayertimes pt2 ON "...
+			"cpt.map = pt2.map AND cpt.track = pt2.track AND cpt.style = pt2.style AND cpt.auth = pt2.auth AND pt2.id = %d;",
+			gS_MySQLPrefix, gS_MySQLPrefix, id_1, gS_MySQLPrefix, gS_MySQLPrefix, id_1);
+		QueryLog(gH_SQL, SQL_CheckpointRecordsMenu_Callback, sQuery, pack, DBPrio_High);
+	}
+	else
+	{
+		FormatEx(sQuery, sizeof(sQuery), 
+			"SELECT 0 as wr, u.name as name, pt.time as time, 0 as checkpoint, 0.0 as stage_time, 0 as attempts FROM %splayertimes pt JOIN %susers u ON pt.auth = u.auth AND pt.id = %d "...
+			"UNION ALL SELECT 1 as wr, u.name as name, pt.time as time, 0 as checkpoint, 0.0 as stage_time, 0 as attempts FROM %splayertimes pt JOIN %susers u ON pt.auth = u.auth AND pt.id = %d "...
+			"UNION ALL SELECT 0 as wr, '' as name, cpt.time, cpt.checkpoint, cpt.stage_time, cpt.attempts FROM %scptimes cpt JOIN %splayertimes pt2 ON cpt.map = pt2.map AND cpt.track = pt2.track AND cpt.style = pt2.style AND cpt.auth = pt2.auth AND pt2.id = %d "...
+			"UNION ALL SELECT 1 as wr, '' as name, cpt.time, cpt.checkpoint, cpt.stage_time, cpt.attempts FROM %scptimes cpt JOIN %splayertimes pt2 ON cpt.map = pt2.map AND cpt.track = pt2.track AND cpt.style = pt2.style AND cpt.auth = pt2.auth AND pt2.id = %d;",
+			gS_MySQLPrefix, gS_MySQLPrefix, id_1, gS_MySQLPrefix, gS_MySQLPrefix, id_2, 
+			gS_MySQLPrefix, gS_MySQLPrefix, id_1,gS_MySQLPrefix, gS_MySQLPrefix, id_2);
+		QueryLog(gH_SQL, SQL_CheckpointRecordsComparisonMenu_Callback, sQuery, GetClientSerial(client), DBPrio_High);
+	}
 }
 
 public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results, const char[] error, DataPack data)
@@ -3888,45 +4214,169 @@ public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results,
 		return;
 	}
 
+	bool limit = false;
 	float fTime;
+	float fMapTime = -1.0;
 	float fStageTime;
 	int num;
 	int iAttempts;
 	char sTime[32];
 	char sMenuItem[128];
 	char sInfo[4];
+	char sName[MAX_NAME_LENGTH];
 
 	Menu menu = new Menu(MenuHandler_CheckpointRecords);
-	menu.SetTitle("%T\n ", "CheckpointRecordsMenuTitle", client);
-
 	FormatEx(sInfo, sizeof(sInfo), "%d", id);
-	
-	while(results.FetchRow())
+
+	if(results.FetchRow())
 	{
-		fTime = results.FetchFloat(0);
-		num = results.FetchInt(1);
+		results.FetchString(0, sName, MAX_NAME_LENGTH);
+		fMapTime = results.FetchFloat(1);
 
-		FormatSeconds(fTime, sTime, sizeof(sTime));
-		FormatEx(sMenuItem, sizeof(sMenuItem), "%T %02d | %T: %s", "CheckpointText", client, num, "CheckpointReachTime", client, sTime);
-
-		fStageTime = results.FetchFloat(2);
-		if(fStageTime > 0.0)
+		while(results.FetchRow())
 		{
-			FormatSeconds(fStageTime, sTime, sizeof(sTime));
-			iAttempts = results.FetchInt(3);
-			FormatEx(sMenuItem, sizeof(sMenuItem), "%s\n%T: %s (%T: %d)\n ", sMenuItem, "StageFinishTime", client, sTime, "StageAttempts", client, iAttempts);
+			fTime = results.FetchFloat(1);
+			num = results.FetchInt(2);
+
+			FormatSeconds(fTime, sTime, sizeof(sTime));
+			if(fTime == fMapTime)
+			{
+				FormatEx(sMenuItem, sizeof(sMenuItem), "%T | %T: %s", "CheckpointFinish", client, "CheckpointReachTime", client, sTime);	
+			}
+			else
+			{
+				FormatEx(sMenuItem, sizeof(sMenuItem), "%T %d | %T: %s", "CheckpointText", client, num, "CheckpointReachTime", client, sTime);			
+			}
+
+			fStageTime = results.FetchFloat(3);
+			if(fStageTime > 0.0)
+			{
+				limit = true;
+				FormatSeconds(fStageTime, sTime, sizeof(sTime));
+				iAttempts = results.FetchInt(4);
+				FormatEx(sMenuItem, sizeof(sMenuItem), "%s\n%T: %s\n%T: %d\n ", sMenuItem, "StageFinishTime", client, num, sTime, "StageAttempts", client, iAttempts);
+			}
+
+			menu.AddItem(sInfo, sMenuItem, ITEMDRAW_DISABLED);
 		}
-
-		menu.AddItem(sInfo, sMenuItem, ITEMDRAW_DISABLED);
 	}
-
+	
 	if(menu.ItemCount == 0)
 	{
 		FormatEx(sMenuItem, sizeof(sMenuItem), "%T", "NoCheckpointRecords", client);
 		menu.AddItem(sInfo, sMenuItem, ITEMDRAW_DISABLED);
 	}
 
-	menu.Pagination = 5;
+	menu.SetTitle("%T\n ", "CheckpointRecordsMenuTitle", client, sName, gA_WRCache[client].sClientMap);
+
+	if(limit)
+	{
+		menu.Pagination = 4;		
+	}
+	
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+public void SQL_CheckpointRecordsComparisonMenu_Callback(Database db, DBResultSet results, const char[] error, int data)
+{
+	if(results == null)
+	{
+		LogError("Timer (WR CheckpointRecordsMenu) SQL query failed. Reason: %s", error);
+
+		return;
+	}
+
+	int client = GetClientFromSerial(data);
+
+	int index;
+	bool limit = false;
+	char sName[2][MAX_NAME_LENGTH];
+	float fMapTime[2] = {-1.0, -1.0};
+	float fTime[2][MAX_STAGES];
+	float fStageTime[2][MAX_STAGES];
+	int iAttempts[2][MAX_STAGES];
+
+	for(int i = 0; i < 2; i++)
+	{
+		if(results.FetchRow())
+		{
+			index = results.FetchInt(0);
+			results.FetchString(1, sName[index], MAX_NAME_LENGTH);
+			fMapTime[index] = results.FetchFloat(2);
+		}
+	}
+
+	while(results.FetchRow())
+	{
+		index = results.FetchInt(0);
+		int checkpoint = results.FetchInt(3);
+
+		fTime[index][checkpoint] = results.FetchFloat(2);
+		fStageTime[index][checkpoint] = results.FetchFloat(4);
+		iAttempts[index][checkpoint] = results.FetchInt(5);
+	}
+
+	Menu menu = new Menu(MenuHandler_CheckpointRecords);
+
+	char sMenuItem[128];
+	char sTime[32];
+	char sTimeDiff[32];
+
+	for (int i = 1; i < MAX_STAGES; i++)
+	{
+		if(fTime[0][i] <= 0.0 || fTime[1][i] <= 0.0 )
+		{
+			continue;
+		}
+
+		float fCPTimeDiff = fTime[0][i] - fTime[1][i];
+		bool nodecimal = fCPTimeDiff > 60;
+		FormatSeconds(fTime[0][i], sTime, sizeof(sTime));
+		FormatSeconds(fCPTimeDiff, sTimeDiff, sizeof(sTimeDiff), true, nodecimal);
+
+		if(fMapTime[0] == fTime[0][i])
+		{
+			FormatEx(sMenuItem, sizeof(sMenuItem), "%T | %T: %s (%s%s)", 
+				"CheckpointFinish", client, "CheckpointReachTime", client, sTime, fCPTimeDiff > 0.0 ? "+":"", sTimeDiff);
+		}
+		else
+		{
+			FormatEx(sMenuItem, sizeof(sMenuItem), "%T %d | %T: %s (%s%s)", 
+				"CheckpointText", client, i, "CheckpointReachTime", client, sTime, fCPTimeDiff > 0.0 ? "+":"", sTimeDiff);			
+		}
+
+		if(fStageTime[0][i] > 0.0 || fStageTime[1][i] > 0.0)
+		{
+			limit = true;
+			float fStageTimeDiff = fStageTime[0][i] - fStageTime[1][i];
+			int iAttemptsDiff = iAttempts[0][i] - iAttempts[1][i];
+			nodecimal = fStageTimeDiff > 60;
+
+			FormatSeconds(fStageTime[0][i], sTime, sizeof(sTime));
+			FormatSeconds(fStageTimeDiff, sTimeDiff, sizeof(sTimeDiff), true, nodecimal);
+
+			FormatEx(sMenuItem, sizeof(sMenuItem), "%s\n%T: %s (%s%s)\n%T: %d (%s%d)\n ", sMenuItem, 
+				"StageFinishTime", client, i, sTime, fStageTimeDiff > 0.0 ? "+":"", sTimeDiff,
+				"StageAttempts", client, iAttempts[0][i], iAttemptsDiff > 0 ? "+":"", iAttemptsDiff);
+		}
+
+		menu.AddItem("", sMenuItem, ITEMDRAW_DISABLED);
+	}	
+
+	if(menu.ItemCount == 0)
+	{
+		FormatEx(sMenuItem, sizeof(sMenuItem), "%T", "NoCheckpointRecords", client);
+		menu.AddItem("", sMenuItem, ITEMDRAW_DISABLED);
+	}
+
+	menu.SetTitle("%T\n ", "CheckpointRecordsComparisonMenuTitle", client, sName[0], sName[1], gA_WRCache[client].sClientMap);
+
+	if(limit)
+	{
+		menu.Pagination = 4;		
+	}
+	
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
@@ -3944,7 +4394,14 @@ public int MenuHandler_CheckpointRecords(Menu menu, MenuAction action, int param
 	{
 		if (param2 == MenuCancel_ExitBack)
 		{
-			OpenSubMenu(param1, StringToInt(sInfo), 0);
+			if(gA_WRCache[param1].iCPRMode > 0)
+			{
+				RetrieveCPRMenu(param1);
+			}
+			else
+			{
+				OpenSubMenu(param1, StringToInt(sInfo), 0);				
+			}
 		}
 		else
 		{

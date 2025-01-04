@@ -265,15 +265,26 @@
 	}
 	"CheckpointRecordsMenuTitle"
 	{
-		"en"		"Checkpoint records"
+		"#format"	"{1:s},{2:s}"
+		"en"		"Checkpoint records for {1} on {2}"
+	}
+	"CheckpointRecordsComparisonMenuTitle"
+	{
+		"#format"	"{1:s},{2:s},{3:s}"
+		"en"		"Checkpoint records comparison\n{1} - {2} on {3}"
 	}
 	"CheckpointReachTime"
 	{
 		"en"		"Time"
 	}
+	"CheckpointFinish"
+	{
+		"en"		"Map finished"
+	}
 	"StageFinishTime"
 	{
-		"en"		"Stage Finish Time"
+		"#format"	"{1:d}"
+		"en"		"Stage {1} Finish Time"
 	}
 	"StageAttempts"
 	{
