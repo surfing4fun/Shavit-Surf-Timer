@@ -675,7 +675,7 @@ public Action Command_MapInfo(int client, int args)
 		QueryLog(gH_SQL, SQL_MapInfo_Callback, sQuery, GetClientSerial(client));
 	}
 
-	return Plugin_Continue;
+	return Plugin_Handled;
 }
 
 public int MenuHandler_MapInfoMatches(Menu menu, MenuAction action, int param1, int param2)
@@ -1528,35 +1528,39 @@ void UpdateAllPoints(bool recalcall=false, char[] map="", int track=-1, int stag
 	}
 	else
 	{
-		char sMapWhere[512], sTrackWhere[64], sTable[64];
+		char sMapWhere[256], sTrackWhere[64], sTable[512];
 
 		if(stage > 0)
 		{
-			FormatEx(sTable, sizeof(sTable), "stagetimes");
-			FormatEx(sTrackWhere, sizeof(sTrackWhere), "stage = %d", stage);
+			FormatEx(sTable, sizeof(sTable), "%sstagetimes ts", gS_MySQLPrefix);
+			FormatEx(sTrackWhere, sizeof(sTrackWhere), "ts.stage = %d", stage);
 		}
 		else if (track != -1)
 		{
-			FormatEx(sTable, sizeof(sTable), "playertimes");
-			FormatEx(sTrackWhere, sizeof(sTrackWhere), "track = %d", track);		
+			FormatEx(sTable, sizeof(sTable), "%splayertimes ts", gS_MySQLPrefix);
+			FormatEx(sTrackWhere, sizeof(sTrackWhere), "ts.track = %d", track);		
+		}
+		else
+		{
+			FormatEx(sTable, sizeof(sTable), "(SELECT map, auth FROM %splayertimes UNION ALL SELECT map, auth FROM %sstagetimes) ts", gS_MySQLPrefix, gS_MySQLPrefix);
 		}
 
 		if (map[0])
-			FormatEx(sMapWhere, sizeof(sMapWhere), "map = '%s'", map);
+			FormatEx(sMapWhere, sizeof(sMapWhere), "ts.map = '%s'", map);
 
 		if(gI_Driver == Driver_sqlite)
 		{
 			FormatEx(sQuery, sizeof(sQuery),
 				"UPDATE %susers AS U SET points = P.total FROM (SELECT auth, SUM(points) AS total "...
 				"FROM ( "...
-				"SELECT points, auth FROM %splayertimes PT WHERE PT.auth IN (SELECT auth FROM %s%s t WHERE %s %s %s ) "... 
+				"SELECT points, auth FROM %splayertimes PT WHERE PT.auth IN (SELECT auth FROM %s WHERE %s %s %s ) "... 
 				"UNION ALL "... 
-				"SELECT points, auth FROM %sstagetimes ST WHERE ST.auth IN (SELECT auth FROM %s%s t WHERE %s %s %s ) "...
+				"SELECT points, auth FROM %sstagetimes ST WHERE ST.auth IN (SELECT auth FROM %s WHERE %s %s %s ) "...
 				") GROUP BY auth) P "...
 				"WHERE U.auth = P.auth %s %s;",
 				gS_MySQLPrefix, 
-				gS_MySQLPrefix, gS_MySQLPrefix, sTable[0] ? sTable:"(SELECT map, auth FROM playertimes UNION ALL SELECT map, auth FROM stagetimes)", sMapWhere, (sTable[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
-				gS_MySQLPrefix, gS_MySQLPrefix, sTable[0] ? sTable:"(SELECT map, auth FROM playertimes UNION ALL SELECT map, auth FROM stagetimes)", sMapWhere, (sTable[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
+				gS_MySQLPrefix, sTable, sMapWhere, (sMapWhere[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
+				gS_MySQLPrefix, sTable, sMapWhere, (sMapWhere[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
 				(sLastLogin[0] != 0) ? "AND " : "", sLastLogin);
 		}
 		else
@@ -1566,16 +1570,16 @@ void UpdateAllPoints(bool recalcall=false, char[] map="", int track=-1, int stag
 				"JOIN ( "... 
 				"	SELECT auth, SUM(points) AS total "...  
 				"	FROM ( "... 
-				"		SELECT auth, points FROM %splayertimes PT WHERE PT.auth IN (SELECT auth FROM %s%s WHERE %s%s %s %s ) "...  
+				"		SELECT auth, points FROM %splayertimes PT WHERE PT.auth IN (SELECT auth FROM %s WHERE %s %s %s ) "...  
 				"		UNION ALL "...
-				"		SELECT auth, points FROM %sstagetimes ST WHERE ST.auth IN (SELECT auth FROM %s%s WHERE %s%s %s %s ) "...
+				"		SELECT auth, points FROM %sstagetimes ST WHERE ST.auth IN (SELECT auth FROM %s WHERE %s %s %s ) "...
 				"	) AS T "...
 				"	GROUP BY auth "...
 				") AS P ON U.auth = P.auth "... 
 				"SET U.points = P.total %s %s;",
 			gS_MySQLPrefix, 
-			gS_MySQLPrefix, gS_MySQLPrefix, sTable[0] ? sTable:"(SELECT map, auth FROM playertimes UNION ALL SELECT map, auth FROM stagetimes) t1", sTable[0] ? "":"t1.", sMapWhere, (sTable[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
-			gS_MySQLPrefix, gS_MySQLPrefix, sTable[0] ? sTable:"(SELECT map, auth FROM playertimes UNION ALL SELECT map, auth FROM stagetimes) t2", sTable[0] ? "":"t2.", sMapWhere, (sTable[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
+			gS_MySQLPrefix, sTable, sMapWhere, (sMapWhere[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
+			gS_MySQLPrefix, sTable, sMapWhere, (sMapWhere[0] && sTrackWhere[0]) ? "AND":"", sTrackWhere,
 			(sLastLogin[0] != 0) ? "WHERE" : "", sLastLogin);			
 		}
 	}
