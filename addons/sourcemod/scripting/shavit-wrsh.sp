@@ -133,12 +133,12 @@ public void OnConfigsExecuted()
 
 	if(strlen(gS_Map) == 0)
 	{
-		GetLowercaseMapName(gS_Map);		
+		GetLowercaseMapName(gS_Map);
 	}
 
 	gB_Fetching = false;
 	gI_RequestTimes = 0;
-	
+
 	if (!StrEqual(gS_Map, gS_PreviousMap))
 	{
 		gB_Stop = false;
@@ -188,7 +188,7 @@ public Action Command_SHMapRank(int client, int args)
 		gS_ChatStrings.sVariable2, gF_ReadyTime[client] - GetEngineTime(), gS_ChatStrings.sText);
 		return Plugin_Handled;
 	}
-	
+
 	if(gB_Fetching)
 	{
 		Shavit_PrintToChat(client, "Plugin is fetching data currently, please try again later.");
@@ -213,7 +213,7 @@ public Action Command_SHMapRank(int client, int args)
 
 		gH_FetchTimer = CreateTimer(gCV_MaxRankingTime.FloatValue, Timer_Ranking, client, TIMER_FLAG_NO_MAPCHANGE);
 		Shavit_PrintToChat(client, "Start ranking from SurfHeaven, please wait.");
-		GetSHSMapRank(client, time, track);     
+		GetSHSMapRank(client, time, track);
 	}
 	else
 	{
@@ -250,7 +250,7 @@ public Action Command_SHStageRank(int client, int args)
 	}
 	else
 	{
-		stage = Shavit_GetClientLastStage(client);      
+		stage = Shavit_GetClientLastStage(client);
 	}
 
 	if(gB_Stop || gA_StageWorldRecord[stage].iRankCount == 0 && gB_StageWRCached)
@@ -270,7 +270,7 @@ public Action Command_SHStageRank(int client, int args)
 
 		gH_FetchTimer = CreateTimer(gCV_MaxRankingTime.FloatValue, Timer_Ranking, client, TIMER_FLAG_NO_MAPCHANGE);
 		Shavit_PrintToChat(client, "Start ranking from SurfHeaven, please wait.");
-		GetSHStageRank(client, time, stage);     
+		GetSHStageRank(client, time, stage);
 	}
 	else
 	{
@@ -452,7 +452,7 @@ public void CacheMapWorldRecord_Callback(HTTPResponse response, any data, const 
 			if(iTrack <= TRACKS_SIZE)
 			{
 				gA_MapWorldRecord[iTrack].fTime = record.GetFloat("time");
-				
+
 				if(gA_MapWorldRecord[iTrack].fTime == 0.0)
 				{
 					gA_MapWorldRecord[iTrack].fTime = float(record.GetInt("time"));
@@ -576,7 +576,7 @@ public int Native_GetSHMapRecordTime(Handle handler, int numParams)
 	{
 		return view_as<int>(0.0);
 	}
-    
+
 	if(gB_MapWRCached)
 	{
 		return view_as<int>(gA_MapWorldRecord[iTrack].fTime);
@@ -623,10 +623,10 @@ public int Native_GetSHStageRecordTime(Handle handler, int numParams)
 	{
 		return view_as<int>(0.0);
 	}
-    
+
 	if(gB_StageWRCached)
 	{
-		return view_as<int>(gA_StageWorldRecord[iStage].fTime)        
+		return view_as<int>(gA_StageWorldRecord[iStage].fTime)
 	}
 	else if(!gB_CacheFail)
 	{
@@ -677,7 +677,7 @@ public void GetSHSMapRank(int client, float time, int track)
 	pack.WriteCell(track);
 
 	HTTPRequest request = new HTTPRequest(sUrl);
-	request.Timeout = 60; 
+	request.Timeout = 60;
 	request.Get(GetSHMapRank_Callback, pack);
 }
 
@@ -805,7 +805,7 @@ public void GetSHStageRank_Callback(HTTPResponse response, DataPack pack, const 
 	{
 		JSONObject record = view_as<JSONObject>(array.Get(i))
 		int iStage = record.GetInt("stage");
-		
+
 		if (stage == iStage)
 		{
 			float fTime = record.GetFloat("time");
@@ -861,7 +861,7 @@ public void CallOnFinishRanking(int client, int track, int stage, int rank, floa
 
 	if (IsValidHandle(gH_CoolDown[client]))
 	{
-		delete gH_CoolDown[client];			
+		delete gH_CoolDown[client];
 	}
 
 	gF_ReadyTime[client] = gCV_RankingCoolDown.FloatValue + GetEngineTime();
@@ -884,10 +884,10 @@ public void CallOnFinishRanking(int client, int track, int stage, int rank, floa
 	char sTime[16];
 	FormatSeconds(time, sTime, 16, true);
 
-	Shavit_PrintToChat(client, "You ranked %s#%d%s (%s%d%s) with a time of %s%s%s %s[%s]%s in SurfHeaven.", 
-		gS_ChatStrings.sVariable, rank, gS_ChatStrings.sText, 
-		gS_ChatStrings.sVariable, iRankCount + 1, gS_ChatStrings.sText, 
-		gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+	Shavit_PrintToChat(client, "You ranked %s#%d%s (%s%d%s) with a time of %s%s%s %s[%s]%s in SurfHeaven.",
+		gS_ChatStrings.sVariable, rank, gS_ChatStrings.sText,
+		gS_ChatStrings.sVariable, iRankCount + 1, gS_ChatStrings.sText,
+		gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
 		gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
 }
 
@@ -961,8 +961,8 @@ public void BuildSHMapTopMenu(int client, int track, int item)
 						FormatEx(sTimeDiff, 32, "%s | PB %s%s", sTimeDiff, fDiffPB > 0 ? "+":"", sDiff);
 					}
 
-					FormatEx(sMenu, sizeof(sMenu), "%s\n  || Gap: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d", 
-					sMenu, sTimeDiff, gS_StyleStrings[iStyle], gA_MapWorldRecord[i].sName, gA_MapWorldRecord[i].sDate, gA_MapWorldRecord[i].iRankCount);
+					FormatEx(sMenu, sizeof(sMenu), "%s\n  || Gap: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d",
+					sMenu, sTimeDiff, gS_StyleStrings[iStyle].sStyleName, gA_MapWorldRecord[i].sName, gA_MapWorldRecord[i].sDate, gA_MapWorldRecord[i].iRankCount);
 				}
 			}
 			else
@@ -1056,7 +1056,7 @@ public void BuildSHStageTopMenu(int client, int stage, int item)
 				}
 
 				FormatEx(sMenu, sizeof(sMenu), "%s\n  || Gap: %s (%s)\n  || Runner: %s\n  || Date: %s\n  || Total records: %d",
-				sMenu, sTimeDiff, gS_StyleStrings[iStyle], gA_StageWorldRecord[i].sName, gA_StageWorldRecord[i].sDate, gA_StageWorldRecord[i].iRankCount);
+				sMenu, sTimeDiff, gS_StyleStrings[iStyle].sStyleName, gA_StageWorldRecord[i].sName, gA_StageWorldRecord[i].sDate, gA_StageWorldRecord[i].iRankCount);
 			}
 
 			menu.AddItem(sInfo, sMenu, (hasRecord ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED));
@@ -1104,7 +1104,7 @@ public void OpenReloadSHReocrdMenu(int client)
 {
 	Menu menu = new Menu(MenuHandler_ReloadSHRecord);
 	char sStatus[16];
-	
+
 	if(gB_Stop)
 	{
 		FormatEx(sStatus, 16, "Forcibly Stop Fetching");
@@ -1135,11 +1135,11 @@ public void OpenReloadSHReocrdMenu(int client)
 	menu.AddItem("refresh", "Refresh Status\n ");
 	if(gB_Stop)
 	{
-		menu.AddItem("resume", "Resume fetching");		
+		menu.AddItem("resume", "Resume fetching");
 	}
 	else
 	{
-		menu.AddItem("stop", "Forcibly Stop fetching");		
+		menu.AddItem("stop", "Forcibly Stop fetching");
 	}
 	menu.AddItem("reset", "Reset Record Cache");
 	menu.AddItem("unfetching", "Set Fetching to false");
@@ -1185,7 +1185,7 @@ public int MenuHandler_ReloadSHRecord(Menu menu, MenuAction action, int param1, 
 		{
 			Shavit_LogMessage("%L - Reseted Plugin status.", param1);
 			gB_Fetching = false;
-			
+
 			OpenReloadSHReocrdMenu(param1);
 		}
 		else if(StrEqual(sInfo, "reload"))

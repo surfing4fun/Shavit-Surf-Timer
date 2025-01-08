@@ -324,7 +324,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetReplayFolderPath", Native_GetReplayFolderPath);
 	CreateNative("Shavit_GetReplayPlaybackSpeed", Native_GetReplayPlaybackSpeed);
 	CreateNative("Shavit_GetReplayBotInfoIndex", Native_GetReplayBotInfoIndex);
-	
+
 
 	if (!FileExists("cfg/sourcemod/plugin.shavit-replay-playback.cfg") && FileExists("cfg/sourcemod/plugin.shavit-replay.cfg"))
 	{
@@ -484,7 +484,7 @@ public void OnPluginStart()
 
 	// commands
 	RegAdminCmd("sm_deletereplay", Command_DeleteReplay, ADMFLAG_RCON, "Open replay deletion menu.");
-	
+
 	RegConsoleCmd("sm_replay", Command_Replay, "Opens the central bot menu. For admins: 'sm_replay stop' to stop the playback.");
 	RegConsoleCmd("sm_specbot", Command_Replay, "Opens the central bot menu. For admins: 'sm_replay stop' to stop the playback.");
 
@@ -1101,7 +1101,7 @@ int CreateReplayEntity(int track, int style, int stage, float delay, int client,
 			}
 
 			SetupIfCustomFrames(gA_BotInfo[client], cache);
-			
+
 			StartReplay(gA_BotInfo[client], gI_MenuTrack[client], gI_MenuStyle[client], gI_MenuStage[client], client, delay);
 		}
 		else
@@ -1673,7 +1673,7 @@ bool LoadStyling()
 				for (int i = 0; i < pieces; i++)
 				{
 					gA_LoopingBotConfig[index].iTrackMask |= 1 << StringToInt(sSplit[i]);
-				}				
+				}
 			}
 
 			kv.GetString("styles", buf, sizeof(buf), "");
@@ -2255,7 +2255,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 	else
 	{
 		FormatSeconds(GetReplayLength(style, track, 0, aCache), sTime, 16);
-		
+
 		if(aCache.bNewFormat)
 		{
 			strcopy(sName, sizeof(sName), aCache.sReplayName);
@@ -2264,7 +2264,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 		{
 			GetReplayName(style, track, stage, sName, sizeof(sName));
 		}
-		
+
 		ReplaceString(temp, sizeof(temp), "{style}", gS_StyleStrings[style].sStyleName);
 		ReplaceString(temp, sizeof(temp), "{styletag}", gS_StyleStrings[style].sClanTag);
 	}
@@ -2289,7 +2289,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 	if (!idle)
 	{
 		float fProgress = float(tick - aCache.iPreFrames) / float(aCache.iFrameCount) * 100.0;
-		
+
 		if(status == Replay_Running)
 		{
 			FormatEx(sProgress, sizeof(sProgress), "%.0f％", fProgress < 0.0 ? 0.0: fProgress);
@@ -2297,7 +2297,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 		else
 		{
 			FormatEx(sProgress, sizeof(sProgress), "%.0f％", (status == Replay_Start) ? 0.0 : 100.0 );
-		}		
+		}
 	}
 	else
 	{
@@ -2977,7 +2977,7 @@ public Action BotEventsStopLogSpam(Event event, const char[] name, bool dontBroa
 	return Plugin_Continue;
 }
 
-public Action Hook_SayText2(UserMsg msg_id, any msg, const int[] players, int playersNum, bool reliable, bool init)
+public Action Hook_SayText2(UserMsg msg_id, Handle msg, const int[] players, int playersNum, bool reliable, bool init)
 {
 	if(!gB_HideNameChange || !gCV_Enabled.BoolValue)
 	{
@@ -3032,7 +3032,7 @@ void ClearFrameCache(frame_cache_t cache)
 
 public void Shavit_OnWRDeleted(int style, int id, int track, int stage, int accountid, const char[] mapname)
 {
-	DeleteReplay(style, track, stage, accountid, mapname);		
+	DeleteReplay(style, track, stage, accountid, mapname);
 }
 
 public Action Command_DeleteReplay(int client, int args)
@@ -3112,11 +3112,11 @@ public Action Command_DeleteReplay(int client, int args)
 				char sTime[32];
 				FormatSeconds(time, sTime, 32, false);
 
-				FormatEx(sDisplay, 64, "%s (%s) - %s", gS_StyleStrings[iStyle].sStyleName, sStage, sTime);				
+				FormatEx(sDisplay, 64, "%s (%s) - %s", gS_StyleStrings[iStyle].sStyleName, sStage, sTime);
 			}
 			else
 			{
-				FormatEx(sDisplay, 64, "%s (%s) - %s", gS_StyleStrings[iStyle].sStyleName, sStage);	
+				FormatEx(sDisplay, 64, "%s (%s) - %s", gS_StyleStrings[iStyle].sStyleName, sStage);
 			}
 
 			menu.AddItem(sInfo, sDisplay);
@@ -3154,7 +3154,7 @@ public int DeleteReplay_Callback(Menu menu, MenuAction action, int param1, int p
 		}
 
 		gI_MenuStage[param1] = 0;
-		gI_MenuTrack[param1] = 0;	
+		gI_MenuTrack[param1] = 0;
 
 		if(StrContains(sExploded[1], "s", false) == 0)
 		{
@@ -3163,7 +3163,7 @@ public int DeleteReplay_Callback(Menu menu, MenuAction action, int param1, int p
 		}
 		else
 		{
-			gI_MenuTrack[param1] = StringToInt(sExploded[1]);			
+			gI_MenuTrack[param1] = StringToInt(sExploded[1]);
 		}
 
 		Menu submenu = new Menu(DeleteConfirmation_Callback);
@@ -3217,11 +3217,11 @@ public int DeleteConfirmation_Callback(Menu menu, MenuAction action, int param1,
 			char sStage[32];
 			FormatEx(sStage, 32, "%T %d", "ReplayStageText", param1, gI_MenuStage[param1]);
 
-			LogAction(param1, param1, "Deleted replay for %s on map %s. (%s%s)", 
+			LogAction(param1, param1, "Deleted replay for %s on map %s. (%s%s)",
 			gS_StyleStrings[style].sStyleName, gS_Map, gI_MenuStage[param1] == 0 ? "Track: ":"", gI_MenuStage[param1] == 0 ? sTrack:sStage);
 
-			Shavit_PrintToChat(param1, "%T (%s%s%s)", "ReplayDeleted", 
-			param1, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText, 
+			Shavit_PrintToChat(param1, "%T (%s%s%s)", "ReplayDeleted",
+			param1, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText,
 			gS_ChatStrings.sVariable, gI_MenuStage[param1] == 0 ? sTrack:sStage, gS_ChatStrings.sText);
 		}
 		else
@@ -3475,7 +3475,7 @@ void OpenReplayTypeMenu(int client)
 	{
 		FormatEx(sDisplay, sizeof(sDisplay), "%T", "Menu_Replay_Prop", client);
 		IntToString(Replay_Prop, sInfo, sizeof(sInfo));
-		menu.AddItem(sInfo, sDisplay, (!alreadyHaveBot) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);		
+		menu.AddItem(sInfo, sDisplay, (!alreadyHaveBot) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 	}
 
 	menu.ExitBackButton = true;
@@ -3536,20 +3536,20 @@ void OpenTrackTypeMenu(int client)
 	}
 
 	char sMenu[64];
-	
+
 	FormatEx(sMenu, sizeof(sMenu), "%T", "Main_Replay", client);
 	menu.AddItem("m", sMenu, records ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
 
 	if(Shavit_GetStageCount(Track_Main) > 1)
 	{
 		FormatEx(sMenu, sizeof(sMenu), "%T", "Stage_Replay", client);
-		menu.AddItem("s", sMenu);		
+		menu.AddItem("s", sMenu);
 	}
 
 	if(Shavit_GetMapTracks(true, false) > 0)
 	{
 		FormatEx(sMenu, sizeof(sMenu), "%T", "Bonus_Replay", client);
-		menu.AddItem("b", sMenu);		
+		menu.AddItem("b", sMenu);
 	}
 
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -3589,7 +3589,7 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 						if(gA_FrameCache[j][0][i].iFrameCount > 0)
 						{
 							records = true;
-							break;						
+							break;
 						}
 					}
 
@@ -3628,7 +3628,7 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 			}
 
 			submenu.ExitBackButton = true;
-			submenu.Display(param1, MENU_TIME_FOREVER);			
+			submenu.Display(param1, MENU_TIME_FOREVER);
 		}
 	}
 	else if(action == MenuAction_Cancel)
@@ -3659,7 +3659,7 @@ public int MenuHandler_ReplayTrack(Menu menu, MenuAction action, int param1, int
 			{
 				gI_MenuStage[param1] = stage;
 
-				OpenReplayStyleMenu(param1, 0, stage);				
+				OpenReplayStyleMenu(param1, 0, stage);
 			}
 		}
 		else
@@ -3672,7 +3672,7 @@ public int MenuHandler_ReplayTrack(Menu menu, MenuAction action, int param1, int
 				gI_MenuTrack[param1] = track;
 
 				OpenReplayStyleMenu(param1, track, 0);
-			}			
+			}
 		}
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
@@ -3692,7 +3692,7 @@ void OpenReplayStyleMenu(int client, int track, int stage)
 	char sTrack[32];
 	if (stage == 0)
 	{
-		GetTrackName(client, track, sTrack, 32);		
+		GetTrackName(client, track, sTrack, 32);
 	}
 	else
 	{
@@ -3716,7 +3716,7 @@ void OpenReplayStyleMenu(int client, int track, int stage)
 
 		char sInfo[8];
 
-		IntToString(iStyle, sInfo, 8);			
+		IntToString(iStyle, sInfo, 8);
 
 		float time = GetReplayLength(iStyle, track, stage, gA_FrameCache[iStyle][track][stage]);
 
@@ -3755,10 +3755,10 @@ public int MenuHandler_ReplayStyle(Menu menu, MenuAction action, int param1, int
 
 		int style = StringToInt(sInfo);
 
-		if (style < 0 || style >= gI_Styles || !Shavit_ReplayEnabledStyle(style) 
-		|| gA_FrameCache[style][gI_MenuTrack[param1]][gI_MenuStage[param1]].iFrameCount == 0 
-		|| gA_BotInfo[param1].iEnt > 0 
-		|| (GetEngineTime() - gF_LastInteraction[param1] < gCV_PlaybackCooldown.FloatValue 
+		if (style < 0 || style >= gI_Styles || !Shavit_ReplayEnabledStyle(style)
+		|| gA_FrameCache[style][gI_MenuTrack[param1]][gI_MenuStage[param1]].iFrameCount == 0
+		|| gA_BotInfo[param1].iEnt > 0
+		|| (GetEngineTime() - gF_LastInteraction[param1] < gCV_PlaybackCooldown.FloatValue
 		&& !CheckCommandAccess(param1, "sm_deletereplay", ADMFLAG_RCON)))
 		{
 			return 0;
@@ -3949,7 +3949,7 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 				if(++stage > iMaxStage)
 				{
 					stage = -1;
-				}			
+				}
 			}
 
 			if(stage == -1) //initialize or Finish a stage loop.
@@ -4103,7 +4103,7 @@ void GetReplayName(int style, int track, int stage, char[] buffer, int length)
 
 	if(stage == 0)
 	{
-		Shavit_GetWRName(style, buffer, length, track);		
+		Shavit_GetWRName(style, buffer, length, track);
 	}
 	else
 	{

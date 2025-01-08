@@ -38,8 +38,10 @@
 static char gS_ZoneTypes[ZONETYPES_SIZE][18] = {
 	"start",
 	"end",
-	"stage",	
+	"stage",
 	"checkpoint",
+	"autobhop",
+	"nojump",
 	"respawn",
 	"stop",
 	"slay",
@@ -502,7 +504,7 @@ JSONObject FillYourMom(zone_cache_t cache)
 public Action Command_DumpZones(int client, int args)
 {
 	int count = Shavit_GetZoneCount();
-	
+
 	if (!count)
 	{
 		ReplyToCommand(client, "Map doesn't have any zones...");
@@ -581,7 +583,7 @@ int MenuHandler_MapInfo(Menu menu, MenuAction action, int param1, int param2)
 					++empties;
 					continue;
 				}
-		
+
 				for (; empties; --empties)
 					arr.Push(empty);
 				arr.Push(obj);
