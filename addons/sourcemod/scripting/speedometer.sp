@@ -110,6 +110,10 @@ public Plugin myinfo =
 public void OnAllPluginsLoaded()
 {
 	HookEvent("player_jump", OnPlayerJump);
+	gB_Core = LibraryExists("shavit");
+	gB_ReplayPlayback = LibraryExists("shavit-replay-playback");
+	gB_Zones = LibraryExists("shavit-zones");
+	gB_AllLibraryExists = gB_Core && gB_ReplayPlayback && gB_Zones;
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -522,10 +526,10 @@ Action ShowColorSettingMenu(int client, int item = 0)
 		GetColorName(gI_SpeedometerColor_SpeedLess[client], sColor, sizeof(sColor));
 		Format(sMessage, sizeof(sMessage), "Less Speed Color: %s", sColor);
 		menu.AddItem("lessColor", sMessage, gB_SpeedometerHud_SpeedDiffDynamicColor[client] ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
-
-		menu.ExitBackButton = true;
-		menu.DisplayAt(client, item, MENU_TIME_FOREVER);
 	}
+
+	menu.ExitBackButton = true;
+	menu.DisplayAt(client, item, MENU_TIME_FOREVER);
 
 	return Plugin_Handled;
 }
