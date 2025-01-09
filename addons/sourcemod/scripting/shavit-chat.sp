@@ -408,7 +408,7 @@ void ReplaceFormats(char[] formatting, int maxlen, char[] name, char[] colon, ch
 	ReplaceString(formatting, maxlen, "{msg}", text);
 }
 
-public Action Hook_SayText2(UserMsg msg_id, any msg, const int[] players, int playersNum, bool reliable, bool init)
+public Action Hook_SayText2(UserMsg msg_id, Handle msg, const int[] players, int playersNum, bool reliable, bool init)
 {
 	if (!gCV_Enabled.BoolValue)
 	{
@@ -889,7 +889,7 @@ Action ShowChatRanksMenu(int client, int item)
 		char sEquipped[16];
 		if(gI_ChatSelection[client] == i)
 		{
-			FormatEx(sEquipped, sizeof(sEquipped), "[%T] ", "TitleEquipped", client);			
+			FormatEx(sEquipped, sizeof(sEquipped), "[%T] ", "TitleEquipped", client);
 		}
 
 		char sMenuDisplay[MAXLENGTH_DISPLAY];
@@ -1042,7 +1042,7 @@ bool HasRankAccess(int client, int rank)
 
 		if(FindFlagByChar(sFlag[0], afFlag))
 		{
-			bFlagAccess = GetAdminFlag(GetUserAdmin(client), afFlag);			
+			bFlagAccess = GetAdminFlag(GetUserAdmin(client), afFlag);
 		}
 	}
 	else
