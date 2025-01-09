@@ -219,9 +219,10 @@ public void OnClientConnected(int client)
 {
 	gF_PlaytimeStart[client] = 0.0;
 	gF_PlaytimeStyleStart[client] = 0.0;
-	any empty[STYLE_LIMIT];
-	gF_PlaytimeStyleSum[client] = empty;
-	gB_HavePlaytimeOnStyle[client] = empty;
+	float fempty[STYLE_LIMIT];
+	bool bempty[STYLE_LIMIT];
+	gF_PlaytimeStyleSum[client] = fempty;
+	gB_HavePlaytimeOnStyle[client] = bempty;
 	gB_QueriedPlaytime[client] = false;
 }
 
@@ -880,7 +881,7 @@ public void OpenStatsMenu_Stages_Mapchooser_Callback(Database db, DBResultSet re
 	data.Reset();
 	int client = GetClientFromSerial(data.ReadCell());
 	data.ReadCell(); // item
-	
+
 	data.ReadCell();
 	data.ReadCell();
 	data.ReadCell();
@@ -920,7 +921,7 @@ public void OpenStatsMenu_Stages_Mapchooser_Callback(Database db, DBResultSet re
 		}
 		else
 		{
-			stages_and_completions[type] += 1;			
+			stages_and_completions[type] += 1;
 		}
 	}
 
@@ -1091,7 +1092,7 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 		}
 		else if (type == 7)
 		{
-			iStageWRs = results.FetchInt(1);				
+			iStageWRs = results.FetchInt(1);
 		}
 		else if (type == 8)
 		{
@@ -1111,7 +1112,7 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 	iWRs[0] = iWRs[0] < iMaps[0] ? iWRs[0] : iMaps[0];
 	iWRs[1] = iWRs[1] < iMaps[1] ? iWRs[1] : iMaps[1];
 	iStageCompletions = iStageCompletions < iStages ? iStageCompletions : iStages;
-	iStageWRs = iStageWRs < iStages ? iStageWRs : iStages; 
+	iStageWRs = iStageWRs < iStages ? iStageWRs : iStages;
 
 	if (1 & 1) // :upside_down_smiley_face:
 	{
@@ -1170,13 +1171,13 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 					"    %T%T: %d\n ",
 					gS_StyleStrings[iStyle].sStyleName,
 					"Playtime", client, sStylePlaytime,
-					"Completions", client, 
+					"Completions", client,
 					sMain, iCompletions[0], iMaps[0], ((float(iCompletions[0]) / (iMaps[0] > 0 ? float(iMaps[0]) : 0.0)) * 100.0),
 					sBonus, iCompletions[1], iMaps[1], ((float(iCompletions[1]) / (iMaps[1] > 0 ? float(iMaps[1]) : 0.0)) * 100.0),
 					"StageText", client, iStageCompletions, iStages, ((float(iStageCompletions) / (iStages > 0 ? float(iStages) : 0.0)) * 100.0),
-					"WorldRecords", client, 
-					sMain, "WRCounts", client, iWRs[0], 
-					sBonus, "WRCounts", client, iWRs[1], 
+					"WorldRecords", client,
+					sMain, "WRCounts", client, iWRs[0],
+					sBonus, "WRCounts", client, iWRs[1],
 					"StageText", client, "WRCounts", client, iStageWRs
 				);
 			}
@@ -1319,7 +1320,7 @@ void ShowMaps(int client)
 	{
 		FormatEx(sQuery, 512,
 		"SELECT a.map, %s, a.time, a.jumps, a.id, COUNT(b.map) + 1 as 'rank', a.points FROM %s%s a LEFT JOIN %s%s b ON a.time > b.time AND a.map = b.map AND a.style = b.style AND %s WHERE a.auth = %d AND a.style = %d %s GROUP BY a.map, a.time, a.jumps, a.id, a.points ORDER BY a.map;",
-			bStage ? "a.stage":"a.track", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes",  
+			bStage ? "a.stage":"a.track", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes", gS_MySQLPrefix, bStage ? "stagetimes":"playertimes",
 			bStage ? "a.stage = b.stage":"a.track = b.track", gI_TargetSteamID[client], gI_Style[client],
 			bStage ? "" : bBonus ? "AND a.track > 0":"AND a.track = 0");
 	}
@@ -1372,7 +1373,7 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 	Menu menu = new Menu(MenuHandler_ShowMaps);
 
 	StringMap mapchooser_maps = null;
-	
+
 	if (gB_Mapchooser && gCV_UseMapchooser.BoolValue)
 		mapchooser_maps = Shavit_GetMapsStringMap();
 
@@ -1401,7 +1402,7 @@ public void ShowMapsCallback(Database db, DBResultSet results, const char[] erro
 
 			if(gI_Track[client] < 2)
 			{
-				GetTrackName(client, track, sTrack, 32);				
+				GetTrackName(client, track, sTrack, 32);
 			}
 			else
 			{
@@ -1508,7 +1509,7 @@ public int MenuHandler_ShowMaps(Menu menu, MenuAction action, int param1, int pa
 		bool bStageRecord = gI_Track[param1] == 2;
 
 		char sQuery[512];
-		FormatEx(sQuery, 512, "SELECT u.name, p.time, p.%s, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.points, p.completions FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = '%s' LIMIT 1;", 
+		FormatEx(sQuery, 512, "SELECT u.name, p.time, p.%s, p.jumps, p.style, u.auth, p.date, p.map, p.strafes, p.sync, p.points, p.completions FROM %s%s p JOIN %susers u ON p.auth = u.auth WHERE p.id = '%s' LIMIT 1;",
 		bStageRecord ? "stage":"track", gS_MySQLPrefix, bStageRecord ? "stagetimes":"playertimes", gS_MySQLPrefix, sInfo);
 
 		QueryLog(gH_SQL, SQL_SubMenu_Callback, sQuery, GetClientSerial(param1));
@@ -1622,7 +1623,7 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 	}
 	else
 	{
-		GetTrackName(client, track, sTrack, sizeof(sTrack));		
+		GetTrackName(client, track, sTrack, sizeof(sTrack));
 	}
 
 	char sFormattedTitle[256];

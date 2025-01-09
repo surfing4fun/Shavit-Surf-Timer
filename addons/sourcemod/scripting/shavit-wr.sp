@@ -159,7 +159,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_SetClientStartVelocity", Native_SetClientStartVelocity);
 	CreateNative("Shavit_SetClientEndVelocity", Native_SetClientEndVelocity);
 	CreateNative("Shavit_GetClientStagePB", Native_GetClientStagePB);
-	CreateNative("Shavit_SetClientStagePB", Native_SetClientStagePB);	
+	CreateNative("Shavit_SetClientStagePB", Native_SetClientStagePB);
 	CreateNative("Shavit_GetClientStageCompletions", Native_GetClientStageCompletions);
 	CreateNative("Shavit_GetClientStageStartVelocity", Native_GetClientStageStartVelocity);
 	CreateNative("Shavit_GetClientStageEndVelocity", Native_GetClientStageEndVelocity);
@@ -422,15 +422,16 @@ void ResetWRs()
 {
 	gSM_WRNames.Clear();
 
-	any empty_cells[TRACKS_SIZE];
+	float fempty[TRACKS_SIZE];
+	int iempty[TRACKS_SIZE];
 
 	for(int i = 0; i < gI_Styles; i++)
 	{
-		gF_WRTime[i] = empty_cells;
-		gF_WRStartVelocity[i] = empty_cells;
-		gF_WREndVelocity[i] = empty_cells;
-		gI_WRRecordID[i] = empty_cells;
-		gI_WRSteamID[i] = empty_cells;
+		gF_WRTime[i] = fempty;
+		gF_WRStartVelocity[i] = fempty;
+		gF_WREndVelocity[i] = fempty;
+		gI_WRRecordID[i] = iempty;
+		gI_WRSteamID[i] = iempty;
 	}
 }
 
@@ -438,15 +439,16 @@ void ResetStageWRs()
 {
 	gSM_StageWRNames.Clear();
 
-	any empty_cells[MAX_STAGES];
+	float fempty[MAX_STAGES];
+	int iempty[MAX_STAGES];
 
 	for(int i = 0; i < gI_Styles; i++)
 	{
-		gF_StageWRTime[i] = empty_cells;
-		gF_StageWRStartVelocity[i] = empty_cells;
-		gF_StageWREndVelocity[i] = empty_cells;
-		gI_StageWRRecordID[i] = empty_cells;
-		gI_StageWRSteamID[i] = empty_cells;
+		gF_StageWRTime[i] = fempty;
+		gF_StageWRStartVelocity[i] = fempty;
+		gF_StageWREndVelocity[i] = fempty;
+		gI_StageWRRecordID[i] = iempty;
+		gI_StageWRSteamID[i] = iempty;
 	}
 }
 
@@ -464,7 +466,7 @@ void ResetLeaderboards()
 	{
 		for(int j = 0; j < TRACKS_SIZE; j++)
 		{
-			gA_Leaderboard[i][j].Clear();				
+			gA_Leaderboard[i][j].Clear();
 		}
 	}
 }
@@ -475,7 +477,7 @@ void ResetStageLeaderboards()
 	{
 		for(int j = 0; j < MAX_STAGES; j++)
 		{
-			gA_StageLeaderboard[i][j].Clear();				
+			gA_StageLeaderboard[i][j].Clear();
 		}
 	}
 }
@@ -630,21 +632,24 @@ public void OnClientConnected(int client)
 	gB_RRSelectBonus[client] = true;
 	gB_RRSelectStage[client] = true;
 
-	any empty_cells[TRACKS_SIZE];
-	any stage_empty_cells[MAX_STAGES];
+	float fempty[TRACKS_SIZE];
+	int iempty[TRACKS_SIZE];
+
+	float fempty_stage[MAX_STAGES];
+	int iempty_stage[MAX_STAGES];
 
 	for(int i = 0; i < gI_Styles; i++)
 	{
-		gF_PlayerRecord[client][i] = empty_cells;
-		gF_PlayerStartVelocity[client][i] = empty_cells;
-		gF_PlayerEndVelocity[client][i] = empty_cells;
-		gI_PlayerCompletion[client][i] = empty_cells;
+		gF_PlayerRecord[client][i] = fempty;
+		gF_PlayerStartVelocity[client][i] = fempty;
+		gF_PlayerEndVelocity[client][i] = fempty;
+		gI_PlayerCompletion[client][i] = iempty;
 
-		gF_PlayerStageRecord[client][i] = stage_empty_cells;
-		gF_PlayerStageStartVelocity[client][i] = stage_empty_cells;
-		gF_PlayerStageEndVelocity[client][i] = stage_empty_cells;
-		gI_PlayerStageCompletion[client][i] = stage_empty_cells;
-		
+		gF_PlayerStageRecord[client][i] = fempty_stage;
+		gF_PlayerStageStartVelocity[client][i] = fempty_stage;
+		gF_PlayerStageEndVelocity[client][i] = fempty_stage;
+		gI_PlayerStageCompletion[client][i] = iempty_stage;
+
 		for(int j = 0; j < TRACKS_SIZE; j++)
 		{
 			if(gA_StageCP_PB[client][i][j] != null)
@@ -685,11 +690,11 @@ void UpdateClientCache(int client)
 		gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", time)", gS_MySQLPrefix, gS_Map, iSteamID);
 	QueryLog(gH_SQL, SQL_UpdateCache_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 
-	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, stage, completions, startvel, endvel FROM %sstagetimes WHERE map = '%s' AND auth = %d", 
+	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, stage, completions, startvel, endvel FROM %sstagetimes WHERE map = '%s' AND auth = %d",
 	gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", time)", gS_MySQLPrefix, gS_Map, iSteamID);
 	QueryLog(gH_SQL, SQL_UpdateStagePBCache_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 
-	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, track, checkpoint FROM %scptimes WHERE map = '%s' AND auth = %d", 
+	FormatEx(sQuery, sizeof(sQuery), "SELECT %s, style, track, checkpoint FROM %scptimes WHERE map = '%s' AND auth = %d",
 		gI_Driver == Driver_mysql ? "REPLACE(FORMAT(time, 9), ',', '')" : "printf(\"%.9f\", time)", gS_MySQLPrefix, gS_Map, iSteamID);
 	QueryLog(gH_SQL, SQL_UpdateCPTimesCache_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 }
@@ -778,7 +783,7 @@ public void SQL_UpdateCPTimesCache_Callback(Database db, DBResultSet results, co
 	}
 
 	int client = GetClientFromSerial(data);
-	
+
 	if(client == 0)
 	{
 		return;
@@ -787,7 +792,7 @@ public void SQL_UpdateCPTimesCache_Callback(Database db, DBResultSet results, co
 	for(int i = 0; i < TRACKS_SIZE; i++)
 	{
 		for(int j = 0; j < gI_Styles; j++)
-		{		
+		{
 			gA_StageCP_PB[client][j][i].Resize(MAX_STAGES);
 			ResetStagePBCPs(client, j, i);
 		}
@@ -808,7 +813,7 @@ public void SQL_UpdateCPTimesCache_Callback(Database db, DBResultSet results, co
 		// {
 		// 	gA_StageCP_PB[client][style][track].Resize(Shavit_GetStageCount(track) + 1);
 		// }
-		
+
 		gA_StageCP_PB[client][style][track].Set(stage, results.FetchFloat(0));
 	}
 }
@@ -1084,7 +1089,7 @@ void DeleteWRFinal(int style, int track, const char[] map, int steamid, int reco
 		char sQuery[256];
 		FormatEx(sQuery, sizeof(sQuery),
 			"DELETE FROM %scpwrs WHERE map = '%s' AND style = %d AND track = %d;", gS_MySQLPrefix, map, style, track);
-		QueryLog(gH_SQL, DeleteWRCPTimes_First_Callback, sQuery, hPack, DBPrio_High);		
+		QueryLog(gH_SQL, DeleteWRCPTimes_First_Callback, sQuery, hPack, DBPrio_High);
 	}
 
 	Call_StartForward(gH_OnWRDeleted);
@@ -1144,7 +1149,7 @@ void DeleteWRCPTimes_Second_Callback(Database db, DBResultSet results, const cha
 	int track = hPack.ReadCell();
 	char map[PLATFORM_MAX_PATH];
 	hPack.ReadString(map, sizeof(map));
-	
+
 	delete hPack;
 
 	if(results.FetchRow())
@@ -1152,7 +1157,7 @@ void DeleteWRCPTimes_Second_Callback(Database db, DBResultSet results, const cha
 		int steamID = results.FetchInt(0);
 
 		char sQuery[512];
-		FormatEx(sQuery, sizeof(sQuery), 
+		FormatEx(sQuery, sizeof(sQuery),
 			"INSERT INTO %scpwrs (style, track, map, checkpoint, auth, time, stage_time, attempts) "...
 			"SELECT style, track, map, checkpoint, auth, time, stage_time, attempts FROM %scptimes "...
 			"WHERE map = '%s' AND style = %d AND track = %d AND auth = %d; ",
@@ -1401,12 +1406,12 @@ public int Native_GetStageCPPB(Handle plugin, int numParams)
 	int style = GetNativeCell(3);
 	int stage = GetNativeCell(4);
 	float pb = 0.0;
-	
+
 	if(stage > gA_StageCP_PB[client][style][track].Length - 1)
 	{
 		return view_as<int>(pb);
 	}
-	
+
 	if (gA_StageCP_PB[client][style][track] != null)
 	{
 		pb = gA_StageCP_PB[client][style][track].Get(stage);
@@ -1660,7 +1665,7 @@ void DeleteStageSubMenu(int client)
 		char sInfo[8];
 		IntToString(iStyle, sInfo, 8);
 
-		int records = GetStageRecordAmount(i, gA_WRCache[client].iLastStage); 
+		int records = GetStageRecordAmount(i, gA_WRCache[client].iLastStage);
 
 		char sDisplay[64];
 		FormatEx(sDisplay, 64, "%s (%T: %d)", gS_StyleStrings[iStyle].sStyleName, "WRRecord", client, records);
@@ -1821,7 +1826,7 @@ public int MenuHandler_DeleteAll_Stage_First(Menu menu, MenuAction action, int p
 			char sInfo[8];
 			IntToString(iStyle, sInfo, 8);
 
-			int records = GetStageRecordAmount(i, gA_WRCache[param1].iLastStage); 
+			int records = GetStageRecordAmount(i, gA_WRCache[param1].iLastStage);
 
 			char sDisplay[64];
 			FormatEx(sDisplay, 64, "%s (%T: %d)", gS_StyleStrings[iStyle].sStyleName, "WRRecord", param1, records);
@@ -2130,15 +2135,15 @@ void OpenDelete(int client)
 
 	if(gA_WRCache[client].iLastStage == 0)
 	{
-		FormatEx(sQuery, 512, 
+		FormatEx(sQuery, 512,
 			"SELECT p.id, u.name, p.time, p.jumps FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC LIMIT 1000;",
 			gS_MySQLPrefix, gS_MySQLPrefix, gS_Map, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
 	}
 	else
 	{
-		FormatEx(sQuery, 512, 
-			"SELECT p.id, u.name, p.time, p.jumps FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND stage = %d ORDER BY time ASC, date ASC LIMIT 1000;", 
-			gS_MySQLPrefix, gS_MySQLPrefix, gS_Map, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastStage);		
+		FormatEx(sQuery, 512,
+			"SELECT p.id, u.name, p.time, p.jumps FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND stage = %d ORDER BY time ASC, date ASC LIMIT 1000;",
+			gS_MySQLPrefix, gS_MySQLPrefix, gS_Map, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastStage);
 	}
 
 	QueryLog(gH_SQL, SQL_OpenDelete_Callback, sQuery, GetClientSerial(client), DBPrio_High);
@@ -2290,7 +2295,7 @@ public int DeleteConfirm_Handler(Menu menu, MenuAction action, int param1, int p
 				"SELECT u.auth, u.name, p.map, p.time, p.sync, p.perfs, p.jumps, p.strafes, p.id, p.date, p.style, p.track, "...
 				"(SELECT id FROM %splayertimes WHERE style = %d AND track = %d AND map = p.map ORDER BY time, date ASC LIMIT 1) "...
 				"FROM %susers u LEFT JOIN %splayertimes p ON u.auth = p.auth WHERE p.id = %d;",
-				gS_MySQLPrefix, gA_WRCache[param1].iLastStyle, gA_WRCache[param1].iLastTrack, gS_MySQLPrefix, gS_MySQLPrefix, iRecordID);			
+				gS_MySQLPrefix, gA_WRCache[param1].iLastStyle, gA_WRCache[param1].iLastTrack, gS_MySQLPrefix, gS_MySQLPrefix, iRecordID);
 		}
 		else
 		{
@@ -2314,12 +2319,12 @@ public int DeleteConfirm_Handler(Menu menu, MenuAction action, int param1, int p
 public void GetRecordDetails_Callback(Database db, DBResultSet results, const char[] error, any data)
 {
 	int client = GetClientFromSerial(data);
-	
+
 	if(results == null)
 	{
 		OpenDelete(client);
 		LogError("Timer (WR GetRecordDetails) SQL query failed. Reason: %s", error);
-		
+
 		return;
 	}
 
@@ -2342,10 +2347,10 @@ public void GetRecordDetails_Callback(Database db, DBResultSet results, const ch
 		int iRecordID = results.FetchInt(8);
 		int iTimestamp = results.FetchInt(9);
 		int iStyle = results.FetchInt(10);
-		int iTrack = results.FetchInt(11);	
+		int iTrack = results.FetchInt(11);
 		int iStage = 0;
 		int iWRRecordID;
-		
+
 
 		if(gA_WRCache[client].iLastStage > 0)
 		{
@@ -2383,12 +2388,12 @@ public void GetRecordDetails_Callback(Database db, DBResultSet results, const ch
 			FormatEx(sQuery, 256, "DELETE FROM %splayertimes WHERE id = %d;",
 				gS_MySQLPrefix, iRecordID);
 			QueryLog(gH_SQL, DeleteConfirm_Callback, sQuery, hPack, DBPrio_High);
-			
+
 			//Delete stage pb as well
 			FormatEx(sQuery, sizeof(sQuery),
 				"DELETE FROM `%scptimes` WHERE style = %d AND track = %d AND map = '%s' AND auth = %d;",
 				gS_MySQLPrefix, iStyle, iTrack, gS_Map, iSteamID);
-			
+
 			QueryLog(gH_SQL, DeleteConfirm_DeleteCPPB_Callback, sQuery, 0, DBPrio_High);
 		}
 		else
@@ -2434,7 +2439,7 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 		{
 			if (iStage == 0)
 			{
-				DeleteSubmenu(i);				
+				DeleteSubmenu(i);
 			}
 			else
 			{
@@ -2456,7 +2461,7 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 	{
 		if(iStage == 0)
 		{
-			DeleteWR(iStyle, iTrack, sMap, iSteamID, iRecordID, false, true);			
+			DeleteWR(iStyle, iTrack, sMap, iSteamID, iRecordID, false, true);
 		}
 		else
 		{
@@ -2477,7 +2482,7 @@ public void DeleteConfirm_Callback(Database db, DBResultSet results, const char[
 
 	char sTrack[32];
 	GetTrackName(LANG_SERVER, iTrack, sTrack, 32);
-	
+
 	char sStage[32];
 	FormatEx(sStage, sizeof(sStage), "| Stage: %d ", iStage);
 
@@ -2526,7 +2531,7 @@ public void DeleteAll_Callback(Database db, DBResultSet results, const char[] er
 
 	if(stage == 0)
 	{
-		DeleteWR(style, track, gS_Map, 0, -1, false, true);		
+		DeleteWR(style, track, gS_Map, 0, -1, false, true);
 		Shavit_PrintToChat(client, "%T", "DeletedRecordsMap", client, gS_ChatStrings.sVariable, gS_Map, gS_ChatStrings.sText);
 	}
 	else if(stage > 0)
@@ -2607,7 +2612,7 @@ public Action Command_CheckpointRecord(int client, int args)
 			}
 		}
 	}
-	
+
 	RetrieveCPRMenu(client);
 	return Plugin_Handled;
 }
@@ -2649,8 +2654,8 @@ public void RetrieveCPRMenu(int client)
 		else
 		{
 			char sQuery[256];
-			FormatEx(sQuery, sizeof(sQuery), 
-				"SELECT id, style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style; ", 
+			FormatEx(sQuery, sizeof(sQuery),
+				"SELECT id, style, time FROM %swrs WHERE map = '%s' AND track = %d AND style < %d ORDER BY style; ",
 				gS_MySQLPrefix, gA_WRCache[client].sClientMap, Track_Main, gI_Styles);
 			QueryLog(gH_SQL, SQL_RetrieveCPRMenu_Callback, sQuery, GetClientSerial(client));
 		}
@@ -2660,8 +2665,8 @@ public void RetrieveCPRMenu(int client)
 		int iSteamID = GetSteamAccountID(client);
 
 		char sQuery[256];
-		FormatEx(sQuery, sizeof(sQuery), 
-			"SELECT id, style, time FROM %splayertimes WHERE map = '%s' AND track = %d AND auth = %d AND style < %d ORDER BY style; ", 
+		FormatEx(sQuery, sizeof(sQuery),
+			"SELECT id, style, time FROM %splayertimes WHERE map = '%s' AND track = %d AND auth = %d AND style < %d ORDER BY style; ",
 			gS_MySQLPrefix, gA_WRCache[client].sClientMap, Track_Main, iSteamID, gI_Styles);
 		QueryLog(gH_SQL, SQL_RetrieveCPRMenu_Callback, sQuery, GetClientSerial(client));
 	}
@@ -2758,7 +2763,7 @@ public int MenuHandler_CPRStyleChooser(Menu menu, MenuAction action, int param1,
 		{
 			return 0;
 		}
-		
+
 		char sInfo[16];
 		menu.GetItem(param2, sInfo, 16);
 		char sExploded[2][16];
@@ -2768,7 +2773,7 @@ public int MenuHandler_CPRStyleChooser(Menu menu, MenuAction action, int param1,
 
 		if(gA_WRCache[param1].iCPRMode == CPRMODE_WR || gA_WRCache[param1].iCPRMode == CPRMODE_PB)
 		{
-			OpenCheckpointRecordsMenu(param1, id, -1);			
+			OpenCheckpointRecordsMenu(param1, id, -1);
 		}
 		else if(gA_WRCache[param1].iCPRMode == CPRMODE_CWR)
 		{
@@ -2776,7 +2781,7 @@ public int MenuHandler_CPRStyleChooser(Menu menu, MenuAction action, int param1,
 
 			if(StrEqual(gA_WRCache[param1].sClientMap, gS_Map))
 			{
-				OpenCheckpointRecordsMenu(param1, id, gI_WRRecordID[style][Track_Main]);		
+				OpenCheckpointRecordsMenu(param1, id, gI_WRRecordID[style][Track_Main]);
 			}
 			else
 			{
@@ -2821,7 +2826,7 @@ public void SQL_RetrieveCCPRMenu_Callback(Database db, DBResultSet results, cons
 	if(results.FetchRow())
 	{
 		int id_2 = results.FetchInt(0);
-		OpenCheckpointRecordsMenu(client, id_1, id_2);	
+		OpenCheckpointRecordsMenu(client, id_1, id_2);
 	}
 }
 
@@ -2873,7 +2878,7 @@ public Action Command_WorldRecord(int client, int args)
 			if (track < Track_Bonus || track > Track_Bonus_Last)
 			{
 				track = Track_Bonus;
-			}			
+			}
 		}
 		else
 		{
@@ -2952,7 +2957,7 @@ public Action Command_WorldRecord(int client, int args)
 			}
 		}
 	}
-	
+
 	RetrieveWRMenu(client, track, stage);
 	return Plugin_Handled;
 }
@@ -3026,11 +3031,11 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 				{
 					break;
 				}
-				
+
 				if (((iTrackMask >> i) & 1) == 1)
 				{
 					GetTrackName(client, i, sTrack, sizeof(sTrack));
-					
+
 					char sInfo[8];
 					IntToString(i, sInfo, 8);
 
@@ -3175,7 +3180,7 @@ public void SQL_RetrieveWRMenu_Callback(Database db, DBResultSet results, const 
 	else
 	{
 		ShowWRStyleMenu(client);
-	}	
+	}
 }
 
 void ShowWRStyleMenu(int client, int first_item=0)
@@ -3277,15 +3282,15 @@ void StartWRMenu(int client)
 	char sQuery[512];
 	if(gA_WRCache[client].iLastStage == 0)
 	{
-		FormatEx(sQuery, 512, 
-			"SELECT p.id, u.name, p.time, p.auth FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC;", 
+		FormatEx(sQuery, 512,
+			"SELECT p.id, u.name, p.time, p.auth FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d ORDER BY time ASC, date ASC;",
 			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack);
 	}
 	else
 	{
-		FormatEx(sQuery, 512, 
-			"SELECT p.id, u.name, p.time, p.auth FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d AND stage = %d ORDER BY time ASC, date ASC;", 
-			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack, gA_WRCache[client].iLastStage);		
+		FormatEx(sQuery, 512,
+			"SELECT p.id, u.name, p.time, p.auth FROM %sstagetimes p JOIN %susers u ON p.auth = u.auth WHERE map = '%s' AND style = %d AND track = %d AND stage = %d ORDER BY time ASC, date ASC;",
+			gS_MySQLPrefix, gS_MySQLPrefix, sEscapedMap, gA_WRCache[client].iLastStyle, gA_WRCache[client].iLastTrack, gA_WRCache[client].iLastStage);
 	}
 	QueryLog(gH_SQL, SQL_WR_Callback, sQuery, dp);
 }
@@ -3310,7 +3315,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 	}
 
 	int client = GetClientFromSerial(serial);
-	
+
 	if(client == 0)
 	{
 		return;
@@ -3339,7 +3344,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 
 			// 2 - time
 			float time = results.FetchFloat(2);
-			
+
 			if(iCount == 1)
 			{
 				fWR = time;
@@ -3408,7 +3413,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 		else
 		{
 			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
-		}	
+		}
 
 		FormatEx(sFormattedTitle, 192, "%T\n%s", "WRRecordFor", client, sMap, sTrack, sRanks);
 		hMenu.SetTitle(sFormattedTitle);
@@ -3569,7 +3574,7 @@ void RecentRecords_DoQuery(int client, char[] style)
 	char sQuery1[512];
 	FormatEx(sQuery1, sizeof(sQuery1), "SELECT a.id, a.map, u.name, a.time, a.style, a.track, 0 as stage, a.date FROM %swrs a JOIN %susers u on a.auth = u.auth WHERE a.track %s %s %s %s",
 		gS_MySQLPrefix, gS_MySQLPrefix,
-		(gB_RRSelectMain[client] && gB_RRSelectBonus[client]) ? "> -1" : (!gB_RRSelectMain[client]) ? "> 0":"= 0", 
+		(gB_RRSelectMain[client] && gB_RRSelectBonus[client]) ? "> -1" : (!gB_RRSelectMain[client]) ? "> 0":"= 0",
 		(style[0] != '\0') ? "AND" : "",
 		(style[0] != '\0') ? "a.style = " : "",
 		(style[0] != '\0') ? style : "");
@@ -3809,7 +3814,7 @@ public Action Command_PersonalBest(int client, int args)
 	pack.WriteString(name);
 
 	char query[512];
-	FormatEx(query, sizeof(query), 
+	FormatEx(query, sizeof(query),
 	"SELECT id, style, track, 0 as stage, time, date, name FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.auth = %d AND p.map = '%s' UNION ALL "...
 	"SELECT id, style, track, stage, time, date, name FROM %sstagetimes s JOIN %susers u ON s.auth = u.auth WHERE s.auth = %d AND s.map = '%s';",
 	gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap, gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap);
@@ -3869,7 +3874,7 @@ public void SQL_PersonalBest_Callback(Database db, DBResultSet results, const ch
 
 		if(stage == 0)
 		{
-			GetTrackName(client, track, track_name, sizeof(track_name));			
+			GetTrackName(client, track, track_name, sizeof(track_name));
 		}
 		else
 		{
@@ -4179,7 +4184,7 @@ public void OpenCheckpointRecordsMenu(int client, int id_1, int id_2)
 		pack.WriteCell(GetClientSerial(client));
 		pack.WriteCell(id_1);
 
-		FormatEx(sQuery, sizeof(sQuery), 
+		FormatEx(sQuery, sizeof(sQuery),
 			"SELECT u.name as name, pt.time as time, 0 as checkpoint, 0.0 as stage_time, 0 as attempts FROM %splayertimes pt JOIN %susers u ON pt.auth = u.auth AND pt.id = %d "...
 			"UNION ALL SELECT '' as name, cpt.time, cpt.checkpoint, cpt.stage_time, cpt.attempts "...
 			"FROM %scptimes cpt JOIN %splayertimes pt2 ON "...
@@ -4189,12 +4194,12 @@ public void OpenCheckpointRecordsMenu(int client, int id_1, int id_2)
 	}
 	else
 	{
-		FormatEx(sQuery, sizeof(sQuery), 
+		FormatEx(sQuery, sizeof(sQuery),
 			"SELECT 0 as wr, u.name as name, pt.time as time, 0 as checkpoint, 0.0 as stage_time, 0 as attempts FROM %splayertimes pt JOIN %susers u ON pt.auth = u.auth AND pt.id = %d "...
 			"UNION ALL SELECT 1 as wr, u.name as name, pt.time as time, 0 as checkpoint, 0.0 as stage_time, 0 as attempts FROM %splayertimes pt JOIN %susers u ON pt.auth = u.auth AND pt.id = %d "...
 			"UNION ALL SELECT 0 as wr, '' as name, cpt.time, cpt.checkpoint, cpt.stage_time, cpt.attempts FROM %scptimes cpt JOIN %splayertimes pt2 ON cpt.map = pt2.map AND cpt.track = pt2.track AND cpt.style = pt2.style AND cpt.auth = pt2.auth AND pt2.id = %d "...
 			"UNION ALL SELECT 1 as wr, '' as name, cpt.time, cpt.checkpoint, cpt.stage_time, cpt.attempts FROM %scptimes cpt JOIN %splayertimes pt2 ON cpt.map = pt2.map AND cpt.track = pt2.track AND cpt.style = pt2.style AND cpt.auth = pt2.auth AND pt2.id = %d;",
-			gS_MySQLPrefix, gS_MySQLPrefix, id_1, gS_MySQLPrefix, gS_MySQLPrefix, id_2, 
+			gS_MySQLPrefix, gS_MySQLPrefix, id_1, gS_MySQLPrefix, gS_MySQLPrefix, id_2,
 			gS_MySQLPrefix, gS_MySQLPrefix, id_1,gS_MySQLPrefix, gS_MySQLPrefix, id_2);
 		QueryLog(gH_SQL, SQL_CheckpointRecordsComparisonMenu_Callback, sQuery, GetClientSerial(client), DBPrio_High);
 	}
@@ -4241,11 +4246,11 @@ public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results,
 			FormatSeconds(fTime, sTime, sizeof(sTime));
 			if(fTime == fMapTime)
 			{
-				FormatEx(sMenuItem, sizeof(sMenuItem), "%T | %T: %s", "CheckpointFinish", client, "CheckpointReachTime", client, sTime);	
+				FormatEx(sMenuItem, sizeof(sMenuItem), "%T | %T: %s", "CheckpointFinish", client, "CheckpointReachTime", client, sTime);
 			}
 			else
 			{
-				FormatEx(sMenuItem, sizeof(sMenuItem), "%T %d | %T: %s", "CheckpointText", client, num, "CheckpointReachTime", client, sTime);			
+				FormatEx(sMenuItem, sizeof(sMenuItem), "%T %d | %T: %s", "CheckpointText", client, num, "CheckpointReachTime", client, sTime);
 			}
 
 			fStageTime = results.FetchFloat(3);
@@ -4260,7 +4265,7 @@ public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results,
 			menu.AddItem(sInfo, sMenuItem, ITEMDRAW_DISABLED);
 		}
 	}
-	
+
 	if(menu.ItemCount == 0)
 	{
 		FormatEx(sMenuItem, sizeof(sMenuItem), "%T", "NoCheckpointRecords", client);
@@ -4271,9 +4276,9 @@ public void SQL_CheckpointRecordsMenu_Callback(Database db, DBResultSet results,
 
 	if(limit)
 	{
-		menu.Pagination = 4;		
+		menu.Pagination = 4;
 	}
-	
+
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
@@ -4337,13 +4342,13 @@ public void SQL_CheckpointRecordsComparisonMenu_Callback(Database db, DBResultSe
 
 		if(fMapTime[0] == fTime[0][i])
 		{
-			FormatEx(sMenuItem, sizeof(sMenuItem), "%T | %T: %s (%s%s)", 
+			FormatEx(sMenuItem, sizeof(sMenuItem), "%T | %T: %s (%s%s)",
 				"CheckpointFinish", client, "CheckpointReachTime", client, sTime, fCPTimeDiff > 0.0 ? "+":"", sTimeDiff);
 		}
 		else
 		{
-			FormatEx(sMenuItem, sizeof(sMenuItem), "%T %d | %T: %s (%s%s)", 
-				"CheckpointText", client, i, "CheckpointReachTime", client, sTime, fCPTimeDiff > 0.0 ? "+":"", sTimeDiff);			
+			FormatEx(sMenuItem, sizeof(sMenuItem), "%T %d | %T: %s (%s%s)",
+				"CheckpointText", client, i, "CheckpointReachTime", client, sTime, fCPTimeDiff > 0.0 ? "+":"", sTimeDiff);
 		}
 
 		if(fStageTime[0][i] > 0.0 || fStageTime[1][i] > 0.0)
@@ -4356,13 +4361,13 @@ public void SQL_CheckpointRecordsComparisonMenu_Callback(Database db, DBResultSe
 			FormatSeconds(fStageTime[0][i], sTime, sizeof(sTime));
 			FormatSeconds(fStageTimeDiff, sTimeDiff, sizeof(sTimeDiff), true, nodecimal);
 
-			FormatEx(sMenuItem, sizeof(sMenuItem), "%s\n%T: %s (%s%s)\n%T: %d (%s%d)\n ", sMenuItem, 
+			FormatEx(sMenuItem, sizeof(sMenuItem), "%s\n%T: %s (%s%s)\n%T: %d (%s%d)\n ", sMenuItem,
 				"StageFinishTime", client, i, sTime, fStageTimeDiff > 0.0 ? "+":"", sTimeDiff,
 				"StageAttempts", client, iAttempts[0][i], iAttemptsDiff > 0 ? "+":"", iAttemptsDiff);
 		}
 
 		menu.AddItem("", sMenuItem, ITEMDRAW_DISABLED);
-	}	
+	}
 
 	if(menu.ItemCount == 0)
 	{
@@ -4374,9 +4379,9 @@ public void SQL_CheckpointRecordsComparisonMenu_Callback(Database db, DBResultSe
 
 	if(limit)
 	{
-		menu.Pagination = 4;		
+		menu.Pagination = 4;
 	}
-	
+
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
@@ -4400,7 +4405,7 @@ public int MenuHandler_CheckpointRecords(Menu menu, MenuAction action, int param
 			}
 			else
 			{
-				OpenSubMenu(param1, StringToInt(sInfo), 0);				
+				OpenSubMenu(param1, StringToInt(sInfo), 0);
 			}
 		}
 		else
@@ -4538,25 +4543,25 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 
 			if(bServerFirstCompletion)	//First Compeletion in server
 			{
-				FormatEx(sMessage, 255, "%T", 
+				FormatEx(sMessage, 255, "%T",
 					"ServerFirstCompletion", LANG_SERVER,
-					gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText, 
+					gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText,
 					gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 			}
 			else
 			{
-				FormatEx(sMessage, 255, "%T", 
+				FormatEx(sMessage, 255, "%T",
 					"PlayerFirstCompletion", LANG_SERVER,
-					gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
-					sDifferenceWR, 
-					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText, 
-					gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText, 
+					gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
+					sDifferenceWR,
+					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
+					gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText,
 					gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 			}
 
@@ -4568,7 +4573,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 				FormatEx(sMessage2, sizeof(sMessage2), "%T", "CompletionPointsInfo", client,
 					gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
 					gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
-					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);				
+					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);
 			}
 
 			FormatEx(sQuery, sizeof(sQuery),
@@ -4577,14 +4582,14 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		}
 		else // Better than PB, Maybe Beat the wr
 		{
-			FormatEx(sMessage, 255, "%T", 
+			FormatEx(sMessage, 255, "%T",
 				"NotFirstCompletion", LANG_SERVER,
-				gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, 
-				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-				gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
 				sDifferenceWR, sDifferencePB,
-				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText, 
-				gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable, iRankCount, gS_ChatStrings.sText,
 				gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 
 			int oldRank = GetStageRankForTime(style, oldtime, stage);
@@ -4606,7 +4611,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		}
 
 		QueryLog(gH_SQL, SQL_OnFinishStage_Callback, sQuery, GetClientSerial(client), DBPrio_High);
-		
+
 		Call_StartForward(gH_OnFinishStage_Post);
 		Call_PushCell(client);
 		Call_PushCell(style);
@@ -4643,8 +4648,8 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		{
 			FormatEx(sMessage, 255, "%T",
 				"WorseTime", client,
-				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-				gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+				gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
 				sDifferenceWR, sDifferencePB,
 				gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 		}
@@ -4652,9 +4657,9 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	else
 	{
 		FormatEx(sMessage, 255, "%T",
-			"UnrankedTime", client, 
-			gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+			"UnrankedTime", client,
+			gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
 			gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 	}
 
@@ -4672,12 +4677,12 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 					{
 						if((Shavit_GetMessageSetting(i) & MSG_FINISHSTAGE) == 0)
 						{
-							Shavit_PrintToChat(i, "%s", sMessage);								
+							Shavit_PrintToChat(i, "%s", sMessage);
 						}
 					}
 					else if((Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)
 					{
-						Shavit_PrintToChat(i, "%s", sMessage);						
+						Shavit_PrintToChat(i, "%s", sMessage);
 					}
 				}
 			}
@@ -4686,30 +4691,30 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 		{
 			if((Shavit_GetMessageSetting(client) & MSG_FINISHSTAGE) == 0)
 			{
-				Shavit_PrintToChat(client, "%s", sMessage);				
+				Shavit_PrintToChat(client, "%s", sMessage);
 			}
 
 			for(int i = 1; i <= MaxClients; i++)
 			{
-				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)	
+				if(client != i && IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)
 				{	//Print to spectator if target finished and worse
 					if(bIncrementCompletions && !Shavit_GetStyleSettingInt(style, "unranked"))
 					{
-						FormatEx(sMessage, 255, "%T", "NotFirstCompletionWorse", i, 
-							gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText, 
-							gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+						FormatEx(sMessage, 255, "%T", "NotFirstCompletionWorse", i,
+							gS_ChatStrings.sVariable2, sName, gS_ChatStrings.sText,
+							gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
 							sDifferenceWR, sDifferencePB,
-							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);						
+							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 					}
 					else
 					{
-						FormatEx(sMessage, 255, "%T", "UnrankedTime", client, 
-							gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText, 
-							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText, 
+						FormatEx(sMessage, 255, "%T", "UnrankedTime", client,
+							gS_ChatStrings.sVariable, sStage, gS_ChatStrings.sText,
+							gS_ChatStrings.sVariable2, sTime, gS_ChatStrings.sText,
 							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 					}
-					
+
 					Shavit_PrintToChat(i, "%s", sMessage);
 				}
 			}
@@ -4717,14 +4722,14 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 
 		if ((Shavit_GetMessageSetting(client) & MSG_EXTRAFINISHINFO) == 0)
 		{
-			Shavit_PrintToChat(client, "%T", "ExtraFinishInfo", client, sStage, 
-			gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable, startvel, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable, endvel, gS_ChatStrings.sText, 
+			Shavit_PrintToChat(client, "%T", "ExtraFinishInfo", client, sStage,
+			gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, startvel, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, endvel, gS_ChatStrings.sText,
 			gS_ChatStrings.sVariable, sync, gS_ChatStrings.sText);
-		}		
-		
+		}
+
 		if (sMessage2[0] != 0 && (Shavit_GetMessageSetting(client) & MSG_POINTINFO) == 0)
 		{
 			Shavit_PrintToChat(client, "%s", sMessage2);
@@ -4820,7 +4825,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	float fDifferenceWR = (time - gF_WRTime[style][track]);
 	char sMessage[255];
 	char sMessage2[255];
-	
+
 	float fCPtimes[MAX_STAGES];
 	float fStageFinishTimes[MAX_STAGES];
 	int iStageAttempts[MAX_STAGES];
@@ -4831,7 +4836,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 	if (iOverwrite > 0)
 	{
-		Shavit_GetClientCPTimes(client, fCPtimes);		
+		Shavit_GetClientCPTimes(client, fCPtimes);
 		Shavit_GetClientStageFinishTimes(client, fStageFinishTimes);
 		Shavit_GetClientStageAttempts(client, iStageAttempts);
 	}
@@ -4898,7 +4903,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 		Call_PushCell(timestamp);
 		Call_Finish();
 	}
-	
+
 	char sDifferenceWR[32];
 	FormatSeconds(fDifferenceWR, sDifferenceWR, 32, true);
 
@@ -4934,10 +4939,10 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 			if(bServerFirstCompletion)	//First Compeletion in server
 			{
 				FormatEx(sMessage, 255, "%T",
-					"ServerFirstCompletion", LANG_SERVER, 
-					gS_ChatStrings.sVariable2, sName, 
-					gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, 
-					gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+					"ServerFirstCompletion", LANG_SERVER,
+					gS_ChatStrings.sVariable2, sName,
+					gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack,
+					gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 					gS_ChatStrings.sText, gS_ChatStrings.sVariable, iRank,
 					gS_ChatStrings.sText, gS_ChatStrings.sVariable, iRankCount,
 					gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
@@ -4945,10 +4950,10 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 			else
 			{
 				FormatEx(sMessage, 255, "%T",
-					"PlayerFirstCompletion", LANG_SERVER, 
-					gS_ChatStrings.sVariable2, sName, 
-					gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, 
-					gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+					"PlayerFirstCompletion", LANG_SERVER,
+					gS_ChatStrings.sVariable2, sName,
+					gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack,
+					gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 					gS_ChatStrings.sText, sDifferenceWR,
 					gS_ChatStrings.sVariable, iRank,
 					gS_ChatStrings.sText, gS_ChatStrings.sVariable, iRankCount,
@@ -4963,9 +4968,9 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 				FormatEx(sMessage2, sizeof(sMessage2), "%T", "CompletionPointsInfo", client,
 					gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
 					gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText,
-					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);						
+					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText);
 			}
-	
+
 			FormatEx(sQuery, sizeof(sQuery),
 				"INSERT INTO %splayertimes (auth, map, time, jumps, date, style, strafes, sync, points, track, perfs, startvel, endvel) VALUES (%d, '%s', %.9f, %d, %d, %d, %d, %.2f, %f, %d, %.2f, %f, %f);",
 				gS_MySQLPrefix, iSteamID, gS_Map, time, jumps, timestamp, style, strafes, sync, fPoints, track, perfs, startvel, endvel);
@@ -4973,10 +4978,10 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 		else // Better than PB, Maybe Beat the wr
 		{
 			FormatEx(sMessage, 255, "%T",
-				"NotFirstCompletion", LANG_SERVER, 
-				gS_ChatStrings.sVariable2, sName, 
-				gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, 
-				gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+				"NotFirstCompletion", LANG_SERVER,
+				gS_ChatStrings.sVariable2, sName,
+				gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack,
+				gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 				gS_ChatStrings.sText, sDifferenceWR, sDifferencePB,
 				gS_ChatStrings.sVariable, iRank,
 				gS_ChatStrings.sText, gS_ChatStrings.sVariable, iRankCount,
@@ -4992,7 +4997,7 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 					gS_ChatStrings.sVariable2, fGainedPoints, gS_ChatStrings.sText,
 					gS_ChatStrings.sVariable, oldRank, gS_ChatStrings.sText,
 					gS_ChatStrings.sVariable, iRank, gS_ChatStrings.sText,
-					gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);				
+					gS_ChatStrings.sVariable, sTrack, gS_ChatStrings.sText);
 			}
 
 			FormatEx(sQuery, sizeof(sQuery),
@@ -5039,9 +5044,9 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 		if(iOverwrite == 0 && !Shavit_GetStyleSettingInt(style, "unranked"))
 		{
 			FormatEx(sMessage, 255, "%T",
-				"WorseTime", client, 
-				gS_ChatStrings.sVariable, sTrack, 
-				gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+				"WorseTime", client,
+				gS_ChatStrings.sVariable, sTrack,
+				gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 				gS_ChatStrings.sText, sDifferenceWR, sDifferencePB,
 				gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 		}
@@ -5049,9 +5054,9 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 	else
 	{
 		FormatEx(sMessage, 255, "%T",
-			"UnrankedTime", client, 
-			gS_ChatStrings.sVariable, sTrack, 
-			gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+			"UnrankedTime", client,
+			gS_ChatStrings.sVariable, sTrack,
+			gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 			gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 	}
 
@@ -5081,12 +5086,12 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 				{
 					if((Shavit_GetMessageSetting(i) & MSG_FINISHMAP) == 0)
 					{
-						Shavit_PrintToChat(i, "%s", sMessage);									
+						Shavit_PrintToChat(i, "%s", sMessage);
 					}
 				}
 				else if((Shavit_GetMessageSetting(i) & MSG_OTHER) == 0)
 				{
-					Shavit_PrintToChat(i, "%s", sMessage);		
+					Shavit_PrintToChat(i, "%s", sMessage);
 				}
 			}
 		}
@@ -5103,21 +5108,21 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 				{
 					if(bIncrementCompletions && !Shavit_GetStyleSettingInt(style, "unranked"))
 					{
-						FormatEx(sMessage, sizeof(sMessage), "%T", "NotFirstCompletionWorse", i, 
-							gS_ChatStrings.sVariable2, sName, 
-							gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack, 
-							gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+						FormatEx(sMessage, sizeof(sMessage), "%T", "NotFirstCompletionWorse", i,
+							gS_ChatStrings.sVariable2, sName,
+							gS_ChatStrings.sText, gS_ChatStrings.sVariable, sTrack,
+							gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 							gS_ChatStrings.sText, sDifferenceWR, sDifferencePB,
-							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);						
+							gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 					}
 					else
 					{
-						FormatEx(sMessage, 255, "%T", "UnrankedTime", client, 
-							gS_ChatStrings.sVariable, sTrack, 
-							gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime, 
+						FormatEx(sMessage, 255, "%T", "UnrankedTime", client,
+							gS_ChatStrings.sVariable, sTrack,
+							gS_ChatStrings.sText, gS_ChatStrings.sVariable2, sTime,
 							gS_ChatStrings.sText, gS_ChatStrings.sStyle, gS_StyleStrings[style].sStyleName, gS_ChatStrings.sText);
 					}
-					
+
 					Shavit_PrintToChat(i, "%s", sMessage);
 				}
 			}
@@ -5125,11 +5130,11 @@ public void Shavit_OnFinish(int client, int style, float time, int jumps, int st
 
 		if ((Shavit_GetMessageSetting(client) & MSG_EXTRAFINISHINFO) == 0)
 		{
-			Shavit_PrintToChat(client, "%T", "ExtraFinishInfo", client, sTrack,	
-			gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable, startvel, gS_ChatStrings.sText, 
-			gS_ChatStrings.sVariable, endvel, gS_ChatStrings.sText, 
+			Shavit_PrintToChat(client, "%T", "ExtraFinishInfo", client, sTrack,
+			gS_ChatStrings.sVariable, avgvel, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, maxvel, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, startvel, gS_ChatStrings.sText,
+			gS_ChatStrings.sVariable, endvel, gS_ChatStrings.sText,
 			gS_ChatStrings.sVariable, sync, gS_ChatStrings.sText);
 		}
 
@@ -5205,16 +5210,16 @@ public void ReplaceCPRecords(Database db, int client, int style, int track, floa
 		{
 			break;
 		}
-		
+
 		if(wr)
 		{
 			gA_StageCP_WR[style][track][i] = cptimes[i];
-		}		
+		}
 		else
 		{
-			gA_StageCP_PB[client][style][track].Set(i, cptimes[i]);			
+			gA_StageCP_PB[client][style][track].Set(i, cptimes[i]);
 		}
-		
+
 		if (cptimes[i] <= 0.0)
 		{
 			continue;
@@ -5396,7 +5401,7 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 		if((Shavit_GetMessageSetting(client) & MSG_CHECKPOINT) == 0)
 		{
 			Shavit_PrintToChat(client, "%T", "CheckpointTime", client,
-				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText,
 				gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
 				gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText);
 		}
@@ -5406,12 +5411,12 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 			if(IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_CHECKPOINT) == 0)
 			{
 				Shavit_PrintToChat(i, "%s*%N*%s %T", gS_ChatStrings.sImproving, client, gS_ChatStrings.sText,  "CheckpointTime", i,
-					gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+					gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText,
 					gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
 					gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText);
 			}
 		}
-		
+
 		return;
 	}
 
@@ -5434,7 +5439,7 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 		if((Shavit_GetMessageSetting(client) & MSG_CHECKPOINT) == 0)
 		{
 			Shavit_PrintToChat(client, "%T", "WRCheckpointTime", client,
-			gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText,
 			gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
 			gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR);
 		}
@@ -5444,12 +5449,12 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 			if(IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_CHECKPOINT) == 0)
 			{
 				Shavit_PrintToChat(i, "%s*%N*%s %T", gS_ChatStrings.sImproving, client, gS_ChatStrings.sText, "WRCheckpointTime", i,
-				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText,
 				gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
 				gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR);
 			}
 		}
-		
+
 		return;
 	}
 
@@ -5470,9 +5475,9 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 	if((Shavit_GetMessageSetting(client) & MSG_CHECKPOINT) == 0)
 	{
 		Shavit_PrintToChat(client, "%T", "WRPBCheckpointTime", client,
-			gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+			gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText,
 			gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
-			gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);		
+			gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);
 	}
 
 	for(int i = 1; i <= MaxClients; i++)
@@ -5480,9 +5485,9 @@ public void Shavit_OnReachNextCP(int client, int track, int checkpoint, float ti
 		if(IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_CHECKPOINT) == 0)
 		{
 			Shavit_PrintToChat(i, "%s*%N*%s %T", gS_ChatStrings.sImproving, client, gS_ChatStrings.sText, "WRPBCheckpointTime", i,
-				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText, 
+				gS_ChatStrings.sVariable2, checkpoint, gS_ChatStrings.sText,
 				gS_ChatStrings.sVariable2, iCheckpointCounts, gS_ChatStrings.sText,
-				gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);		
+				gS_ChatStrings.sVariable, sTime, gS_ChatStrings.sText, sDifferenceWR, sDifferencePB);
 		}
 	}
 }
