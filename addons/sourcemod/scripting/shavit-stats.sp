@@ -1195,7 +1195,8 @@ public void OpenStatsMenuCallback(Database db, DBResultSet results, const char[]
 			FormatEx(sMenuItem, 64, "%T", "NoRecords", client);
 			menu.AddItem("-1", sMenuItem);
 		}
-
+		
+		menu.Pagination = 5;
 		menu.ExitButton = true;
 		menu.DisplayAt(client, item, MENU_TIME_FOREVER);
 
