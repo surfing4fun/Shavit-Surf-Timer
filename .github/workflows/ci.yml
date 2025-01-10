@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        sm-version: [ '1.11' ] #, '1.12'
+        sm-version: [ '1.12' ]
 
     name: "Build SM ${{ matrix.sm-version }}"
     steps:
@@ -32,6 +32,8 @@ jobs:
           tar --strip-components=1 -xvzf v5.0.0.tar.gz sm-json-5.0.0/addons/sourcemod/scripting/include
           wget https://github.com/hermansimensen/eventqueue-fix/archive/refs/tags/1.3.2.tar.gz
           tar --strip-components=1 -xvzf 1.3.2.tar.gz -C addons/sourcemod
+          wget https://github.com/rtldg/sm_closestpos/releases/download/v1.1.1/sm_closestpos-sm1.10-ubuntu-22.04-f848dfc.zip
+          unzip sm_closestpos-sm1.10-ubuntu-22.04-f848dfc.zip "addons/sourcemod/scripting/include/*"
           rm -rf *.zip *.tar.gz addons/sourcemod/.git* addons/sourcemod/LICENSE
 
       - name: Run compiler
@@ -47,7 +49,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bhoptimer-${{ github.head_ref || github.ref_name }}-sm${{ matrix.sm-version }}-${{ env.GITHUB_SHA_SHORT }}
+          name: shavit-surftimer-${{ github.head_ref || github.ref_name }}-sm${{ matrix.sm-version }}-${{ env.GITHUB_SHA_SHORT }}
           path: |
             addons
             materials
