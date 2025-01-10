@@ -356,12 +356,11 @@ native void Shavit_Zones_DeleteMap(const char[] map);
  * Checks if a player is inside a stage zone.
  *
  * @param client                    Client index.
- * @param track                     Mapzone track, -1 to ignore track.
  * @param stage                     Reference to variable that will hold the zone's stage.
  * @param limitspeed				Reference to variable that will hold whether the stage zone liimit prespeed.
  * @return                          Boolean value.
  */
-native bool Shavit_InsideZoneStage(int client, int track, int &stage, bool &limitspeed = true);
+native bool Shavit_InsideZoneStage(int client, int &stage, bool &limitspeed = true);
 
 /**
  * Checks if a player is inside a mapzone.

@@ -645,6 +645,7 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	int iZoneStage;
 	
 	bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+	bool bInsideStageZone = iTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
 						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 

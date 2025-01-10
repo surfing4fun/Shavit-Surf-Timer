@@ -1849,7 +1849,7 @@ void UpdateMainHUD(int client)
 
 	if(!bReplay)
 	{
-		huddata.bInsideStageZone = gB_Zones && Shavit_InsideZoneStage(target, huddata.iTrack, huddata.iZoneStage);
+		huddata.bInsideStageZone = huddata.iTrack == Track_Main ? (gB_Zones && Shavit_InsideZoneStage(target, huddata.iZoneStage)):false;
 		
 		if (gB_Zones && Shavit_GetClientTime(target) < 0.3)
 		{

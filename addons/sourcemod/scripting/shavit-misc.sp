@@ -1316,7 +1316,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 
 	int iZoneStage;
 	bool bIsStageLimitPrespeed;
-	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage, bIsStageLimitPrespeed);
+	bool bInsideStageZone = track == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage, bIsStageLimitPrespeed):false;
 	
 	if(!bIsStageLimitPrespeed)
 	{
@@ -2123,7 +2123,7 @@ public Action Command_Noclip(int client, int args)
 		int iZoneStage;
 		int iTrack = Shavit_GetClientTrack(client);
 		
-		bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+		bool bInsideStageZone = iTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 		bool bPractice = Shavit_IsPracticeMode(target);
 		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
 		bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
@@ -2214,7 +2214,7 @@ public Action CommandListener_Noclip(int client, const char[] command, int args)
 		int iZoneStage;
 		int iTrack = Shavit_GetClientTrack(client);
 		
-		bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+		bool bInsideStageZone = iTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 		bool bPractice = Shavit_IsPracticeMode(target);
 		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
 		bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 
@@ -2309,7 +2309,7 @@ public Action CommandListener_Real_Noclip(int client, const char[] command, int 
 		int iZoneStage;
 		int iTrack = Shavit_GetClientTrack(client);
 		
-		bool bInsideStageZone = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+		bool bInsideStageZone = iTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 		bool bPractice = Shavit_IsPracticeMode(target);
 		bool bSegmented = Shavit_GetStyleSettingBool(Shavit_GetBhopStyle(target), "segments");
 		bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, iTrack) || 

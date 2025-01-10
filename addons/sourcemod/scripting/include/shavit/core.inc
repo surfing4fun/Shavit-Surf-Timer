@@ -75,7 +75,7 @@ enum
 {
 	Track_Main,
 	Track_Bonus,
-	Track_Bonus_Last = 12, //8 is not enough for surf bounus
+	Track_Bonus_Last = 12, //8 is not enough for surf bonuses
 	TRACKS_SIZE
 };
 

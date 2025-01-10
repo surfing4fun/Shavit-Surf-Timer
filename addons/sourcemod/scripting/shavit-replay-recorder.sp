@@ -282,7 +282,7 @@ public Action Shavit_OnStart(int client)
 	int iMaxPreFrames = RoundToFloor(gCV_PlaybackPreRunTime.FloatValue * gF_Tickrate / Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed"));
 	int iZoneStage;
 	int track = Shavit_GetClientTrack(client);
-	bool bInsideStageZone = Shavit_InsideZoneStage(client, track, iZoneStage);
+	bool bInsideStageZone = track == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 	
 	bool bInStart = Shavit_InsideZone(client, Zone_Start, track) || 
 					(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));

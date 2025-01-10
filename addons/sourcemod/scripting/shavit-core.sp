@@ -1045,7 +1045,7 @@ public Action Command_TogglePause(int client, int args)
 
 	int iZoneStage;
 	int iTrack = Shavit_GetClientTrack(client);
-	bool InsideStage = Shavit_InsideZoneStage(client, iTrack, iZoneStage);
+	bool InsideStage = iTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 	if((Shavit_IsOnlyStageMode(client) && InsideStage && iZoneStage == gA_Timers[client].iLastStage))
 	{
 		Shavit_PrintToChat(client, "%T", "PauseStageStartZone", client, gS_ChatStrings.sText, gS_ChatStrings.sWarning, gS_ChatStrings.sText, gS_ChatStrings.sVariable, gS_ChatStrings.sText);
@@ -3301,7 +3301,7 @@ void StartTimer(int client, int track)
 
 			if (gA_Timers[client].bOnlyStageMode)
 			{
-				Shavit_InsideZoneStage(client, track, gA_Timers[client].iLastStage);
+				Shavit_InsideZoneStage(client, gA_Timers[client].iLastStage);
 			}
 			else
 			{
@@ -4121,7 +4121,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
 	int iZoneStage;
 	
-	bool bInsideStageZone = Shavit_InsideZoneStage(client, gA_Timers[client].iTimerTrack, iZoneStage);
+	bool bInsideStageZone = gA_Timers[client].iTimerTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
 	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, gA_Timers[client].iTimerTrack) || 
 						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == gA_Timers[client].iLastStage);
 
