@@ -2995,6 +2995,7 @@ public int MenuHandler_TpToEdit(Menu menu, MenuAction action, int param1, int pa
 				fCenter[1] = gV_ZoneCenter[id][1];
 				fCenter[2] = gA_ZoneCache[id].fCorner1[2];
 
+				Shavit_SetPracticeMode(param1, true, false);
 				TeleportEntity(param1, fCenter, NULL_VECTOR, view_as<float>({0.0, 0.0, 0.0}));
 			}
 		}
@@ -3023,6 +3024,7 @@ public int MenuHandler_HookZone_Editor(Menu menu, MenuAction action, int param1,
 		if (StrEqual(info, "tpto"))
 		{
 			Shavit_StopTimer(param1);
+			Shavit_SetPracticeMode(param1, true, false);
 			float center[3];
 			center[0] = (gA_EditCache[param1].fCorner1[0] + gA_EditCache[param1].fCorner2[0]) * 0.5;
 			center[1] = (gA_EditCache[param1].fCorner1[1] + gA_EditCache[param1].fCorner2[1]) * 0.5;

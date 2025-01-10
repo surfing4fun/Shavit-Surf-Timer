@@ -994,6 +994,7 @@ public Action Command_TeleportEnd(int client, int args)
 		return Plugin_Handled;
 	}
 
+	Shavit_SetPracticeMode(client, true, false);
 	Call_StartForward(gH_Forwards_OnEnd);
 	Call_PushCell(client);
 	Call_PushCell(track);
