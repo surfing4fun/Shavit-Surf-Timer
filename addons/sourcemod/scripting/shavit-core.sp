@@ -3427,6 +3427,7 @@ void ResumeTimer(int client)
 	gA_Timers[client].bClientPaused = false;
 	// setting is handled in usercmd
 	SetEntityMoveType(client, MOVETYPE_WALK);
+	gI_LastNoclipTick[client] = 0;
 }
 
 public void OnClientDisconnect(int client)
