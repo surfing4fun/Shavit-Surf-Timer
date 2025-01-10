@@ -341,6 +341,10 @@
 	{
 		"en"		"Use prespeed limit"
 	}
+	"ZoneStopAfterTeleport"
+	{
+		"en"		"Stop after teleport"
+	}
 	"ZoneSetCheckpoint"
 	{
 		"#format"	"{1:d}"

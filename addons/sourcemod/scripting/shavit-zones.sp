@@ -4866,6 +4866,11 @@ void CreateEditMenu(int client, bool autostage=false)
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetCheckpoint", client, gA_EditCache[client].iData);
 		menu.AddItem("datafromchat", sMenuItem);
 	}
+	else if(gA_EditCache[client].iType == Zone_Teleport)
+	{
+		FormatEx(sMenuItem, 64, "[%T] %T", gA_EditCache[client].bUseSpeedLimit ? "ItemEnabled":"ItemDisabled", client, "ZoneStopAfterTeleport", client);
+		menu.AddItem("togglespdlimit", sMenuItem);
+	}
 	else if (gA_EditCache[client].iType == Zone_Airaccelerate)
 	{
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetAiraccelerate", client, gA_EditCache[client].iData);
@@ -5962,6 +5967,7 @@ public void StartTouchPost(int entity, int other)
 			if(!bReplay)
 			{
 				TeleportEntity(other, gA_ZoneCache[zone].fDestination, NULL_VECTOR, NULL_VECTOR);				
+				TeleportEntity(other, gA_ZoneCache[zone].fDestination, NULL_VECTOR, gA_ZoneCache[zone].bUseSpeedLimit ? ZERO_VECTOR:NULL_VECTOR);				
 			}
 		}
 
