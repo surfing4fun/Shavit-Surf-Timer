@@ -237,8 +237,8 @@ public void OnClientCookiesCached(int client)
 
 	if (!GetClientCookieInt(client, gH_GhostModeCookie, gGM_GhostMode[client]))
 	{
-		gGM_GhostMode[client] = GhostMode_Race;
-		SetClientCookieInt(client, gH_GhostCookie, GhostMode_Race);
+		gGM_GhostMode[client] = GhostMode_Guide;
+		SetClientCookieInt(client, gH_GhostModeCookie, GhostMode_Guide);
 	}
 
 	if (!GetClientCookieBool(client, gH_GhostDrawBoxCookie, gB_DrawBox[client]))
@@ -261,7 +261,7 @@ public void OnClientCookiesCached(int client)
 
 	if (!GetClientCookieInt(client, gH_GhostBoxColorCookie, gI_GhostBoxColor[client]))
 	{
-		gI_GhostRouteColor[client] = 1;
+		gI_GhostBoxColor[client] = 1;
 		SetClientCookieInt(client, gH_GhostBoxColorCookie, 1);
 	}
 
