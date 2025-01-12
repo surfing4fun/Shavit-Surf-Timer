@@ -2996,12 +2996,12 @@ public Action Hook_SayText2(UserMsg msg_id, Handle msg, const int[] players, int
 
 	if(um == UM_Protobuf)
 	{
-		Protobuf pbmsg = msg;
+		Protobuf pbmsg = view_as<Protobuf>(msg);
 		pbmsg.ReadString("msg_name", sMessage, 24);
 	}
 	else
 	{
-		BfRead bfmsg = msg;
+		BfRead bfmsg = view_as<BfRead>(msg);
 		bfmsg.ReadByte();
 		bfmsg.ReadByte();
 		bfmsg.ReadString(sMessage, 24);

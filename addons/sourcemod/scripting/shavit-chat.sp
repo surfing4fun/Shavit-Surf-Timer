@@ -422,7 +422,7 @@ public Action Hook_SayText2(UserMsg msg_id, Handle msg, const int[] players, int
 
 	if(gB_Protobuf)
 	{
-		Protobuf pbmsg = UserMessageToProtobuf(msg);
+		Protobuf pbmsg = view_as<Protobuf>(msg);
 		client = pbmsg.ReadInt("ent_idx");
 		pbmsg.ReadString("msg_name", sMessage, 32);
 		pbmsg.ReadString("params", sOriginalName, MAXLENGTH_NAME, 0);
@@ -430,7 +430,7 @@ public Action Hook_SayText2(UserMsg msg_id, Handle msg, const int[] players, int
 	}
 	else
 	{
-		BfRead bfmsg = UserMessageToBfRead(msg);
+		BfRead bfmsg = view_as<BfRead>(msg);
 		client = bfmsg.ReadByte();
 		bfmsg.ReadByte(); // chat parameter
 		bfmsg.ReadString(sMessage, 32);
