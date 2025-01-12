@@ -218,6 +218,11 @@ public void OnClientDisconnect(int client)
 	{
 		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][0], 0);
 	}		
+
+	if(gB_GrabbingPostFrames[client][1])
+	{
+		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][1], 1);
+	}
 }
 
 public void OnClientDisconnect_Post(int client)
@@ -279,6 +284,11 @@ public Action Shavit_OnStart(int client)
 		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][0], 0);
 	}
 
+	if(gB_GrabbingPostFrames[client][1])
+	{
+		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][1], 1);
+	}
+
 	int iMaxPreFrames = RoundToFloor(gCV_PlaybackPreRunTime.FloatValue * gF_Tickrate / Shavit_GetStyleSettingFloat(Shavit_GetBhopStyle(client), "speed"));
 	int iZoneStage;
 	int track = Shavit_GetClientTrack(client);
@@ -331,6 +341,11 @@ public void Shavit_OnStop(int client)
 	if (gB_GrabbingPostFrames[client][0])
 	{
 		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][0], 0);
+	}
+
+	if(gB_GrabbingPostFrames[client][1])
+	{
+		FinishGrabbingPostFrames(client, gA_FinishedRunInfo[client][1], 1);
 	}
 
 	ClearFrames(client);
