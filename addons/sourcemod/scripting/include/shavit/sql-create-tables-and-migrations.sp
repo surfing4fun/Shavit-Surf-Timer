@@ -61,7 +61,8 @@ enum
 	Migration_AddPlayertimesStartvelAndEndvel, // 35
 	Migration_AddStagetimesStartvelAndEndvel,
 	Migration_AddCptimesStagetimeAndAttempts,
-	Migration_AddCpwrsStagetimeAndAttempts, //38
+	Migration_AddCpwrsStagetimeAndAttempts, 
+	Migration_AddUsersFirstlogin, //39
 	// Migration_AddCpwrsStartvelAndEndvel,
 	// Migration_AddCptimesStartvelAndEndvel,
 	MIGRATIONS_END
@@ -155,13 +156,13 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	if (driver == Driver_mysql)
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%susers` (`auth` INT NOT NULL, `name` VARCHAR(32) COLLATE 'utf8mb4_general_ci', `ip` INT, `lastlogin` INT NOT NULL DEFAULT -1, `points` FLOAT NOT NULL DEFAULT 0, `playtime` FLOAT NOT NULL DEFAULT 0, PRIMARY KEY (`auth`), INDEX `points` (`points`), INDEX `lastlogin` (`lastlogin`)) ENGINE=INNODB;",
+			"CREATE TABLE IF NOT EXISTS `%susers` (`auth` INT NOT NULL, `name` VARCHAR(32) COLLATE 'utf8mb4_general_ci', `ip` INT, `firstlogin` INT NOT NULL DEFAULT -1, `lastlogin` INT NOT NULL DEFAULT -1, `points` FLOAT NOT NULL DEFAULT 0, `playtime` FLOAT NOT NULL DEFAULT 0, PRIMARY KEY (`auth`), INDEX `points` (`points`), INDEX `firstlogin` (`firstlogin`), INDEX `lastlogin` (`lastlogin`)) ENGINE=INNODB;",
 			gS_SQLPrefix);
 	}
 	else
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%susers` (`auth` INT NOT NULL PRIMARY KEY, `name` VARCHAR(32), `ip` INT, `lastlogin` INTEGER NOT NULL DEFAULT -1, `points` FLOAT NOT NULL DEFAULT 0, `playtime` FLOAT NOT NULL DEFAULT 0);",
+			"CREATE TABLE IF NOT EXISTS `%susers` (`auth` INT NOT NULL PRIMARY KEY, `name` VARCHAR(32), `ip` INT, `firstlogin` INTEGER NOT NULL DEFAULT -1, `lastlogin` INTEGER NOT NULL DEFAULT -1, `points` FLOAT NOT NULL DEFAULT 0, `playtime` FLOAT NOT NULL DEFAULT 0);",
 			gS_SQLPrefix);
 	}
 
@@ -661,6 +662,20 @@ void ApplyMigration_AddCpwrsStagetimeAndAttempts()
 // {
 
 // }
+
+void ApplyMigration_AddUsersFirstlogin()
+{
+	char sQuery[128];
+	if(gI_Driver == Driver_mysql)
+	{
+		FormatEx(sQuery, 128, "ALTER TABLE `%susers` ADD COLUMN `firstlogin` INT NOT NULL DEFAULT -1, ADD INDEX `firstlogin` (`firstlogin`);", gS_SQLPrefix);
+	}
+	else
+	{
+		FormatEx(sQuery, 128, "ALTER TABLE `%susers` ADD COLUMN `firstlogin` INTEGER NOT NULL DEFAULT -1", gS_SQLPrefix);
+	}
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddUsersFirstlogin, DBPrio_High);
+}
 
 public void SQL_Migration_DeprecateExactTimeInt_Query(Database db, DBResultSet results, const char[] error, any data)
 {
