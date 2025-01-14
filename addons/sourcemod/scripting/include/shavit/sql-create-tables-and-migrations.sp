@@ -31,7 +31,7 @@ enum
 	Migration_ConvertSteamIDsPlayertimes,
 	Migration_ConvertSteamIDsChat,
 	Migration_PlayertimesDateToInt,
-	Migration_AddZonesFlagsAndDataAndSpeedLimit, // 10
+	Migration_AddZonesFlagsAndData, // 10
 	Migration_AddPlayertimesCompletions,
 	Migration_AddCustomChatAccess,
 	Migration_AddPlayertimesExactTimeInt,
@@ -218,14 +218,14 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 	if (driver == Driver_mysql)
 	{
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%splayertimes` (`id` INT NOT NULL AUTO_INCREMENT, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, PRIMARY KEY (`id`), INDEX `map` (`map`, `style`, `track`, `time`), INDEX `auth` (`auth`, `date`, `points`), INDEX `time` (`time`), INDEX `map2` (`map`), CONSTRAINT `%spt_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT) ENGINE=INNODB;",
+			"CREATE TABLE IF NOT EXISTS `%splayertimes` (`id` INT NOT NULL AUTO_INCREMENT, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, `startvel` FLOAT NOT NULL, `endvel` FLOAT NOT NULL, PRIMARY KEY (`id`), INDEX `map` (`map`, `style`, `track`, `time`), INDEX `auth` (`auth`, `date`, `points`), INDEX `time` (`time`), INDEX `map2` (`map`), CONSTRAINT `%spt_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT) ENGINE=INNODB;",
 			gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
 	}
 	else
 	{
 		// id  style  track  time  auth  map  points  exact_time_int
 		FormatEx(sQuery, sizeof(sQuery),
-			"CREATE TABLE IF NOT EXISTS `%splayertimes` (`id` INTEGER PRIMARY KEY, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, CONSTRAINT `%spt_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT);",
+			"CREATE TABLE IF NOT EXISTS `%splayertimes` (`id` INTEGER PRIMARY KEY, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, `startvel` FLOAT NOT NULL, `endvel` FLOAT NOT NULL, CONSTRAINT `%spt_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT);",
 			gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
 		strcopy(SQLitePTQuery, sizeof(SQLitePTQuery), sQuery);
 	}
@@ -238,14 +238,14 @@ public void SQL_CreateTables(Database hSQL, const char[] prefix, int driver)
 
 	if (driver == Driver_mysql)
 	{
-		FormatEx(sQuery, sizeof(sQuery),																														///////////////////////////////////////
-			"CREATE TABLE IF NOT EXISTS `%sstagetimes` (`id` INT NOT NULL AUTO_INCREMENT, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `stage` TINYINT NOT NULL, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, PRIMARY KEY (`id`), INDEX `map` (`map`, `style`, `track`, `stage`, `time`), INDEX `auth` (`auth`, `date`, `points`), INDEX `time` (`time`), INDEX `map2` (`map`), CONSTRAINT `%sst_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT) ENGINE=INNODB;",
+		FormatEx(sQuery, sizeof(sQuery),
+			"CREATE TABLE IF NOT EXISTS `%sstagetimes` (`id` INT NOT NULL AUTO_INCREMENT, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `stage` TINYINT NOT NULL, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, `startvel` FLOAT NOT NULL, `endvel` FLOAT NOT NULL, PRIMARY KEY (`id`), INDEX `map` (`map`, `style`, `track`, `stage`, `time`), INDEX `auth` (`auth`, `date`, `points`), INDEX `time` (`time`), INDEX `map2` (`map`), CONSTRAINT `%sst_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT) ENGINE=INNODB;",
 			gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
 	}
 	else
 	{
-		FormatEx(sQuery, sizeof(sQuery),																												 ////////////////////////////////////
-			"CREATE TABLE IF NOT EXISTS `%sstagetimes` (`id` INTEGER PRIMARY KEY, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `stage` TINYINT NOT NULL, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, CONSTRAINT `%sst_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT);",
+		FormatEx(sQuery, sizeof(sQuery),
+			"CREATE TABLE IF NOT EXISTS `%sstagetimes` (`id` INTEGER PRIMARY KEY, `style` TINYINT NOT NULL DEFAULT 0, `track` TINYINT NOT NULL DEFAULT 0, `stage` TINYINT NOT NULL, `time` FLOAT NOT NULL, `auth` INT NOT NULL, `map` VARCHAR(255) NOT NULL, `points` FLOAT NOT NULL DEFAULT 0, `jumps` INT, `date` INT, `strafes` INT, `sync` FLOAT, `perfs` FLOAT DEFAULT 0, `completions` SMALLINT DEFAULT 1, `startvel` FLOAT NOT NULL, `endvel` FLOAT NOT NULL, CONSTRAINT `%sst_auth` FOREIGN KEY (`auth`) REFERENCES `%susers` (`auth`) ON UPDATE RESTRICT ON DELETE RESTRICT);",
 			gS_SQLPrefix, gS_SQLPrefix, gS_SQLPrefix);
 		strcopy(SQLitePTQuery, sizeof(SQLitePTQuery), sQuery);
 	}
@@ -415,7 +415,7 @@ void ApplyMigration(int migration)
 		case Migration_ConvertSteamIDsUsers: ApplyMigration_ConvertSteamIDs();
 		case Migration_ConvertSteamIDsPlayertimes, Migration_ConvertSteamIDsChat: return; // this is confusing, but the above case handles all of them
 		case Migration_PlayertimesDateToInt: ApplyMigration_PlayertimesDateToInt();
-		case Migration_AddZonesFlagsAndDataAndSpeedLimit: ApplyMigration_AddZonesFlagsAndDataAndSpeedLimit();
+		case Migration_AddZonesFlagsAndData: ApplyMigration_AddZonesFlagsAndData();
 		case Migration_AddPlayertimesCompletions: ApplyMigration_AddPlayertimesCompletions();
 		case Migration_AddCustomChatAccess: ApplyMigration_AddCustomChatAccess();
 		case Migration_AddPlayertimesExactTimeInt: ApplyMigration_AddPlayertimesExactTimeInt();
@@ -472,11 +472,11 @@ void ApplyMigration_PlayertimesDateToInt()
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_PlayertimesDateToInt, DBPrio_High);
 }
 
-void ApplyMigration_AddZonesFlagsAndDataAndSpeedLimit()
+void ApplyMigration_AddZonesFlagsAndData()
 {
 	char sQuery[192];
-	FormatEx(sQuery, 192, "ALTER TABLE `%smapzones` ADD COLUMN `flags` INT NULL AFTER `track`, ADD COLUMN `data` INT NULL AFTER `flags`, ADD COLUMN `speedlimit` TINYINT NOT NULL DEFAULT 1 AFTER `data`;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddZonesFlagsAndDataAndSpeedLimit, DBPrio_High);
+	FormatEx(sQuery, 192, "ALTER TABLE `%smapzones` ADD COLUMN `flags` INT NULL AFTER `track`, ADD COLUMN `data` INT NULL AFTER `flags`;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddZonesFlagsAndData, DBPrio_High);
 }
 
 void ApplyMigration_AddPlayertimesCompletions()
@@ -610,49 +610,36 @@ void ApplyMigration_AddMapzonesSpeedlimit()
 
 void ApplyMigration_DeprecateExactTimeInt()
 {
-	char query[256];
-
-	FormatEx(query, sizeof(query), "SELECT id, time, exact_time_int FROM %splayertimes WHERE exact_time_int != 0;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_Migration_DeprecateExactTimeInt_Query, query);
+	char sQuery[256];
+	FormatEx(sQuery, sizeof(sQuery), "SELECT id, time, exact_time_int FROM %splayertimes WHERE exact_time_int != 0;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_Migration_DeprecateExactTimeInt_Query, sQuery, DBPrio_High);
 }
 
 void ApplyMigration_AddPlayertimesStartvelAndEndvel()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%splayertimes` ADD COLUMN `startvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddPlayertimesStartvelAndEndvel, DBPrio_High);
-	
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%splayertimes` ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%splayertimes` ADD COLUMN `startvel` FLOAT NOT NULL DEFAULT 0.0, ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddPlayertimesStartvelAndEndvel, DBPrio_High);
 }
 
 void ApplyMigration_AddStagetimesStartvelAndEndvel()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstagetimes` ADD COLUMN `startvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStagetimesStartvelAndEndvel, DBPrio_High);
-	
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstagetimes` ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%sstagetimes` ADD COLUMN `startvel` FLOAT NOT NULL DEFAULT 0.0, ADD COLUMN `endvel` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddStagetimesStartvelAndEndvel, DBPrio_High);
 }
 
 void ApplyMigration_AddCptimesStagetimeAndAttempts()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scptimes` ADD COLUMN `stage_time` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCptimesStagetimeAndAttempts, DBPrio_High);
-	
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scptimes` ADD COLUMN `attempts` SMALLINT NOT NULL DEFAULT 0;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scptimes` ADD COLUMN `stage_time` FLOAT NOT NULL DEFAULT 0.0, ADD COLUMN `attempts` SMALLINT NOT NULL DEFAULT 0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCptimesStagetimeAndAttempts, DBPrio_High);
 }
 
 void ApplyMigration_AddCpwrsStagetimeAndAttempts()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scpwrs` ADD COLUMN `stage_time` FLOAT NOT NULL DEFAULT 0.0;", gS_SQLPrefix);
-	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCpwrsStagetimeAndAttempts, DBPrio_High);
-	
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scpwrs` ADD COLUMN `attempts` SMALLINT NOT NULL DEFAULT 0;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%scpwrs` ADD COLUMN `stage_time` FLOAT NOT NULL DEFAULT 0.0, ADD COLUMN `attempts` SMALLINT NOT NULL DEFAULT 0;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddCpwrsStagetimeAndAttempts, DBPrio_High);
 }
 
