@@ -108,6 +108,7 @@ char gS_MigrationNames[][] = {
 	"AddStagetimesStartvelAndEndvel",	
 	"AddCptimesStagetimeAndAttempts",
 	"AddCpwrsStagetimeAndAttempts",	
+	"AddUsersFirstlogin",
 	// "AddCpwrsStartvelAndEndvel",
 	// "AddCptimesStartvelAndEndvel",
 };
@@ -443,6 +444,8 @@ void ApplyMigration(int migration)
 		case Migration_AddStagetimesStartvelAndEndvel: ApplyMigration_AddStagetimesStartvelAndEndvel();
 		case Migration_AddCptimesStagetimeAndAttempts: ApplyMigration_AddCptimesStagetimeAndAttempts();
 		case Migration_AddCpwrsStagetimeAndAttempts: ApplyMigration_AddCpwrsStagetimeAndAttempts();
+		case Migration_AddUsersFirstlogin: ApplyMigration_AddUsersFirstlogin()
+
 		// case Migration_AddCpwrsStartvelAndEndvel: ApplyMigration_AddCpwrsStartvelAndEndvel();
 		// case Migration_AddCptimesStartvelAndEndvel: ApplyMigration_AddCptimesStartvelAndEndvel();
 	}
