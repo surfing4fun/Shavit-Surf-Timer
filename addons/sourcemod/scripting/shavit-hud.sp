@@ -227,9 +227,11 @@ public void OnPluginStart()
 		..."HUD_TIMELEFT			256\n"
 		..."HUD_2DVEL				512\n"
 		..."HUD_NOSOUNDS			1024\n"
-		..."HUD_USP                 4096\n"
-		..."HUD_GLOCK               8192\n"
+		..."HUD_USP                 2048\n"
+		..."HUD_GLOCK               4096\n"
+		..."HUD_DEBUGTARGETNAME		8192\n"
 		..."HUD_SPECTATORSDEAD      16384\n"
+		..."HUD_MAPINFO				32768\n"
 	);
 
 	IntToString(HUD_DEFAULT2, defaultHUD, 8);
