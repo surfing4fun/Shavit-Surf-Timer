@@ -84,6 +84,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_shcpwr", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
 	RegConsoleCmd("sm_shwrcp", Command_SHStageTop, "Display top stage records of map in SurfHeaven");
 
+	RegAdminCmd("sm_useshtier", Command_UseSHTier, ADMFLAG_RCON, "Change the current map's tier to which Surf Heaven has assigned");
+
 	RegAdminCmd("sm_reloadshrecord", Command_ReloadSHRecord, ADMFLAG_RCON, "Reload SH record.")
 	RegAdminCmd("sm_stopfetchingrecord", Command_StopFetchingSHRecord, ADMFLAG_RCON, "Stop fetching records from surfheaven.")
 
@@ -276,6 +278,15 @@ public Action Command_SHStageRank(int client, int args)
 	{
 		Shavit_PrintToChat(client, "You have no records in Stage %d.", stage);
 	}
+
+	return Plugin_Handled;
+}
+
+public Action Command_UseSHTier(int client, int args)
+{
+	Shavit_PrintToChat(client, "Getting map tiers from Surf Heaven.");
+	GetMapInfoFromSurfHeaven(client, gS_Map);
+	Shavit_LogMessage("%L - set `%s` tier to surf heaven map tier", client, gS_Map);
 
 	return Plugin_Handled;
 }
@@ -564,6 +575,51 @@ public void CacheStageWorldRecord_Callback(HTTPResponse response, any data, cons
 	}
 
 	gB_Fetching = false;
+}
+
+stock void GetMapInfoFromSurfHeaven(int client, const char[] map)
+{
+	char sUrl[256];
+	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_MAPINFO_URL, map);
+	HTTPRequest request = new HTTPRequest(sUrl);
+	request.Timeout = 3600;
+	request.Get(GetMapInfoFromSurfHeaven_Callback, GetClientSerial(client));
+}
+
+public void GetMapInfoFromSurfHeaven_Callback(HTTPResponse response, int serial, const char[] error)
+{
+	if(response.Status != HTTPStatus_OK)
+	{
+		LogError("( WRSH GetMapInfo ) Fail to fetch map info from surf heaven. Reason: %s", error);
+		return;
+	}
+
+	int client = GetClientFromSerial(serial);
+
+	char sResult[1024];
+	response.Data.ToString(sResult, sizeof(sResult));
+
+	if(sResult[0] == '\0')
+	{
+		return;
+	}
+
+	JSONArray array = view_as<JSONArray>(response.Data);
+
+	if(array.Length < 1)
+	{
+		delete array;
+		return;
+	}
+
+	JSONObject info = view_as<JSONObject>(array.Get(0));
+
+	int tier = info.GetInt("tier");
+
+	delete info;
+	delete array;
+
+	FakeClientCommand(client, "sm_settier %d", tier);
 }
 ////////////////////////////
 

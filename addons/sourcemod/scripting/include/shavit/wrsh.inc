@@ -5,6 +5,7 @@
 
 #define SH_MAPRECORD_URL "https://surfheaven.eu/api/records/"
 #define SH_STAGERECORD_URL "https://surfheaven.eu/api/stages/"
+#define SH_MAPINFO_URL "https://surfheaven.eu/api/mapinfo/"
 
 enum struct wrinfo_t
 {

@@ -50,11 +50,6 @@
 #undef REQUIRE_PLUGIN
 
 #undef REQUIRE_EXTENSIONS
-#define USE_SHMAPTIERS 1
-#if USE_SHMAPTIERS
-#include <ripext>
-#define SH_MAPINFO_URL "https://surfheaven.eu/api/mapinfo/"
-#endif
 #include <cstrike>
 
 #pragma newdecls required
@@ -181,10 +176,6 @@ public void OnPluginStart()
 
 	RegAdminCmd("sm_settier", Command_SetTier, ADMFLAG_RCON, "Change the map's tier. Usage: sm_settier <tier> [map]");
 	RegAdminCmd("sm_setmaptier", Command_SetTier, ADMFLAG_RCON, "Change the map's tier. Usage: sm_setmaptier <tier> [map] (sm_settier alias)");
-
-#if USE_SHMAPTIERS	
-	RegAdminCmd("sm_useshtier", Command_UseSHTier, ADMFLAG_RCON, "Change the current map's tier to which Surf Heaven has assigned");
-#endif
 
 	RegAdminCmd("sm_setmaxvelocity", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvelocity <value> [map]");
 	RegAdminCmd("sm_setmaxvel", Command_SetMaxVelocity, ADMFLAG_RCON, "Change the map's sv_maxvelocity. Usage: sm_setmaxvel <value> [map] (sm_setmaxvelocity alias)");
@@ -408,10 +399,6 @@ public void SQL_FillMapSettingCache_Callback(Database db, DBResultSet results, c
 
 	if (!gA_MapTiers.GetValue(gS_Map, gI_Tier))
 	{
-#if USE_SHMAPTIERS
-		GetMapInfoFromSurfHeaven(gS_Map);
-#endif
-
 		Call_StartForward(gH_Forwards_OnTierAssigned);
 		Call_PushString(gS_Map);
 		Call_PushCell(gI_Tier);
@@ -431,16 +418,6 @@ public void OnMapEnd()
 	gB_WorldRecordsCached = false;
 }
 
-#if USE_SHMAPTIERS	
-public Action Command_UseSHTier(int client, int args)
-{
-	Shavit_PrintToChat(client, "Getting map tiers from Surf Heaven.");
-	GetMapInfoFromSurfHeaven(gS_Map);
-	Shavit_LogMessage("%L - set `%s` tier to surf heaven map tier", client, gS_Map);
-
-	return Plugin_Handled;
-}
-#endif
 
 public void Shavit_OnWRDeleted(int style, int id, int track, int stage, int accountid, const char[] mapname)
 {
@@ -2187,61 +2164,3 @@ stock float min(float a, float b)
 {
 	return a < b ? a:b;
 }
-
-#if USE_SHMAPTIERS
-stock void GetMapInfoFromSurfHeaven(const char[] map)
-{
-	char sUrl[256];
-	FormatEx(sUrl, sizeof(sUrl), "%s%s", SH_MAPINFO_URL, map);
-	HTTPRequest request = new HTTPRequest(sUrl);
-	request.Timeout = 3600;
-	request.Get(GetMapInfoFromSurfHeaven_Callback);
-}
-
-public void GetMapInfoFromSurfHeaven_Callback(HTTPResponse response, any data, const char[] error)
-{
-	if(response.Status != HTTPStatus_OK)
-	{
-		LogError("( Rankings GetMapInfo ) Fail to fetch map info from surf heaven. Reason: %s", error);
-		return;
-	}
-
-	char sResult[1024];
-	response.Data.ToString(sResult, sizeof(sResult));
-
-	if(sResult[0] == '\0')
-	{
-		return;
-	}
-
-	JSONArray array = view_as<JSONArray>(response.Data);
-
-	if(array.Length < 1)
-	{
-		delete array;
-		return;
-	}
-
-	JSONObject info = view_as<JSONObject>(array.Get(0));
-
-	gI_Tier = info.GetInt("tier");
-
-	delete info;
-	delete array;
-
-	gA_MapTiers.SetValue(gS_Map, gI_Tier);
-
-	Call_StartForward(gH_Forwards_OnTierAssigned);
-	Call_PushString(gS_Map);
-	Call_PushCell(gI_Tier);
-	Call_Finish();
-
-	Shavit_PrintToChatAll("%T", "SetTier", LANG_SERVER, gS_ChatStrings.sVariable2, gI_Tier, gS_ChatStrings.sText);
-
-	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, tier, maxvelocity) VALUES ('%s', %d, %f);", gS_MySQLPrefix, gS_Map, gI_Tier, gCV_DefaultMaxVelocity.FloatValue);
-	QueryLog(gH_SQL, SQL_SetMapTier_Callback, sQuery, 0, DBPrio_High);
-
-	Shavit_LogMessage("[Server] - set tier of `%s` to %d", gS_Map, gI_Tier);
-}
-#endif
