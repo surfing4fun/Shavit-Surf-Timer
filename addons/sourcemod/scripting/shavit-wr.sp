@@ -132,9 +132,10 @@ chatstrings_t gS_ChatStrings;
 float gA_StageCP_WR[STYLE_LIMIT][TRACKS_SIZE][MAX_STAGES]; // WR run's stage times
 ArrayList gA_StageCP_PB[MAXPLAYERS+1][STYLE_LIMIT][TRACKS_SIZE]; // player's best WRCP times or something
 
-
 Menu gH_PBMenu[MAXPLAYERS+1];
 int gI_PBMenuPos[MAXPLAYERS+1];
+
+int gI_RRMenuPos[MAXPLAYERS+1];
 bool gB_RRSelectMain[MAXPLAYERS+1];
 bool gB_RRSelectBonus[MAXPLAYERS+1];
 bool gB_RRSelectStage[MAXPLAYERS+1];
@@ -3433,6 +3434,7 @@ public int WRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 
 		if(id != -1)
 		{
+			gI_RRMenuPos[param1] = -1;
 			OpenSubMenu(param1, id, gA_WRCache[param1].iLastStage);
 		}
 		else
@@ -3490,6 +3492,8 @@ int RRFirstMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 
 		if (StrEqual(info, "all"))
 		{
+			gI_RRMenuPos[param1] = 0;
+			gA_WRCache[client].iLastStyle = -1;
 			RecentRecords_DoQuery(client, "");
 		}
 		else if (StrEqual(info, "style"))
@@ -3553,6 +3557,8 @@ int RRStyleSelectionMenu_Handler(Menu menu, MenuAction action, int param1, int p
 	{
 		char info[16];
 		menu.GetItem(param2, info, sizeof(info));
+		gI_RRMenuPos[param1] = 0;
+		gA_WRCache[param1].iLastStyle = StringToInt(info);
 		RecentRecords_DoQuery(param1, info);
 	}
 	else if (action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
@@ -3653,8 +3659,8 @@ public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error
 		char sDisplay[192];
 		FormatEx(sDisplay, 192, "[%s/%s] %s - %s @ %s", gS_StyleStrings[iStyle].sShortName, sTrack, sMap, sName, sTime);
 
-		char sInfo[192];
-		FormatEx(sInfo, 192, "%d;%d;%s", stage, results.FetchInt(0), sMap);
+		char sInfo[64];
+		FormatEx(sInfo, 192, "%d;%d", stage, results.FetchInt(0));
 
 		menu.AddItem(sInfo, sDisplay);
 	}
@@ -3663,32 +3669,26 @@ public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error
 	{
 		char sMenuItem[64];
 		FormatEx(sMenuItem, 64, "%T", "WRMapNoRecords", client);
-		menu.AddItem("-1", sMenuItem);
+		menu.AddItem("-1", sMenuItem, ITEMDRAW_DISABLED);
 	}
 
 	menu.ExitBackButton = true;
-	menu.Display(client, MENU_TIME_FOREVER);
+	menu.DisplayAt(client, gI_RRMenuPos[client], MENU_TIME_FOREVER);
 }
 
 public int RRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 {
 	if(action == MenuAction_Select)
 	{
-		char sInfo[128];
-		menu.GetItem(param2, sInfo, 128);
+		char sInfo[64];
+		menu.GetItem(param2, sInfo, 64);
 
 		if(StringToInt(sInfo) != -1)
 		{
-			char sExploded[3][128];
-			ExplodeString(sInfo, ";", sExploded, 3, 128, true);
-
-			strcopy(gA_WRCache[param1].sClientMap, 128, sExploded[1]);
-
+			char sExploded[2][32];
+			ExplodeString(sInfo, ";", sExploded, 3, 256, true);
+			gI_RRMenuPos[param1] = GetMenuSelectionPosition();
 			OpenSubMenu(param1, StringToInt(sExploded[1]), StringToInt(sExploded[0]));
-		}
-		else
-		{
-			RetrieveWRMenu(param1, gA_WRCache[param1].iLastTrack);
 		}
 	}
 	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
@@ -3916,6 +3916,7 @@ public int PersonalBestMenu_Handler(Menu menu, MenuAction action, int param1, in
 		}
 
 		gI_PBMenuPos[param1] = GetMenuSelectionPosition();
+		gI_RRMenuPos[param1] = -1;
 		int record_id = StringToInt(info);
 		OpenSubMenu(param1, record_id, stage);
 	}
@@ -4155,6 +4156,16 @@ public int SubMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 			if (gH_PBMenu[param1])
 			{
 				gH_PBMenu[param1].DisplayAt(param1, gI_PBMenuPos[param1], MENU_TIME_FOREVER);
+			}
+			else if(gI_RRMenuPos[param1] > -1)
+			{
+				char sStyle[16];
+				if(gA_WRCache[param1].iLastStyle != -1)
+				{
+					IntToString(gA_WRCache[param1].iLastStyle, sStyle, sizeof(sStyle));		
+				}
+
+				RecentRecords_DoQuery(param1, sStyle);
 			}
 			else
 			{
