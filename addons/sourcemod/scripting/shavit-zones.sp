@@ -327,7 +327,7 @@ public void OnPluginStart()
 
 	gH_CustomZoneCookie = new Cookie("shavit_customzones", "Cookie for storing custom zone stuff", CookieAccess_Private);
 
-	for (int i = 0; i <= 9; i++)
+	for (int i = 1; i <= 9; i++)
 	{
 		char cmd[30];
 		FormatEx(cmd, sizeof(cmd), "sm_s%d%cGo to stage %d", i, 0, i); // 😈
