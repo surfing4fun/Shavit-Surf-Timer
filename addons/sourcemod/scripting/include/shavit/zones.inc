@@ -167,10 +167,10 @@ stock void GetZoneName(int client, int zoneType, char[] output, int size)
 // Please follow something like this:
 //   mod_zone_start
 //   mod_zone_end
+//   mod_zone_stage_X
 //   mod_zone_checkpoint_X
 //   mod_zone_bonus_X_start
 //   mod_zone_bonus_X_end
-//   mod_zone_bonus_X_checkpoint_X
 //
 //   climb_startbutton
 //   climb_endbutton
@@ -181,11 +181,13 @@ stock void GetZoneName(int client, int zoneType, char[] output, int size)
 //   climb_endzone
 //   climb_bonusX_startzone
 //   climb_bonusX_endzone
-stock bool Shavit_ParseZoneTargetname(const char[] targetname, bool button, int& type, int& track, int& stage, const char[] mapname_for_log="")
+stock bool Shavit_ParseZoneTargetname(const char[] targetname, bool button, int& type, int& track, int& data, const char[] mapname_for_log="")
 {
 	track = Track_Main;
 	type = -1;
-	stage = 0;
+	data = 0;
+
+	int index = -1;
 
 	if (strncmp(targetname, "climb_", 6) != 0
 	&&  (button || strncmp(targetname, "mod_zone_", 9) != 0))
@@ -201,63 +203,83 @@ stock bool Shavit_ParseZoneTargetname(const char[] targetname, bool button, int&
 	{
 		type = Zone_End;
 	}
-
-	int bonus = StrContains(targetname, "bonus");
-
-	if (bonus != -1)
+	else if(StrContains(targetname, "stage") != -1)
 	{
-		track = Track_Bonus;
-		bonus += 5; // skip past "bonus"
-		if (targetname[bonus] == '_') bonus += 1;
+		type = Zone_Stage;
+	}
+	else if(StrContains(targetname, "checkpoint") != -1)
+	{
+		type = Zone_Checkpoint;
+	}
+	
+	if (type == -1)
+	{
+		if (mapname_for_log[0]) 
+			LogError("invalid zone type in prebuilt map zone (%s) on %s", targetname, mapname_for_log);
+		return false;
+	}
 
-		if ('1' <= targetname[bonus] <= '9')
+	if(type == Zone_Start || type == Zone_End)
+	{
+		index = StrContains(targetname, "bonus");
+		if(index != -1)
 		{
-			track = StringToInt(targetname[bonus]);
+			index += 5;
+			if (targetname[index] == '_') 
+				index += 1;
+
+			if ('1' <= targetname[index] <= '9')
+				track = StringToInt(targetname[index]);
 
 			if (track < Track_Bonus || track > Track_Bonus_Last)
 			{
-				if (mapname_for_log[0]) LogError("invalid track in prebuilt map zone (%s) on %s", targetname, mapname_for_log);
+				if (mapname_for_log[0]) 
+					LogError("invalid track in prebuilt map zone (%s) on %s", targetname, mapname_for_log);
 				return false;
 			}
 		}
+		else
+		{
+			track = Track_Main;
+		}
 	}
-
-	int checkpoint = StrContains(targetname, "checkpoint");
-
-	if (checkpoint != -1)
+	else if(type == Zone_Stage || type == Zone_Checkpoint)
 	{
 		if (button)
 		{
-			if (mapname_for_log[0]) LogError("invalid button (%s) (has checkpoint) on %s", targetname, mapname_for_log);
+			if (mapname_for_log[0]) 
+				LogError("invalid button (%s) (has checkpoint) on %s", targetname, mapname_for_log);
+
 			return false;
 		}
 
-		if (type != -1)
+		track = Track_Main;
+
+		if(type == Zone_Stage)
 		{
-			if (mapname_for_log[0]) LogError("invalid type (start/end + checkpoint) in prebuilt map zone (%s) on %s", targetname, mapname_for_log);
-			return false; // end/start & checkpoint...
+			index = StrContains(targetname, "stage");
+			index += 5;
+		}
+		else
+		{
+			index = StrContains(targetname, "checkpoint");
+			index += 10;
 		}
 
-		type = Zone_Stage;
-		checkpoint += 10; // skip past "checkpoint"
-		if (targetname[checkpoint] == '_') checkpoint += 1;
+		if(targetname[index] == '_')
+			index += 1;
 
-		if ('1' <= targetname[checkpoint] <= '9')
+		if ('1' <= targetname[index] <= '9')
 		{
-			stage = StringToInt(targetname[checkpoint]);
-
-			if (stage <= 0 || stage > MAX_STAGES)
-			{
-				if (mapname_for_log[0]) LogError("invalid stage number in prebuilt map zone (%s) on %s", targetname, mapname_for_log);
-				return false;
-			}
+			data = StringToInt(targetname[index]);
 		}
-	}
 
-	if (type == -1)
-	{
-		if (mapname_for_log[0]) LogError("invalid zone type in prebuilt map zone (%s) on %s", targetname, mapname_for_log);
-		return false;
+		if ((type == Zone_Stage && data < 2) || (type == Zone_Checkpoint && data < 1) || data > MAX_STAGES)
+		{
+			if (mapname_for_log[0]) 
+				LogError("invalid %s number in prebuilt map zone (%s) on %s", type == Zone_Stage ? "stage":"checkpoint", targetname, mapname_for_log);
+			return false;
+		}
 	}
 
 	return true;
