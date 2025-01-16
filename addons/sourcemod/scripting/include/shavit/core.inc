@@ -136,6 +136,9 @@ enum struct stagestart_info_t
 	int iTotalMeasures;
 	int iGoodGains;
 
+	float fZoneOffset[2];
+	float fDistanceOffset[2];
+
 	float fStartVelocity;
 	float fAvgVelocity;
 	float fMaxVelocity;

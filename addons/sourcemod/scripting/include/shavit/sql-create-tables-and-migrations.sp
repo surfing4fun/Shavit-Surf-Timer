@@ -604,7 +604,7 @@ void ApplyMigration_AddMapzonesTarget()
 void ApplyMigration_AddMapzonesSpeedlimit()
 {
 	char sQuery[192];
-	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smapzones` ADD COLUMN `speedlimit` TINYINT NOT NULL DEFAULT 1;", gS_SQLPrefix);
+	FormatEx(sQuery, sizeof(sQuery), "ALTER TABLE `%smapzones` ADD COLUMN `speedlimit` TINYINT NOT NULL DEFAULT 3;", gS_SQLPrefix);
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddMapZonesSpeelimit, DBPrio_High);
 }
 

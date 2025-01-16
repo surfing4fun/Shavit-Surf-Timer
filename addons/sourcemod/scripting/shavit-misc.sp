@@ -63,7 +63,6 @@ char gS_RadioCommands[][] = { "coverme", "takepoint", "holdpos", "regroup", "fol
 bool gB_Hide[MAXPLAYERS+1];
 bool gB_AutoRestart[MAXPLAYERS+1];
 bool gB_Late = false;
-int gI_GroundEntity[MAXPLAYERS+1];
 int gI_LastShot[MAXPLAYERS+1];
 ArrayList gA_Advertisements = null;
 int gI_AdvertisementsCycle = 0;
@@ -85,12 +84,10 @@ float gF_PauseVelocity[MAXPLAYERS+1][3];
 
 // cvars
 Convar gCV_GodMode = null;
-Convar gCV_PreSpeed = null;
 Convar gCV_HideTeamChanges = null;
 Convar gCV_RespawnOnTeam = null;
 Convar gCV_RespawnOnRestart = null;
 Convar gCV_StartOnSpawn = null;
-Convar gCV_PrestrafeLimit = null;
 Convar gCV_HideRadar = null;
 Convar gCV_TeleportCommands = null;
 Convar gCV_NoWeaponDrops = null;
@@ -117,7 +114,6 @@ Convar gCV_BhopSounds = null;
 Convar gCV_RestrictNoclip = null;
 Convar gCV_SpecScoreboardOrder = null;
 Convar gCV_BadSetLocalAnglesFix = null;
-Convar gCV_PrestrafeZone = null;
 
 // external cvars
 ConVar sv_cheats = null;
@@ -267,13 +263,10 @@ public void OnPluginStart()
 
 	// cvars and stuff
 	gCV_GodMode = new Convar("shavit_misc_godmode", "3", "Enable godmode for players?\n0 - Disabled\n1 - Only prevent fall/world damage.\n2 - Only prevent damage from other players.\n3 - Full godmode.", 0, true, 0.0, true, 3.0);
-	gCV_PreSpeed = new Convar("shavit_misc_prespeed", "4", "Stop prespeeding in the start zone?\n0 - Disabled, fully allow prespeeding.\n1 - Limit relatively to prestrafelimit.\n2 - Block bunnyhopping in startzone.\n3 - Limit to prestrafelimit and block bunnyhopping.\n4 - Limit to prestrafelimit but allow prespeeding. Combine with shavit_core_nozaxisspeed 1 for SourceCode timer's behavior.\n5 - Limit horizontal speed to prestrafe but allow prespeeding.", 0, true, 0.0, true, 5.0);
-	gCV_PrestrafeZone = new Convar("shavit_misc_prestrafezones", "2", "What situation should prestrafe limit excute when player inside a start zone?\n0 - Disabled, no prestrafe limit in any start zone.\n1 - Only excute prestrafe limit in start zone.\n2 - Excute prestrafe limit in both start zone and stage start zone, but prestrafe limit would not excute in stage start zone when player's main timer is running.\n3 - Excute prestrafe limit in both start zone and stage start zone.", 0, true, 0.0, true, 3.0);
 	gCV_HideTeamChanges = new Convar("shavit_misc_hideteamchanges", "1", "Hide team changes in chat?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_RespawnOnTeam = new Convar("shavit_misc_respawnonteam", "1", "Respawn whenever a player joins a team?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_RespawnOnRestart = new Convar("shavit_misc_respawnonrestart", "1", "Respawn a dead player if they use the timer restart command?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_StartOnSpawn = new Convar("shavit_misc_startonspawn", "1", "Restart the timer for a player after they spawn?\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
-	gCV_PrestrafeLimit = new Convar("shavit_misc_prestrafelimit", "100", "Prestrafe limitation in startzone.\nThe value used internally is style run speed + this.\ni.e. run speed of 250 can prestrafe up to 278 (+28) with regular settings.", 0, true, 0.0, false);
 	gCV_HideRadar = new Convar("shavit_misc_hideradar", "1", "Should the plugin hide the in-game radar?", 0, true, 0.0, true, 1.0);
 	gCV_TeleportCommands = new Convar("shavit_misc_tpcmds", "1", "Enable teleport-related commands? (sm_goto/sm_tpto)\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
 	gCV_NoWeaponDrops = new Convar("shavit_misc_noweapondrops", "1", "Remove every dropped weapon.\n0 - Disabled\n1 - Enabled", 0, true, 0.0, true, 1.0);
@@ -334,7 +327,7 @@ public void OnPluginStart()
 
 public void OnAllPluginsLoaded()
 {
-	
+
 }
 
 void LoadDHooks()
@@ -1315,36 +1308,9 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 	}
 
 	int iZoneStage;
-	bool bIsStageLimitPrespeed;
-	bool bInsideStageZone = track == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage, bIsStageLimitPrespeed):false;
-	
-	if(!bIsStageLimitPrespeed)
-	{
-		bInsideStageZone = false;
-	}
-
-	bool bInStart = false;
-
-	if (gCV_PrestrafeZone.IntValue > 0)
-	{
-		if (gCV_PrestrafeZone.IntValue > 1)
-		{
-			if (gCV_PrestrafeZone.IntValue == 2)
-			{
-				bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track) ||
-				(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
-			}
-			else if (gCV_PrestrafeZone.IntValue == 3)
-			{
-				bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track) ||
-				(Shavit_GetTimerStatus(client) == Timer_Running && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
-			}
-		}
-		else
-		{
-			bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, track);
-		}
-	}
+	bool bInsideStageZone = track == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
+	bool bInStart = Shavit_InsideZone(client, Zone_Start, track) || 
+					(bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
 	
 	// i will not be adding a setting to toggle this off
 	if(bNoclip)
@@ -1378,63 +1344,6 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 	}
 
 	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	if(GetEntityFlags(client) & FL_BASEVELOCITY) // they are on booster, dont limit them
-	{
-		bInStart = false;
-		Shavit_SetStageTimeValid(client, true);
-	}
-
-	// prespeed
-	if(!bNoclip && Shavit_GetStyleSettingInt(gI_Style[client], "prespeed") == 0 && bInStart)
-	{
-		int prespeed_type = Shavit_GetStyleSettingInt(gI_Style[client], "prespeed_type");
-
-		if (prespeed_type == -1)
-		{
-			prespeed_type = gCV_PreSpeed.IntValue;
-		}
-
-		int iPrevGroundEntity = (gI_GroundEntity[client] != -1) ? EntRefToEntIndex(gI_GroundEntity[client]) : -1;
-		if ((prespeed_type == 2 || prespeed_type == 4) && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0)
-		{
-			DumbSetVelocity(client, view_as<float>({0.0, 0.0, 0.0}));
-		}
-		else if (prespeed_type == 1 || prespeed_type >= 3)
-		{
-			float fSpeed[3];
-			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
-
-			float fLimit = (Shavit_GetStyleSettingFloat(gI_Style[client], "runspeed") + gCV_PrestrafeLimit.FloatValue);
-
-			// if trying to jump, add a very low limit to stop prespeeding in an elegant way
-			// otherwise, make sure nothing weird is happening (such as sliding at ridiculous speeds, at zone enter)
-			if (prespeed_type < 4 && fSpeed[2] > 0.0)
-			{
-				fLimit /= 3.0;
-			}
-
-			float fSpeedXY = (SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0)));
-			float fScale = (fLimit / fSpeedXY);
-
-			if(fScale < 1.0)
-			{
-				if (prespeed_type == 5)
-				{
-					float zSpeed = fSpeed[2];
-					fSpeed[2] = 0.0;
-
-					ScaleVector(fSpeed, fScale);
-					fSpeed[2] = zSpeed;
-				}
-				else
-				{
-					ScaleVector(fSpeed, fScale);
-				}
-
-				DumbSetVelocity(client, fSpeed);
-			}
-		}
-	}
 
 	if (!bNoclip && Shavit_GetStyleSettingBool(gI_Style[client], "prespeed") && bInStart)
 	{
@@ -1467,8 +1376,6 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 			}
 		}
 	}
-
-	gI_GroundEntity[client] = (iGroundEntity != -1) ? EntIndexToEntRef(iGroundEntity) : -1;
 
 	return Plugin_Continue;
 }

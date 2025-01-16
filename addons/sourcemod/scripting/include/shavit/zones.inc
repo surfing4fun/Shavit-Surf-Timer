@@ -60,6 +60,18 @@ enum
 	ZF_Origin      = (1 << 4), // sTarget is the entity's origin formatted as "%X %X %X"
 };
 
+enum // Zone speed limit flag. Used by specify prestrafe limit to each stage zone. 
+{
+	ZSLF_LimitSpeed   = (1 << 0), // limit horizontal velocity
+	ZSLF_BlockBhop    = (1 << 1), // stop players when they try to bhop  
+	ZSLF_BlockJump    = (1 << 2), // block jump
+	ZSLF_ReduceSpeed  = (1 << 3), // reduce speed when exceeding speed limit
+	ZSLF_NoVerticalSpeed = (1 << 4), // work as the same behaviour of convar "shavit_core_nozaxisspeed": dont start timer if vertical speed exists
+	ZSLF_ResetSpeedAfterTeleported = (1 << 5), // reset speed after teleported by a teleport zone
+};
+
+#define DEFAULT_SPEEDLIMITFLAG (ZSLF_LimitSpeed|ZSLF_BlockBhop)
+
 // Zone Display type
 enum
 {
@@ -113,7 +125,7 @@ enum struct zone_cache_t
 	int iDatabaseID; // Can be the database ID (> 0) for "sql" sources. Non-sql sources can fill this with whatever.
 	int iFlags; // The ZF_* flags.
 	int iData; // Depends on the zone. Zone_Stage stores the stage number in this for example.
-	bool bUseSpeedLimit; // Stage zone speed limit for surf maps. there are constant staged surf map exist like surf_ace.
+	int iSpeedLimitFlags; // A bitfalg for each start zone. track start zone speed limit will be overridden by higher level speed limit if there are two start zone in same track.
 	float fCorner1[3]; // the hull mins. (or unused if ZoneForm_AreasAndClusters) // TODO, maybe reuse for cluster & areas?
 	float fCorner2[3]; // the hull maxs. (or unused if ZoneForm_AreasAndClusters)
 	float fDestination[3]; // Used by Zone_CustomSpawn, Zone_Teleport, and Zone_Stage.
@@ -360,7 +372,7 @@ native void Shavit_Zones_DeleteMap(const char[] map);
  * @param limitspeed				Reference to variable that will hold whether the stage zone liimit prespeed.
  * @return                          Boolean value.
  */
-native bool Shavit_InsideZoneStage(int client, int &stage, bool &limitspeed = true);
+native bool Shavit_InsideZoneStage(int client, int &stage, int &limitspeed = true);
 
 /**
  * Checks if a player is inside a mapzone.
@@ -441,12 +453,20 @@ native int Shavit_GetMapTracks(bool bonus, bool mask);
 native int Shavit_GetZoneType(int zoneid);
 
 /**
- * Returns the if the zone limit prespeed.
+ * Returns the prespeed limit bitflag of a zone.
  *
  * @param zoneid                    Zone index.
- * @return                          Bool value, true if the zone limit prespeed.
+ * @return                          Int value, bit flag of zone speed limit.
  */
-native bool Shavit_GetZoneUseSpeedLimit(int zoneid);
+native int Shavit_GetZoneSpeedLimitFlags(int zoneid);
+
+/**
+ * Returns the prespeed limit bitflag of a track.
+ *
+ * @param track                    	Timer track.
+ * @return                          Int value, bit flag of zone speed limit.
+ */
+native int Shavit_GetTrackSpeedLimitFlags(int zoneid);
 
 /**
  * Sets the player's current location as their spawn location for the specified track.
@@ -558,6 +578,7 @@ public void __pl_shavit_zones_SetNTVOptional()
 	MarkNativeAsOptional("Shavit_RemoveZone");
 	MarkNativeAsOptional("Shavit_InsideZoneStage");
 	MarkNativeAsOptional("Shavit_TeleportToStartZone");
-	MarkNativeAsOptional("Shavit_GetZoneUseSpeedLimit");
+	MarkNativeAsOptional("Shavit_GetZoneSpeedLimitFlags");
+	MarkNativeAsOptional("Shavit_GetTrackSpeedLimitFlags");
 }
 #endif

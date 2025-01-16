@@ -149,8 +149,6 @@ TopMenuObject gH_TimerCommands = INVALID_TOPMENUOBJECT;
 // cvars
 Convar gCV_Restart = null;
 Convar gCV_Pause = null;
-Convar gCV_BlockPreJump = null;
-Convar gCV_NoZAxisSpeed = null;
 Convar gCV_DisablePracticeModeOnStart = null;
 Convar gCV_VelocityTeleport = null;
 Convar gCV_DefaultStyle = null;
@@ -161,6 +159,9 @@ Convar gCV_TimeInMessages;
 Convar gCV_DebugOffsets = null;
 Convar gCV_SaveIps = null;
 Convar gCV_HijackTeleportAngles = null;
+Convar gCV_PrestrafeZone = null;
+Convar gCV_PrestrafeLimit = null;
+
 // cached cvars
 int gI_DefaultStyle = 0;
 bool gB_StyleCookies = true;
@@ -191,6 +192,7 @@ bool gB_CookiesRetrieved[MAXPLAYERS+1];
 float gF_ZoneAiraccelerate[MAXPLAYERS+1];
 float gF_ZoneSpeedLimit[MAXPLAYERS+1];
 int gI_LastPrintedSteamID[MAXPLAYERS+1];
+int gI_GroundEntity[MAXPLAYERS+1];
 
 // kz support
 bool gB_KZMap[TRACKS_SIZE];
@@ -448,8 +450,6 @@ public void OnPluginStart()
 
 	gCV_Restart = new Convar("shavit_core_restart", "1", "Allow commands that restart the timer?", 0, true, 0.0, true, 1.0);
 	gCV_Pause = new Convar("shavit_core_pause", "1", "Allow pausing?", 0, true, 0.0, true, 1.0);
-	gCV_BlockPreJump = new Convar("shavit_core_blockprejump", "0", "Prevents jumping in the start zone.", 0, true, 0.0, true, 1.0);
-	gCV_NoZAxisSpeed = new Convar("shavit_core_nozaxisspeed", "0", "Don't start timer if vertical speed exists (btimes style).", 0, true, 0.0, true, 1.0);
 	gCV_DisablePracticeModeOnStart = new Convar("shavit_core_disable_practicemode_onstart", "0", "Disable practice mode when client enter start zone?", 0, true, 0.0, true, 1.0);
 	gCV_VelocityTeleport = new Convar("shavit_core_velocityteleport", "0", "Teleport the client when changing its velocity? (for special styles)", 0, true, 0.0, true, 1.0);
 	gCV_DefaultStyle = new Convar("shavit_core_defaultstyle", "0", "Default style ID.\nAdd the '!' prefix to disable style cookies - i.e. \"!3\" to *force* scroll to be the default style.", 0, true, 0.0);
@@ -460,6 +460,8 @@ public void OnPluginStart()
 	gCV_DebugOffsets = new Convar("shavit_core_debugoffsets", "0", "Print offset upon leaving or entering a zone?", 0, true, 0.0, true, 1.0);
 	gCV_SaveIps = new Convar("shavit_core_save_ips", "1", "Whether to save player IPs in the 'users' database table. IPs are used to show player location on the !profile menu.\nTurning this on will not wipe existing IPs from the 'users' table.", 0, true, 0.0, true, 1.0);
 	gCV_HijackTeleportAngles = new Convar("shavit_core_hijack_teleport_angles", "0", "Whether to hijack player angles on teleport so their latency doesn't fuck up their shit.", 0, true, 0.0, true, 1.0);
+	gCV_PrestrafeZone = new Convar("shavit_core_prestrafezones", "3", "What situation should prestrafe limit excute when player inside a start zone?\n0 - Disabled, no prestrafe limit in any start zone.\n1 - Only excute prestrafe limit in track start zone.\n2 - Excute prestrafe limit in both track start zone and stage start zone, but prestrafe limit would not excute in stage start zone when player's main timer is running.\n3 - Excute prestrafe limit in both track start zone and stage start zone.", 0, true, 0.0, true, 3.0);
+	gCV_PrestrafeLimit = new Convar("shavit_core_prestrafelimit", "100", "Prestrafe limitation in startzone.\nThe value used internally is style run speed + this.\ni.e. run speed of 250 can prestrafe up to 278 (+28) with regular settings.", 0, true, 0.0, false);
 	gCV_DefaultStyle.AddChangeHook(OnConVarChanged);
 
 	Anti_sv_cheats_cvars();
@@ -2182,19 +2184,15 @@ public int Native_StartStageTimer(Handle handler, int numParams)
 			float fSpeed[3];
 			GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
 			float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+			float fLimit = (Shavit_GetStyleSettingFloat(gA_Timers[client].bsStyle, "runspeed") + gCV_PrestrafeLimit.FloatValue);
 
-			int nozaxisspeed = GetStyleSettingInt(gA_Timers[client].bsStyle, "nozaxisspeed");
+			int iSpeedLimitFlags;
+			int iZoneStage;
+			Shavit_InsideZoneStage(client, iZoneStage, iSpeedLimitFlags);
+			bool bNoVerticalSpeed = (iSpeedLimitFlags & ZSLF_NoVerticalSpeed) > 0;
 
-			if (nozaxisspeed < 0)
-			{
-				nozaxisspeed = gCV_NoZAxisSpeed.BoolValue;
-			}
-
-			if (!nozaxisspeed ||
-				GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 1 ||
-				(fSpeed[2] == 0.0 && (GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 2 || curVel <= 50.0 ||
-					((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
-					(gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))))) // beautiful
+			if (!bNoVerticalSpeed || (fSpeed[2] == 0.0 && curVel <= fLimit) || ((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
+			  	(gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))) // beautiful
 			{
 				Call_StartForward(gH_Forwards_StageStart);
 				Call_PushCell(client);
@@ -2348,17 +2346,24 @@ public Action Shavit_OnFinishPre(int client, timer_snapshot_t snapshot)
 	return Plugin_Continue;
 }
 
-void CalculateRunTime(timer_snapshot_t s, bool include_end_offset)
+void CalculateRunTime(timer_snapshot_t s, bool stage, bool include_end_offset)
 {
 	float ticks = float(s.iFullTicks) + (s.iFractionalTicks / 10000.0);
 
 	if (gCV_UseOffsets.BoolValue)
 	{
-		ticks += s.fZoneOffset[Zone_Start];
+		ticks += stage ? s.aStageStartInfo.fZoneOffset[Zone_Start]:s.fZoneOffset[Zone_Start];
 
 		if (include_end_offset)
 		{
-			ticks -= (1.0 - s.fZoneOffset[Zone_End]);
+			if(stage)
+			{
+				ticks -= (1.0 - s.aStageStartInfo.fZoneOffset[Zone_End]);
+			}
+			else
+			{
+				ticks -= (1.0 - s.fZoneOffset[Zone_End]);
+			}
 		}
 	}
 
@@ -2377,7 +2382,7 @@ public int Native_FinishMap(Handle handler, int numParams)
 
 	if(gCV_UseOffsets.BoolValue)
 	{
-		CalculateTickIntervalOffset(client, Zone_End);
+		CalculateTickIntervalOffset(client, Zone_End, false);
 
 		if(gCV_DebugOffsets.BoolValue)
 		{
@@ -2395,7 +2400,7 @@ public int Native_FinishMap(Handle handler, int numParams)
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
 	float fEndVelocity = GetVectorLength(fSpeed);
 
-	CalculateRunTime(gA_Timers[client], true);
+	CalculateRunTime(gA_Timers[client], false, true);
 
 	if(gA_Timers[client].iTimerTrack == Track_Main && Shavit_GetStageCount(Track_Main) > 1)
 	{
@@ -2464,14 +2469,14 @@ public int Native_FinishStage(Handle handler, int numParams)
 
 	if(gCV_UseOffsets.BoolValue)
 	{
-		CalculateTickIntervalOffset(client, Zone_End);
+		CalculateTickIntervalOffset(client, Zone_End, !gA_Timers[client].bOnlyStageMode && stage > 1);
 
 		if(gCV_DebugOffsets.BoolValue)
 		{
 			char sOffsetMessage[100];
 			char sOffsetDistance[8];
-			FormatEx(sOffsetDistance, 8, "%.1f", gA_Timers[client].fDistanceOffset[Zone_End]);
-			FormatEx(sOffsetMessage, sizeof(sOffsetMessage), "[END] %T %d", "DebugOffsets", client, gA_Timers[client].fZoneOffset[Zone_End], sOffsetDistance, gA_Timers[client].iZoneIncrement);
+			FormatEx(sOffsetDistance, 8, "%.1f", gA_Timers[client].aStageStartInfo.fDistanceOffset[Zone_End]);
+			FormatEx(sOffsetMessage, sizeof(sOffsetMessage), "[END] %T %d", "DebugOffsets", client, gA_Timers[client].aStageStartInfo.fZoneOffset[Zone_End], sOffsetDistance, gA_Timers[client].aStageStartInfo.iZoneIncrement);
 			PrintToConsole(client, "%s", sOffsetMessage);
 			Shavit_StopChatSound();
 			Shavit_PrintToChat(client, "%s", sOffsetMessage);
@@ -2498,7 +2503,7 @@ public int Native_FinishStage(Handle handler, int numParams)
 		end.fAvgVelocity = end.aStageStartInfo.fAvgVelocity;
 	}
 
-	CalculateRunTime(gA_Timers[client], true);
+	CalculateRunTime(end, !end.bOnlyStageMode && stage > 1, true);
 
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_FinishStagePre);
@@ -2554,6 +2559,9 @@ public int Native_FinishStage(Handle handler, int numParams)
 		gA_Timers[client].aStageStartInfo.iStrafes = gA_Timers[client].iStrafes;
 		gA_Timers[client].aStageStartInfo.iGoodGains = gA_Timers[client].iGoodGains;
 		gA_Timers[client].aStageStartInfo.iTotalMeasures = gA_Timers[client].iTotalMeasures;
+		gA_Timers[client].aStageStartInfo.iZoneIncrement = 0;
+		gA_Timers[client].aStageStartInfo.fMaxVelocity = fEndVelocity;	
+		gA_Timers[client].aStageStartInfo.fAvgVelocity = fEndVelocity;
 		gA_Timers[client].fStageFinishTimes[stage] = end.fCurrentTime;
 	}
 
@@ -3258,19 +3266,23 @@ void StartTimer(int client, int track)
 	float fSpeed[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
 	float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+	float fLimit = (Shavit_GetStyleSettingFloat(gA_Timers[client].bsStyle, "runspeed") + gCV_PrestrafeLimit.FloatValue);
 
-	int nozaxisspeed = GetStyleSettingInt(gA_Timers[client].bsStyle, "nozaxisspeed");
-
-	if (nozaxisspeed < 0)
+	int iZoneStage;
+	bool bNoVerticalSpeed;
+	if(gA_Timers[client].bOnlyStageMode)
 	{
-		nozaxisspeed = gCV_NoZAxisSpeed.BoolValue;
+		int iSpeedLimitFlags;
+		Shavit_InsideZoneStage(client, iZoneStage, iSpeedLimitFlags);
+		bNoVerticalSpeed = (iSpeedLimitFlags & ZSLF_NoVerticalSpeed) > 0;
 	}
-
-	if (!nozaxisspeed ||
-		GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 1 ||
-		(fSpeed[2] == 0.0 && (GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 2 || curVel <= 50.0 ||
-			((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
-			  (gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))))) // beautiful
+	else
+	{
+		bNoVerticalSpeed = (Shavit_GetTrackSpeedLimitFlags(track) & ZSLF_NoVerticalSpeed) > 0;
+	}
+	
+	if (!bNoVerticalSpeed || (fSpeed[2] == 0.0 && curVel <= fLimit) || ((curVel <= ClientMaxPrestrafe(client) && gA_Timers[client].bOnGround &&
+			  (gI_LastTickcount[client]-gI_FirstTouchedGround[client] > RoundFloat(0.5/GetTickInterval()))))) // beautiful
 	{
 		Action result = Plugin_Continue;
 		Call_StartForward(gH_Forwards_StartPre);
@@ -3301,7 +3313,7 @@ void StartTimer(int client, int track)
 
 			if (gA_Timers[client].bOnlyStageMode)
 			{
-				Shavit_InsideZoneStage(client, gA_Timers[client].iLastStage);
+				gA_Timers[client].iLastStage = iZoneStage;
 			}
 			else
 			{
@@ -3794,42 +3806,169 @@ public void PreThinkPost(int client)
 
 public void PostThinkPost(int client)
 {
-	gF_Origin[client][1] = gF_Origin[client][0];
-	GetEntPropVector(client, Prop_Data, "m_vecOrigin", gF_Origin[client][0]);
-
-	if(gA_Timers[client].iZoneIncrement == 1 && gCV_UseOffsets.BoolValue)
+	if(GetTimerStatus(client) == Timer_Running) // i dont know if someone can actually pause timer when zone increment is 1, just in case.
 	{
-		float fVel[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", fVel);
+		gF_Origin[client][1] = gF_Origin[client][0];
+		GetEntPropVector(client, Prop_Data, "m_vecOrigin", gF_Origin[client][0]);
 
-		int nozaxisspeed = GetStyleSettingInt(gA_Timers[client].bsStyle, "nozaxisspeed");
+		bool bNormalStart = gA_Timers[client].iZoneIncrement == 1;
+		bool bMainTimerStageStart = !bNormalStart && !gA_Timers[client].bOnlyStageMode && gA_Timers[client].aStageStartInfo.iZoneIncrement == 1;
 
-		if (nozaxisspeed < 0)
+		if((bNormalStart || bMainTimerStageStart))
 		{
-			nozaxisspeed = gCV_NoZAxisSpeed.BoolValue;
-		}
-
-		if (!nozaxisspeed)
-		{
-			if(fVel[2] == 0.0)
+			if(gCV_UseOffsets.BoolValue)
 			{
-				CalculateTickIntervalOffset(client, Zone_Start);
+				CalculateTickIntervalOffset(client, Zone_Start, bMainTimerStageStart);			
 			}
+
+			CheckClientStartVelocity(client, (gA_Timers[client].bOnlyStageMode && bNormalStart && gA_Timers[client].iTimerTrack == Track_Main) || bMainTimerStageStart);
+
+			if(gCV_DebugOffsets.BoolValue)
+			{
+				char sOffsetMessage[100];
+				char sOffsetDistance[8];
+				FormatEx(sOffsetDistance, 8, "%.1f", gA_Timers[client].fDistanceOffset[Zone_Start]);
+				FormatEx(sOffsetMessage, sizeof(sOffsetMessage), "[START] %T", "DebugOffsets", client, gA_Timers[client].fZoneOffset[Zone_Start], sOffsetDistance);
+				PrintToConsole(client, "%s", sOffsetMessage);
+				Shavit_StopChatSound();
+				Shavit_PrintToChat(client, "%s", sOffsetMessage);
+			}
+		}		
+	}
+}
+
+public void CheckClientStartVelocity(int client, bool stagestart)
+{
+	int stage = gA_Timers[client].iLastStage; 
+	int track = gA_Timers[client].iTimerTrack;
+	int style = gA_Timers[client].bsStyle;
+
+	float fSpeed[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+	float speed = GetVectorLength(fSpeed);
+	float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
+	float fMaxPrespeed = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
+	int iSpeedLimitFlags;
+
+	if(stagestart && stage > 0)
+	{
+		gA_Timers[client].aStageStartInfo.fStartVelocity = speed;
+
+		int iZoneStage;
+		Shavit_InsideZoneStage(client, iZoneStage, iSpeedLimitFlags);
+
+		bool bZoneLimited;
+		if(gCV_PrestrafeZone.IntValue == 2)
+		{
+			bZoneLimited = gA_Timers[client].bOnlyStageMode || !((iSpeedLimitFlags & ZSLF_LimitSpeed) > 0 || (iSpeedLimitFlags & ZSLF_ReduceSpeed) > 0);
+
+		}
+		else if(gCV_PrestrafeZone.IntValue == 3)
+		{
+			bZoneLimited = (iSpeedLimitFlags & ZSLF_NoVerticalSpeed) == 0;
 		}
 		else
 		{
-			CalculateTickIntervalOffset(client, Zone_Start);
+			bZoneLimited = true;
 		}
+		
+		gA_Timers[client].bStageTimeValid = bZoneLimited ? true:curVel < fMaxPrespeed;
 
-		if(gCV_DebugOffsets.BoolValue)
+		if(curVel > 20)
 		{
-			char sOffsetMessage[100];
-			char sOffsetDistance[8];
-			FormatEx(sOffsetDistance, 8, "%.1f", gA_Timers[client].fDistanceOffset[Zone_Start]);
-			FormatEx(sOffsetMessage, sizeof(sOffsetMessage), "[START] %T", "DebugOffsets", client, gA_Timers[client].fZoneOffset[Zone_Start], sOffsetDistance);
-			PrintToConsole(client, "%s", sOffsetMessage);
-			Shavit_StopChatSound();
-			Shavit_PrintToChat(client, "%s", sOffsetMessage);
+			float fStartVelWR = Shavit_GetStageWRStartVelocity(style, stage);
+			char sVelDiff[64];
+
+			if(fStartVelWR > 0.0)
+			{
+				float fStartVelDiffWR = speed - fStartVelWR;
+
+				FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.f", 
+					fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
+
+				float fStartVelPB = Shavit_GetClientStageStartVelocity(client, style, stage);
+
+				if(fStartVelPB > 0.0)
+				{
+					float fStartVelDiffPB = speed - fStartVelPB;
+
+					FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s | PB: %s%s%.f", sVelDiff, gS_ChatStrings.sText,
+						fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
+				}
+
+				FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s)", sVelDiff, gS_ChatStrings.sText);
+			}
+
+			if((gI_MessageSettings[client] & MSG_SPEEDTRAP) == 0)
+			{
+				Shavit_StopChatSound();							
+				Shavit_PrintToChat(client, "%T %s", "StageStartZonePrespeed", client,
+					gS_ChatStrings.sVariable2, stage, gS_ChatStrings.sText,
+					gA_Timers[client].bStageTimeValid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText, sVelDiff);
+			}
+
+			if(!gA_Timers[client].bStageTimeValid)
+			{
+				Shavit_PrintToChat(client, "%T", "PrespeedLimitExcceded", client, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
+			}
+
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(IsValidClient(i) && GetSpectatorTarget(i) == client && (gI_MessageSettings[i] & MSG_SPEEDTRAP) == 0)
+				{
+					Shavit_StopChatSound();
+					Shavit_PrintToChat(i, "%s*%N*%s %T %s", gS_ChatStrings.sImproving, client, gS_ChatStrings.sText, "StageStartZonePrespeed", i,
+						gS_ChatStrings.sVariable2, stage, gS_ChatStrings.sText,
+						gA_Timers[client].bStageTimeValid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText, sVelDiff);
+				}
+			}
+		}
+	}
+	else
+	{
+		gA_Timers[client].fStartVelocity = speed;
+		gA_Timers[client].aStageStartInfo.fStartVelocity = speed;
+		gA_Timers[client].bStageTimeValid = true;
+
+		if(curVel > 20)
+		{
+			float fStartVelWR = Shavit_GetWRStartVelocity(style, track);
+			char sVelDiff[64];
+
+			if(fStartVelWR > 0.0)
+			{
+				float fStartVelDiffWR = speed - fStartVelWR;
+
+				FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.f", 
+					fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
+
+				float fStartVelPB = Shavit_GetClientStartVelocity(client, style, track);
+
+				if(fStartVelPB > 0.0)
+				{
+					float fStartVelDiffPB = speed - fStartVelPB;
+
+					FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s | PB: %s%s%.f", sVelDiff, gS_ChatStrings.sText,
+						fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
+				}
+
+				FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s)", sVelDiff, gS_ChatStrings.sText);
+			}
+
+			if((Shavit_GetMessageSetting(client) & MSG_SPEEDTRAP) == 0)
+			{
+				Shavit_StopChatSound();							
+				Shavit_PrintToChat(client, "%T %s", "TrackStartZonePrespeed", client, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
+			}
+
+			for(int i = 1; i <= MaxClients; i++)
+			{
+				if(IsValidClient(i) && GetSpectatorTarget(i) == client && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
+				{
+					Shavit_StopChatSound();							
+					Shavit_PrintToChat(i, "%s*%N*%s %T %s", gS_ChatStrings.sImproving, client, gS_ChatStrings.sText, "TrackStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
+				}
+			}	
 		}
 	}
 }
@@ -3986,7 +4125,7 @@ public MRESReturn DHook_ProcessMovementPost(Handle hParams)
 	gA_Timers[client].iFractionalTicks -= whole_tick * 10000;
 	gA_Timers[client].iFullTicks       += whole_tick;
 
-	CalculateRunTime(gA_Timers[client], false);
+	CalculateRunTime(gA_Timers[client], false, false);
 
 	Call_StartForward(gH_Forwards_OnTimeIncrementPost);
 	Call_PushCell(client);
@@ -3996,8 +4135,9 @@ public MRESReturn DHook_ProcessMovementPost(Handle hParams)
 	return MRES_Ignored;
 }
 
+
 // reference: https://github.com/momentum-mod/game/blob/5e2d1995ca7c599907980ee5b5da04d7b5474c61/mp/src/game/server/momentum/mom_timer.cpp#L388
-void CalculateTickIntervalOffset(int client, int zonetype)
+void CalculateTickIntervalOffset(int client, int zonetype, bool stage)
 {
 	float localOrigin[3];
 	GetEntPropVector(client, Prop_Send, "m_vecOrigin", localOrigin);
@@ -4022,8 +4162,16 @@ void CalculateTickIntervalOffset(int client, int zonetype)
 
 	float offset = gF_Fraction[client] * GetTickInterval();
 
-	gA_Timers[client].fZoneOffset[zonetype] = gF_Fraction[client];
-	gA_Timers[client].fDistanceOffset[zonetype] = gF_SmallestDist[client];
+	if(stage)
+	{
+		gA_Timers[client].aStageStartInfo.fZoneOffset[zonetype] = gF_Fraction[client];
+		gA_Timers[client].aStageStartInfo.fDistanceOffset[zonetype] = gF_SmallestDist[client];	
+	}
+	else
+	{
+		gA_Timers[client].fZoneOffset[zonetype] = gF_Fraction[client];
+		gA_Timers[client].fDistanceOffset[zonetype] = gF_SmallestDist[client];		
+	}
 
 	Call_StartForward(gH_Forwards_OnTimeOffsetCalculated);
 	Call_PushCell(client);
@@ -4072,6 +4220,16 @@ void BuildSnapshot(int client, timer_snapshot_t snapshot)
 	//snapshot.iLandingTick = ?????; // TODO: Think about handling segmented scroll? /shrug
 }
 
+// This is used instead of `TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, fSpeed)`.
+// Why: TeleportEntity somehow triggers the zone EndTouch which fucks with `Shavit_InsideZone`.
+void DumbSetVelocity(int client, float fSpeed[3])
+{
+	// Someone please let me know if any of these are unnecessary.
+	SetEntPropVector(client, Prop_Data, "m_vecBaseVelocity", ZERO_VECTOR);
+	SetEntPropVector(client, Prop_Data, "m_vecVelocity", fSpeed);
+	SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed); // m_vecBaseVelocity+m_vecVelocity
+}
+
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	if(IsFakeClient(client))
@@ -4098,8 +4256,93 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		return Plugin_Changed;
 	}
 
+	bool bNoclip = (GetEntityMoveType(client) == MOVETYPE_NOCLIP);
+
 	int iLastButtons = gI_LastButtons[client]; // buttons without effected by code.
 	gI_LastButtons[client] = buttons;
+
+	bool bShouldApplyLimit, bLimitSpeed, bBlockBhop, bBlockJump, bReduceSpeed, bNoVerticalSpeed;
+
+	int iZoneStage, iStageZoneSpeedLimitFlags;
+	int iTrackStartLimitFlags = Shavit_GetTrackSpeedLimitFlags(gA_Timers[client].iTimerTrack);
+	
+	bool bInsideStageZone = gA_Timers[client].iTimerTrack == Track_Main ? gB_Zones && Shavit_InsideZoneStage(client, iZoneStage, iStageZoneSpeedLimitFlags):false;
+	bool bInsideTrackStartZone = gB_Zones && Shavit_InsideZone(client, Zone_Start, gA_Timers[client].iTimerTrack);
+	bool bInsideStageStartZone = (bInsideStageZone && iZoneStage == gA_Timers[client].iLastStage);
+
+	bool bInStart = bInsideTrackStartZone || bInsideStageStartZone;
+	
+	float fSpeed[3];
+	float fCurrentTime;
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
+	float fSpeedXY = (SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0)));
+	float fLimit = (Shavit_GetStyleSettingFloat(gA_Timers[client].bsStyle, "runspeed") + gCV_PrestrafeLimit.FloatValue);
+
+	if (bInStart && gCV_PrestrafeZone.IntValue > 0)
+	{
+		if(GetEntityFlags(client) & FL_BASEVELOCITY) // they are on booster, dont limit them
+		{
+			gA_Timers[client].bStageTimeValid = true;
+		}
+		else if(bInsideTrackStartZone)
+		{
+			fCurrentTime = gA_Timers[client].fCurrentTime;
+			bLimitSpeed  = ((iTrackStartLimitFlags & ZSLF_LimitSpeed) > 0);
+			bBlockBhop   = ( (iTrackStartLimitFlags & ZSLF_BlockBhop) > 0);
+			bBlockJump   = ( (iTrackStartLimitFlags & ZSLF_BlockJump) > 0);
+			bReduceSpeed = (  (iTrackStartLimitFlags & ZSLF_ReduceSpeed) > 0);
+			bNoVerticalSpeed = (  (iTrackStartLimitFlags & ZSLF_NoVerticalSpeed) > 0);
+		}
+		else if(gCV_PrestrafeZone.IntValue > 1 && bInsideStageStartZone)
+		{
+			if(gA_Timers[client].bOnlyStageMode || gCV_PrestrafeZone.IntValue > 2)
+			{
+				fCurrentTime = gA_Timers[client].bOnlyStageMode ? gA_Timers[client].fCurrentTime:gA_Timers[client].fCurrentTime-gA_Timers[client].aStageStartInfo.fStageStartTime;
+				bLimitSpeed  = ((iStageZoneSpeedLimitFlags & ZSLF_LimitSpeed) > 0);
+				bBlockBhop   = ( (iStageZoneSpeedLimitFlags & ZSLF_BlockBhop) > 0);
+				bBlockJump   = ( (iStageZoneSpeedLimitFlags & ZSLF_BlockJump) > 0);
+				bReduceSpeed = (  (iStageZoneSpeedLimitFlags & ZSLF_ReduceSpeed) > 0);
+				bNoVerticalSpeed = ((iStageZoneSpeedLimitFlags & ZSLF_NoVerticalSpeed) > 0);
+			}
+		}
+
+		bShouldApplyLimit = !bNoVerticalSpeed || (fCurrentTime < 1.0 && fSpeedXY <= fLimit);
+	}
+
+	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+
+	if(!bNoclip && bShouldApplyLimit)
+	{
+		int iPrevGroundEntity = (gI_GroundEntity[client] != -1) ? EntRefToEntIndex(gI_GroundEntity[client]) : -1;
+		if (bBlockBhop && !bBlockJump && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0 )
+		{	// block bhop
+			DumbSetVelocity(client, view_as<float>({0.0, 0.0, 0.0}));
+		}
+		else if (bLimitSpeed || bReduceSpeed)
+		{
+			float fScale = (fLimit / fSpeedXY);
+
+			if(fScale < 1.0)
+			{
+				// add a very low limit to stop prespeeding in an elegant way
+				// otherwise, make sure nothing weird is happening (such as sliding at ridiculous speeds, at zone enter)
+				if (bReduceSpeed)
+				{
+					fScale /= 3.0;
+				}
+
+				float zSpeed = fSpeed[2];
+				fSpeed[2] = 0.0;
+
+				ScaleVector(fSpeed, fScale);
+				fSpeed[2] = zSpeed;
+
+				DumbSetVelocity(client, fSpeed);
+			}
+		}
+	}
+
+	gI_GroundEntity[client] = (iGroundEntity != -1) ? EntIndexToEntRef(iGroundEntity) : -1;
 
 	Action result = Plugin_Continue;
 	Call_StartForward(gH_Forwards_OnUserCmdPre);
@@ -4118,13 +4361,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		return result;
 	}
-
-	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	int iZoneStage;
-	
-	bool bInsideStageZone = gA_Timers[client].iTimerTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
-	bool bInStart = gB_Zones && Shavit_InsideZone(client, Zone_Start, gA_Timers[client].iTimerTrack) || 
-						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == gA_Timers[client].iLastStage);
 
 	if (gA_Timers[client].bTimerEnabled && !gA_Timers[client].bClientPaused)
 	{
@@ -4338,11 +4574,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	// enable duck-jumping/bhop in tf2
 	if (gEV_Type == Engine_TF2 && GetStyleSettingBool(gA_Timers[client].bsStyle, "bunnyhopping") && (buttons & IN_JUMP) > 0 && iGroundEntity != -1)
 	{
-		float fSpeed[3];
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
+		float fAbsSpeed[3];
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsSpeed);
 
-		fSpeed[2] = 289.0;
-		SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fSpeed);
+		fAbsSpeed[2] = 289.0;
+		SetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", fAbsSpeed);
 	}
 
 	// perf jump measuring
@@ -4350,16 +4586,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	gI_LastTickcount[client] = tickcount;
 
-
-	int blockprejump = GetStyleSettingInt(gA_Timers[client].bsStyle, "blockprejump");
-
-	if (blockprejump < 0)
+	if(gB_Zones && Shavit_InsideZone(client, Zone_NoJump, gA_Timers[client].iTimerTrack))
 	{
-		blockprejump = gCV_BlockPreJump.BoolValue;
+		bBlockJump = true;
 	}
 
-	if ((bInStart && blockprejump && GetStyleSettingInt(gA_Timers[client].bsStyle, "prespeed") == 0 && (vel[2] > 0 || (buttons & IN_JUMP) > 0)) 
-	|| (gB_Zones && Shavit_InsideZone(client, Zone_NoJump, gA_Timers[client].iTimerTrack)))
+	if (bBlockJump && (vel[2] > 0 || (buttons & IN_JUMP) > 0) && !bInWater)
 	{
 		if((iLastButtons & IN_JUMP) == 0 && (buttons & IN_JUMP) > 0 && bOnGround)
 		{

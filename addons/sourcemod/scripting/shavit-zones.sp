@@ -122,6 +122,8 @@ float gV_ZoneCenter[MAX_ZONES][3];
 float gF_CustomSpawn[TRACKS_SIZE][3];
 int gI_EntityZone[2048] = {-1, ...};
 
+//prespeed settings for track start zone
+int gI_TrackStartZoneSpeedLimitFlags[TRACKS_SIZE] = {-1, ...};
 
 // stage & checkpoint stuffs
 int gI_HighestStage[TRACKS_SIZE];
@@ -158,15 +160,12 @@ Convar gCV_EnforceTracks = null;
 Convar gCV_BoxOffset = null;
 Convar gCV_ExtraSpawnHeight = null;
 Convar gCV_PrebuiltVisualOffset = null;
-
 Convar gCV_ForceTargetnameReset = null;
 Convar gCV_ResetTargetnameMain = null;
 Convar gCV_ResetTargetnameBonus = null;
 Convar gCV_ResetClassnameMain = null;
 Convar gCV_ResetClassnameBonus = null;
-
-ConVar gCV_PrestrafeLimit = null;
-ConVar gCV_PrestrafeZone = null;
+Convar gCV_DefaultZonePrespeedLimit = null;
 
 // handles
 Handle gH_DrawVisible = null;
@@ -227,7 +226,7 @@ public Plugin myinfo =
 	author = "shavit, GAMMA CASE, rtldg, KiD Fearless, Kryptanyte, carnifex, rumour, BoomShotKapow, Nuko, Technoblazed, Kxnrl, Extan, sh4hrazad, OliviaMourning",
 	description = "Map zones for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -256,7 +255,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("Shavit_GetMapTracks", Native_GetMapTracks);
 	CreateNative("Shavit_TeleportToStartZone", Native_TeleportToStartZone);
 	CreateNative("Shavit_InsideZoneStage", Native_InsideZoneStage);
-	CreateNative("Shavit_GetZoneUseSpeedLimit", Native_GetZoneUseSpeedLimit);
+	CreateNative("Shavit_GetZoneSpeedLimitFlags", Native_GetZoneSpeedLimitFlags);
+	CreateNative("Shavit_GetTrackSpeedLimitFlags", Native_GetTrackSpeedLimitFlags);
 
 	// registers library, check "bool LibraryExists(const char[] name)" in order to use with other plugins
 	RegPluginLibrary("shavit-zones");
@@ -376,12 +376,15 @@ public void OnPluginStart()
 	gCV_BoxOffset = new Convar("shavit_zones_box_offset", "0", "Offset zone trigger boxes by this many unit\n0 - matches players bounding box\n16 - matches players center");
 	gCV_ExtraSpawnHeight = new Convar("shavit_zones_extra_spawn_height", "0.0", "YOU DONT NEED TO TOUCH THIS USUALLY. FIX YOUR ACTUAL ZONES.\nUsed to fix some shit prebuilt zones that are in the ground like bhop_strafecontrol");
 	gCV_PrebuiltVisualOffset = new Convar("shavit_zones_prebuilt_visual_offset", "-1.0", "YOU DONT NEED TO TOUCH THIS USUALLY.\nUsed to fix the VISUAL beam offset for prebuilt zones on a map.\nExample maps you'd want to use 16 on: bhop_tranquility and bhop_amaranthglow");
-
 	gCV_ForceTargetnameReset = new Convar("shavit_zones_forcetargetnamereset", "0", "Reset the player's targetname upon timer start?\nRecommended to leave disabled. Enable via per-map configs when necessary.\n0 - Disabled\n1 - Enabled for all tracks\n2 - Enable for Main\n3 - Enable for Bonus", 0, true, 0.0, true, 3.0);
 	gCV_ResetTargetnameMain = new Convar("shavit_zones_resettargetname_main", "", "What targetname to use when resetting the player.\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
 	gCV_ResetTargetnameBonus = new Convar("shavit_zones_resettargetname_bonus", "", "What targetname to use when resetting the player (on bonus tracks).\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
 	gCV_ResetClassnameMain = new Convar("shavit_zones_resetclassname_main", "", "What classname to use when resetting the player.\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
 	gCV_ResetClassnameBonus = new Convar("shavit_zones_resetclassname_bonus", "", "What classname to use when resetting the player (on bonus tracks).\nWould be applied once player teleports to the start zone or on every start if shavit_zones_forcetargetnamereset cvar is set to 1.\nYou don't need to touch this");
+	
+	char defaultFlags[16];
+	IntToString(DEFAULT_SPEEDLIMITFLAG, defaultFlags, sizeof(defaultFlags));
+	gCV_DefaultZonePrespeedLimit = new Convar("shavit_zone_defaultzoneprespeedlimit", defaultFlags, "Default Zone prespeed limit settings as a bitflag\nLimit horizental speed				1\nBlock bunnyhop						2\nBlock pre-jump						4\nReduce speed when exceeding limit	8", 0, true, 0.0);
 
 	gCV_SQLZones.AddChangeHook(OnConVarChanged);
 	gCV_Interval.AddChangeHook(OnConVarChanged);
@@ -554,8 +557,7 @@ void LoadDHooks()
 
 public void OnAllPluginsLoaded()
 {
-	gCV_PrestrafeLimit = FindConVar("shavit_misc_prestrafelimit");
-	gCV_PrestrafeZone = FindConVar("shavit_misc_prestrafezones");
+
 }
 
 public void OnLibraryAdded(const char[] name)
@@ -759,9 +761,14 @@ public int Native_GetZoneData(Handle handler, int numParams)
 	return gA_ZoneCache[GetNativeCell(1)].iData;
 }
 
-public int Native_GetZoneUseSpeedLimit(Handle handler, int numParams)
+public int Native_GetZoneSpeedLimitFlags(Handle handler, int numParams)
 {
-	return gA_ZoneCache[GetNativeCell(1)].bUseSpeedLimit;
+	return gA_ZoneCache[GetNativeCell(1)].iSpeedLimitFlags;
+}
+
+public int Native_GetTrackSpeedLimitFlags(Handle handler, int numParams)
+{
+	return gI_TrackStartZoneSpeedLimitFlags[GetNativeCell(1)];
 }
 
 public int Native_GetZoneFlags(Handle handler, int numParams)
@@ -778,15 +785,10 @@ public int Native_InsideZoneStage(Handle handler, int numParams)
 {
 	int client = GetNativeCell(1);
 
-	if(gI_HighestStage[Track_Main] < 2)
-	{
-		return false;
-	}
-
 	if(gI_ZoneStage[client][1] > -1)
 	{
 		SetNativeCellRef(2, gI_ZoneStage[client][0]);
-		SetNativeCellRef(3, gA_ZoneCache[gI_ZoneStage[client][1]].bUseSpeedLimit);
+		SetNativeCellRef(3, gA_ZoneCache[gI_ZoneStage[client][1]].iSpeedLimitFlags);
 		return true;
 	}
 
@@ -1021,6 +1023,12 @@ public any Native_AddZone(Handle plugin, int numParams)
 	AddVectors(cache.fCorner1, cache.fCorner2, gV_ZoneCenter[gI_MapZones]);
 	ScaleVector(gV_ZoneCenter[gI_MapZones], 0.5);
 
+	if (cache.iType == Zone_Start)
+	{
+		if(cache.iSpeedLimitFlags > gI_TrackStartZoneSpeedLimitFlags[cache.iTrack])
+			gI_TrackStartZoneSpeedLimitFlags[cache.iTrack] = cache.iSpeedLimitFlags;
+	}
+
 	if (cache.iType == Zone_Stage)
 	{
 		if (cache.iData > gI_HighestStage[cache.iTrack])
@@ -1090,12 +1098,13 @@ public any Native_RemoveZone(Handle plugin, int numParams)
 	RecalcInsideZoneAll();
 
 	if (cache.iType == Zone_Stage && cache.iData == gI_HighestStage[cache.iTrack])
-	{
 		RecalcHighestStage();
-	}
 
 	if (cache.iType == Zone_Checkpoint && cache.iData == gI_HighestCheckpoint[cache.iTrack])
 		RecalcHighestCheckpoint();
+
+	if (cache.iType == Zone_Start)
+		UpdateTrackSpeedLimitFlags(cache.iTrack);
 		
 	// call EndTouchPost(zoneent, player) manually here?
 
@@ -1709,6 +1718,7 @@ void UnloadZones()
 	gI_MapZones = 0;
 
 	int empty_tracks[TRACKS_SIZE];
+	int empty_flags[TRACKS_SIZE] = {-1, ...};
 	bool empty_InsideZoneID[MAX_ZONES];
 
 	for (int i = 1; i <= MaxClients; i++)
@@ -1719,6 +1729,7 @@ void UnloadZones()
 
 	gI_HighestStage = empty_tracks;
 	gI_HighestCheckpoint = empty_tracks;
+	gI_TrackStartZoneSpeedLimitFlags = empty_flags;
 
 	for(int i = 0; i < TRACKS_SIZE; i++)
 	{
@@ -1789,6 +1800,19 @@ void RecalcHighestCheckpoint()
 	}
 }
 
+void UpdateTrackSpeedLimitFlags(int track)
+{
+	gI_TrackStartZoneSpeedLimitFlags[track] = -1;
+	for (int i = 0; i < gI_MapZones; i++)
+	{
+		if(gA_ZoneCache[i].iType != Zone_Start || gA_ZoneCache[i].iTrack != track)
+			continue;
+
+		if(gA_ZoneCache[i].iSpeedLimitFlags > gI_TrackStartZoneSpeedLimitFlags[track])
+			gI_TrackStartZoneSpeedLimitFlags[track] = gA_ZoneCache[i].iSpeedLimitFlags;
+	}
+}
+
 void RefreshZones()
 {
 	char sQuery[512];
@@ -1837,7 +1861,7 @@ public void SQL_RefreshZones_Callback(Database db, DBResultSet results, const ch
 		cache.iDatabaseID = results.FetchInt(11);
 		cache.iFlags = results.FetchInt(12);
 		cache.iData = results.FetchInt(13);
-		cache.bUseSpeedLimit = view_as<bool>(results.FetchInt(14));
+		cache.iSpeedLimitFlags = results.FetchInt(14);
 		cache.iForm = results.FetchInt(15);
 		results.FetchString(16, cache.sTarget, sizeof(cache.sTarget));
 		cache.sSource = "sql";
@@ -4169,7 +4193,7 @@ void Reset(int client)
 {
 	zone_cache_t cache;
 	cache.iDatabaseID = -1;
-	cache.bUseSpeedLimit = true;
+	cache.iSpeedLimitFlags = gCV_DefaultZonePrespeedLimit.IntValue;
 	gA_EditCache[client] = cache;
 	gI_MapStep[client] = 0;
 	gI_LockAxis[client] = -1;
@@ -4642,6 +4666,7 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 			}
 
 			InsertZone(param1);
+
 			return 0;
 		}
 		else if(StrEqual(sInfo, "no"))
@@ -4658,15 +4683,20 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 		{
 			UpdateTeleportZone(param1);
 		}
+		else if(StrEqual(sInfo, "speedlimit"))
+		{
+			CreateSpeedLimitOptionMenu(param1);
+			return 0;
+		}
+		else if(StrEqual(sInfo, "resetspeed"))
+		{
+			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_ResetSpeedAfterTeleported;
+		}
 		else if(StrEqual(sInfo, "datafromchat"))
 		{
 			gB_WaitingForChatInput[param1] = true;
 			Shavit_PrintToChat(param1, "%T", "ZoneEnterDataChat", param1);
 			return 0;
-		}
-		else if(StrEqual(sInfo, "togglespdlimit"))
-		{
-			gA_EditCache[param1].bUseSpeedLimit = !gA_EditCache[param1].bUseSpeedLimit;
 		}
 		else if(StrEqual(sInfo, "forcerender"))
 		{
@@ -4677,7 +4707,7 @@ public int CreateZoneConfirm_Handler(Menu menu, MenuAction action, int param1, i
 			gA_EditCache[param1].iFlags ^= ZF_DrawAsBox;
 		}
 
-		CreateEditMenu(param1);
+		CreateEditMenu(param1, false, GetMenuSelectionPosition());
 	}
 	else if (action == MenuAction_Cancel)
 	{
@@ -4786,7 +4816,7 @@ void UpdateTeleportZone(int client)
 	}
 }
 
-void CreateEditMenu(int client, bool autostage=false)
+void CreateEditMenu(int client, bool autostage=false, int item=0)
 {
 	bool hookmenu = gI_HookListPos[client] != -1;
 
@@ -4831,6 +4861,9 @@ void CreateEditMenu(int client, bool autostage=false)
 			menu.AddItem("yes", sMenuItem);
 		}
 
+		FormatEx(sMenuItem, 64, "%T\n", "ZoneSetCancel", client);
+		menu.AddItem("no", sMenuItem);
+
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetTPZone", client);
 		menu.AddItem("tpzone", sMenuItem);
 	}
@@ -4839,6 +4872,9 @@ void CreateEditMenu(int client, bool autostage=false)
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetConfirm", client);
 		menu.AddItem("yes", sMenuItem);
 
+		FormatEx(sMenuItem, 64, "%T\n ", "ZoneSetCancel", client);
+		menu.AddItem("no", sMenuItem);
+
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetTPZone", client);
 		menu.AddItem("tpzone", sMenuItem);
 	}
@@ -4846,10 +4882,10 @@ void CreateEditMenu(int client, bool autostage=false)
 	{
 		FormatEx(sMenuItem, 64, "%T", "ZoneSetConfirm", client);
 		menu.AddItem("yes", sMenuItem);
-	}
 
-	FormatEx(sMenuItem, 64, "%T", "ZoneSetCancel", client);
-	menu.AddItem("no", sMenuItem);
+		FormatEx(sMenuItem, 64, "%T\n ", "ZoneSetCancel", client);
+		menu.AddItem("no", sMenuItem);
+	}
 
 	if(gA_EditCache[client].iForm == ZoneForm_Box)
 	{
@@ -4857,19 +4893,25 @@ void CreateEditMenu(int client, bool autostage=false)
 		menu.AddItem("adjust", sMenuItem, ITEMDRAW_DEFAULT);		
 	}
 
-	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iFlags & ZF_ForceRender) > 0)? "ItemEnabled":"ItemDisabled", client, "ZoneForceRender", client);
-	menu.AddItem("forcerender", sMenuItem);
-
 	if(gA_EditCache[client].iForm == ZoneForm_trigger_multiple)
 	{
 		FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iFlags & ZF_DrawAsBox) > 0)? "ItemEnabled":"ItemDisabled", client, "ZoneDrawAsBox", client);
 		menu.AddItem("drawasbox", sMenuItem);
-	}
+	}	
 
-	if (gA_EditCache[client].iType == Zone_Stage)
+	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iFlags & ZF_ForceRender) > 0)? "ItemEnabled":"ItemDisabled", client, "ZoneForceRender", client);
+	
+	menu.AddItem("forcerender", sMenuItem);
+
+	if(gA_EditCache[client].iType == Zone_Start)
 	{
-		FormatEx(sMenuItem, 64, "[%T] %T", gA_EditCache[client].bUseSpeedLimit ? "ItemEnabled":"ItemDisabled", client, "ZoneUseStageSpeedLimit", client);
-		menu.AddItem("togglespdlimit", sMenuItem);
+		FormatEx(sMenuItem, 64, "%T", "ZoneSpeedLimitOption", client);
+		menu.AddItem("speedlimit", sMenuItem);
+	}
+	else if (gA_EditCache[client].iType == Zone_Stage)
+	{
+		FormatEx(sMenuItem, 64, "%T", "ZoneSpeedLimitOption", client);
+		menu.AddItem("speedlimit", sMenuItem);
 
 		if (autostage)
 		{
@@ -4896,8 +4938,8 @@ void CreateEditMenu(int client, bool autostage=false)
 	}
 	else if(gA_EditCache[client].iType == Zone_Teleport)
 	{
-		FormatEx(sMenuItem, 64, "[%T] %T", gA_EditCache[client].bUseSpeedLimit ? "ItemEnabled":"ItemDisabled", client, "ZoneStopAfterTeleport", client);
-		menu.AddItem("togglespdlimit", sMenuItem);
+		FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_ResetSpeedAfterTeleported) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneResetSpeedAfterTeleport", client);
+		menu.AddItem("resetspeed", sMenuItem);
 	}
 	else if (gA_EditCache[client].iType == Zone_Airaccelerate)
 	{
@@ -4934,7 +4976,92 @@ void CreateEditMenu(int client, bool autostage=false)
 		menu.ExitBackButton = true;
 	else
 		menu.ExitButton = true;
-	menu.Display(client, MENU_TIME_FOREVER);
+	menu.DisplayAt(client, item, MENU_TIME_FOREVER);
+}
+
+void CreateSpeedLimitOptionMenu(int client, int item=0)
+{
+	Menu menu = new Menu(MenuHandler_SpeedLimitOption);
+	char sMenuItem[64];
+	
+	if(gA_EditCache[client].iType == Zone_Start)
+	{
+		if(gI_ZoneID[client] == -1) // i really dont like this :(
+		{
+			if(gA_EditCache[client].iSpeedLimitFlags < gI_TrackStartZoneSpeedLimitFlags[gA_EditCache[client].iTrack])
+			{
+				FormatEx(sMenuItem, 64, "%T", "ZoneSpeedLimitSettingOverridden", client);
+			}
+		}
+		else if(gA_ZoneCache[gI_ZoneID[client]].iSpeedLimitFlags < gI_TrackStartZoneSpeedLimitFlags[gA_EditCache[client].iTrack] && gA_EditCache[client].iSpeedLimitFlags < gI_TrackStartZoneSpeedLimitFlags[gA_EditCache[client].iTrack])
+		{
+			FormatEx(sMenuItem, 64, "%T", "ZoneSpeedLimitSettingOverridden", client);
+		}
+	}
+
+	menu.SetTitle("%T\n%s %s", "SpeedLimitOptionMenuTitle", client, sMenuItem, sMenuItem[0] ? "\n ":"");
+
+	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_LimitSpeed) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneLimitSpeed", client);
+	menu.AddItem("speedlimit", sMenuItem);
+
+	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_BlockBhop) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneBlockBhop", client);
+	menu.AddItem("blockbhop", sMenuItem);
+
+	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_BlockJump) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneBlockJump", client);
+	menu.AddItem("blockjump", sMenuItem);
+
+	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_ReduceSpeed) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneReduceSpeed", client);
+	menu.AddItem("reducespeed", sMenuItem);
+
+	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_NoVerticalSpeed) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneNoVerticalSpeed", client);
+	menu.AddItem("nozverticalspeed", sMenuItem);
+
+	menu.ExitBackButton = true;
+	menu.ExitButton = false;
+
+	menu.DisplayAt(client, item, MENU_TIME_FOREVER);
+}
+
+public int MenuHandler_SpeedLimitOption(Menu menu, MenuAction action, int param1, int param2)
+{
+	if(action == MenuAction_Select)
+	{
+		char sInfo[16];
+		menu.GetItem(param2, sInfo, 16);
+
+		if(StrEqual(sInfo, "speedlimit"))
+		{
+			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_LimitSpeed;
+		}
+		else if(StrEqual(sInfo, "blockbhop"))
+		{
+			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_BlockBhop;
+		}
+		else if(StrEqual(sInfo, "blockjump"))
+		{
+			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_BlockJump;
+		}
+		else if(StrEqual(sInfo, "reducespeed"))
+		{
+			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_ReduceSpeed;
+		}
+		else if(StrEqual(sInfo, "nozverticalspeed"))
+		{
+			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_NoVerticalSpeed;
+		}
+
+		CreateSpeedLimitOptionMenu(param1, GetMenuSelectionPosition());
+	}
+	else if(action == MenuAction_Cancel && param2 == MenuCancel_ExitBack)
+	{
+		CreateEditMenu(param1);
+	}
+	else if(action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
 }
 
 void CreateAdjustMenu(int client, int page)
@@ -5071,7 +5198,7 @@ void InsertZone(int client)
 			EXPAND_VECTOR(c.fCorner1),
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
-			c.iFlags, c.iData, view_as<int>(c.bUseSpeedLimit),
+			c.iFlags, c.iData, c.iSpeedLimitFlags,
 			c.iForm, c.sTarget
 		);
 
@@ -5093,7 +5220,7 @@ void InsertZone(int client)
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
 			c.iTrack, c.iFlags, c.iData,
-			view_as<int>(c.bUseSpeedLimit), 
+			c.iSpeedLimitFlags, 
 			c.iForm, c.sTarget
 		);
 	}
@@ -5107,7 +5234,7 @@ void InsertZone(int client)
 			EXPAND_VECTOR(c.fCorner1),
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
-			c.iFlags, c.iData, view_as<int>(c.bUseSpeedLimit),
+			c.iFlags, c.iData, c.iSpeedLimitFlags,
 			c.iForm, c.sTarget
 		);
 
@@ -5125,7 +5252,7 @@ void InsertZone(int client)
 			EXPAND_VECTOR(c.fCorner2),
 			EXPAND_VECTOR(c.fDestination),
 			c.iFlags, c.iData,
-			view_as<int>(c.bUseSpeedLimit),
+			c.iSpeedLimitFlags,
 			c.iForm, c.sTarget,
 			(gI_Driver != Driver_sqlite) ? "id" : "rowid", c.iDatabaseID
 		);
@@ -5997,7 +6124,7 @@ public void StartTouchPost(int entity, int other)
 		{
 			if(!bReplay)
 			{
-				TeleportEntity(other, gA_ZoneCache[zone].fDestination, NULL_VECTOR, gA_ZoneCache[zone].bUseSpeedLimit ? ZERO_VECTOR:NULL_VECTOR);				
+				TeleportEntity(other, gA_ZoneCache[zone].fDestination, NULL_VECTOR, ((gA_ZoneCache[zone].iSpeedLimitFlags & ZSLF_ResetSpeedAfterTeleported) > 0) ? ZERO_VECTOR:NULL_VECTOR);				
 			}
 		}
 
@@ -6022,7 +6149,7 @@ public void StartTouchPost(int entity, int other)
 
 		case Zone_Start:
 		{
-			if(!bReplay && Shavit_GetClientTrack(other) == track)
+			if(!bReplay && (Shavit_GetTimerStatus(other) == Timer_Stopped || track == Track_Main || Shavit_GetClientTrack(other) == track))
 			{
 				UpdateClientZoneStage(other);
 			}
@@ -6184,154 +6311,14 @@ public void EndTouchPost(int entity, int other)
 			if(Shavit_GetClientTrack(other) == track)
 			{
 				UpdateClientZoneStage(other);
-
-				if(Shavit_GetTimerStatus(other) == Timer_Running)
-				{
-					float fSpeed[3];
-					GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
-					float speed = GetVectorLength(fSpeed);
-
-					float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
-						
-					if (Shavit_GetClientTime(other) < 0.3)
-					{
-						Shavit_SetStageTimeValid(other, true);
-						Shavit_SetStartVelocity(other, speed);
-
-						if(gI_HighestStage[track] > 1)
-						{
-							Shavit_SetStageStartVelocity(other, speed);
-						}
-
-						if(curVel >= 15.0)
-						{
-							int style = Shavit_GetBhopStyle(other);
-
-							float fStartVelWR = Shavit_GetWRStartVelocity(style, track);
-							char sVelDiff[64];
-
-							if(fStartVelWR > 0.0)
-							{
-								float fStartVelDiffWR = speed - fStartVelWR;
-
-								FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.f", 
-									fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
-
-								float fStartVelPB = Shavit_GetClientStartVelocity(other, style, track);
-
-								if(fStartVelPB > 0.0)
-								{
-									float fStartVelDiffPB = speed - fStartVelPB;
-
-									FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s | PB: %s%s%.f", sVelDiff, gS_ChatStrings.sText,
-										fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
-								}
-
-								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s)", sVelDiff, gS_ChatStrings.sText);
-							}
-
-							if((Shavit_GetMessageSetting(other) & MSG_SPEEDTRAP) == 0)
-							{
-								Shavit_StopChatSound();							
-								Shavit_PrintToChat(other, "%T %s", "ZoneStartZonePrespeed", other, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
-							}
-
-							for(int i = 1; i <= MaxClients; i++)
-							{
-								if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
-								{
-									Shavit_StopChatSound();							
-									Shavit_PrintToChat(i, "%s*%N*%s %T %s", gS_ChatStrings.sImproving, other, gS_ChatStrings.sText, "ZoneStartZonePrespeed", i, gS_ChatStrings.sVariable, speed, gS_ChatStrings.sText, sVelDiff);
-								}
-							}						
-						}
-					}
-				}
 			}
 		}
 			
 		case Zone_Stage:
 		{
-			int zonestage = gA_ZoneCache[entityzone].iData;
-			int stage = Shavit_GetClientLastStage(other);
-
 			if(Shavit_GetClientTrack(other) == track)
 			{
 				UpdateClientZoneStage(other);
-
-				if(Shavit_GetTimerStatus(other) == Timer_Running && stage == zonestage)
-				{
-					float fSpeed[3];
-					GetEntPropVector(other, Prop_Data, "m_vecVelocity", fSpeed);
-					float speed = GetVectorLength(fSpeed);
-					float curVel = SquareRoot(Pow(fSpeed[0], 2.0) + Pow(fSpeed[1], 2.0));
-
-					if (Shavit_GetClientStageTime(other) < 0.3)
-					{
-						Shavit_SetStageStartVelocity(other, speed);
-
-						if(curVel >= 15.0)
-						{
-							int style = Shavit_GetBhopStyle(other);
-							float fMaxPrespeed = Shavit_GetStyleSettingFloat(style, "runspeed") + gCV_PrestrafeLimit.FloatValue;
-							bool bZoneLimited = !gA_ZoneCache[entityzone].bUseSpeedLimit || (gCV_PrestrafeZone.IntValue == 3) || (gCV_PrestrafeZone.IntValue == 2 && Shavit_IsOnlyStageMode(other));
-
-							bool valid = bZoneLimited ? true : curVel < fMaxPrespeed;
-							Shavit_SetStageTimeValid(other, valid);
-							
-							float fStartVelWR = Shavit_GetStageWRStartVelocity(style, stage);
-							char sVelDiff[64];
-
-							if(fStartVelWR > 0.0)
-							{
-								float fStartVelDiffWR = speed - fStartVelWR;
-
-								FormatEx(sVelDiff, sizeof(sVelDiff), "(SR: %s%s%.f", 
-									fStartVelDiffWR > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffWR > 0 ? "+":"", fStartVelDiffWR);	
-
-								float fStartVelPB = Shavit_GetClientStageStartVelocity(other, style, stage);
-
-								if(fStartVelPB > 0.0)
-								{
-									float fStartVelDiffPB = speed - fStartVelPB;
-
-									FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s | PB: %s%s%.f", sVelDiff, gS_ChatStrings.sText,
-										fStartVelDiffPB > 0 ? gS_ChatStrings.sImproving : gS_ChatStrings.sWarning, fStartVelDiffPB > 0 ? "+":"", fStartVelDiffPB);	
-								}
-
-								FormatEx(sVelDiff, sizeof(sVelDiff), "%s%s u/s)", sVelDiff, gS_ChatStrings.sText);
-							}
-
-							if((Shavit_GetMessageSetting(other) & MSG_SPEEDTRAP) == 0)
-							{
-								Shavit_StopChatSound();							
-								Shavit_PrintToChat(other, "%T %s", "ZoneStageStartZonePrespeed", other,
-									gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
-									valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText, sVelDiff);
-							}
-
-							if(!valid)
-							{
-								Shavit_PrintToChat(other, "%T", "ZonePrespeedExcceded", other, gS_ChatStrings.sWarning, gS_ChatStrings.sText);
-							}
-
-							for(int i = 1; i <= MaxClients; i++)
-							{
-								if(IsValidClient(i) && GetSpectatorTarget(i) == other && (Shavit_GetMessageSetting(i) & MSG_SPEEDTRAP) == 0)
-								{
-									Shavit_StopChatSound();
-									Shavit_PrintToChat(i, "%s*%N*%s %T %s", gS_ChatStrings.sImproving, other, gS_ChatStrings.sText, "ZoneStageStartZonePrespeed", i,
-										gS_ChatStrings.sVariable2, zonestage, gS_ChatStrings.sText,
-										valid ? gS_ChatStrings.sVariable : gS_ChatStrings.sWarning, speed, gS_ChatStrings.sText, sVelDiff);
-								}
-							}						
-						}
-						else
-						{
-							Shavit_SetStageTimeValid(other, true);
-						}
-					}
-				}
 			}
 		}
 	}

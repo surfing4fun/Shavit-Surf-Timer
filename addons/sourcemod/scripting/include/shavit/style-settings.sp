@@ -156,9 +156,6 @@ public SMCResult OnStyleEnterSection(SMCParser smc, const char[] name, bool opt_
 	SetStyleSettingFloat(gI_CurrentParserIndex, "velocity_limit", 0.0);
 	SetStyleSettingInt  (gI_CurrentParserIndex, "bunnyhopping", 1);
 
-	SetStyleSettingInt  (gI_CurrentParserIndex, "prespeed_type", -1);
-	SetStyleSettingInt  (gI_CurrentParserIndex, "blockprejump", -1);
-	SetStyleSettingInt  (gI_CurrentParserIndex, "nozaxisspeed", -1);
 	SetStyleSettingInt  (gI_CurrentParserIndex, "restrictnoclip", -1);
 	SetStyleSettingInt  (gI_CurrentParserIndex, "startinair", 0);
 

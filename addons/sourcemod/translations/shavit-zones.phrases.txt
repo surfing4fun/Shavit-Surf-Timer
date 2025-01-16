@@ -337,13 +337,41 @@
 		"#format"	"{1:d}"
 		"en"		"Stage: {1}"
 	}
-	"ZoneUseStageSpeedLimit"
+	"ZoneSpeedLimitOption"
 	{
-		"en"		"Use prespeed limit"
+		"en"		"Speed Limit Options"
 	}
-	"ZoneStopAfterTeleport"
+	"SpeedLimitOptionMenuTitle"
 	{
-		"en"		"Stop after teleport"
+		"en"		"Speed Limit Options"
+	}
+	"ZoneSpeedLimitSettingOverridden"
+	{
+		"en"		"Current settings will be overridden by higher-level speed limits."		
+	}
+	"ZoneLimitSpeed"
+	{
+		"en"		"Limit horizental speed"
+	}
+	"ZoneBlockBhop"
+	{
+		"en"		"Block Bunnyhop"
+	}
+	"ZoneBlockJump"
+	{
+		"en"		"Block Pre-jump"
+	}	
+	"ZoneReduceSpeed"
+	{
+		"en"		"Reduce speed when exceeding limit"
+	}
+	"ZoneNoVerticalSpeed"
+	{
+		"en"		"Start timer if vertical speed exists"
+	}
+	"ZoneResetSpeedAfterTeleport"
+	{
+		"en"		"Reset speed after teleport"
 	}
 	"ZoneSetCheckpoint"
 	{
@@ -447,11 +475,6 @@
 	"TpToZone"
 	{
 		"en"        "Teleport to a zone"
-	}
-	"ZonePrespeedExcceded"
-	{
-		"#format"	"{1:s},{2:s}"
-		"en"		"{1}WARNING:{2} You excceded prespeed limit in start zone, Your current stage time WILL NOT be saved."
 	}
 	// ---------- Custom Zone ---------- //
 	"CustomZoneOption"
@@ -560,16 +583,6 @@
 	{
 		"#format"	"{1:s},{2:s},{3:s}"
 		"en"		"{1}Your timer has been stopped for entering a {2}glitch zone{3}."
-	}
-	"ZoneStartZonePrespeed"
-	{
-		"#format"	"{1:s},{2:.f},{3:s}"
-		"en"		"Start: {1}{2}{3} u/s "
-	}
-	"ZoneStageStartZonePrespeed"
-	{
-		"#format"	"{1:s},{2:d},{3:s},{4:s},{5:.f},{6:s}"
-		"en"		"Stage {1}{2}{3} Start: {4}{5}{6} u/s "
 	}
 	"Zone_Start"
 	{
