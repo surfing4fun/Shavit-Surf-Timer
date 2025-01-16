@@ -67,10 +67,6 @@
 		"en"		"Replay bot is unavailable, try again later."
 	}
 	// ============== Common translation ====================
-	"StageText"
-	{
-		"en"		"Stage"
-	}
 	"PersonalReplay"
 	{
 		"en"		"[PR] "

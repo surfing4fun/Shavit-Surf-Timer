@@ -37,10 +37,6 @@
 		"#format"	"{1:s},{2:s},{3:s}"
 		"en"		"Could not delete replay for {1}{2}{3}."
 	}
-	"ReplayStageText"
-	{
-		"en"		"Stage"
-	}
 	// ---------- Central Replay Menu ---------- //
 	"CentralReplayTitle"
 	{

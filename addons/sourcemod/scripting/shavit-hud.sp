@@ -1332,7 +1332,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 			}
 			else
 			{
-				FormatEx(sTrack, 32, "%T %d", "HudStage", client, data.iReplayStage);
+				FormatEx(sTrack, 32, "%T %d", "StageText", client, data.iReplayStage);
 			}
 
 			FormatEx(sTrack, 128, "%T", "ReplayText", client, sTrack);
@@ -1447,10 +1447,7 @@ int AddHUDToBuffer_Source2013(int client, huddata_t data, char[] buffer, int max
 				{
 					if(Shavit_IsOnlyStageMode(data.iTarget))
 					{
-						// FormatEx(sLine, 128, "%s%s%T %d", data.iTrack == Track_Bonus ? sTrack : "", data.iTrack == Track_Bonus ? " ":"", 
-						// "HudStage", client, data.iCurrentStage);
-						// AddHUDLine(buffer, maxlen, sLine, iLines);
-						FormatEx(sLine, 128, "%T %d", "HudStage", client, data.iCurrentStage);
+						FormatEx(sLine, 128, "%T %d", "StageText", client, data.iCurrentStage);
 						AddHUDLine(buffer, maxlen, sLine, iLines);
 					}
 					else
@@ -2550,7 +2547,7 @@ void UpdateKeyHint(int client, bool force = false)
 					float fSHStageWRTime = Shavit_GetSHStageRecordTime(stage);
 					if(fSHStageWRTime > 0.0)
 					{
-						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "StageText", client, stage);
 						
 						char sSHStageWRTime[16];
 						FormatSeconds(fSHStageWRTime, sSHStageWRTime, 16);
@@ -2564,7 +2561,7 @@ void UpdateKeyHint(int client, bool force = false)
 					}
 					else if(fSHStageWRTime == -1.0)
 					{
-						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "StageText", client, stage);
 						Format(sMessage, sizeof(sMessage), "%s\nSH: Loading...", sMessage);
 					}
 
@@ -2572,7 +2569,7 @@ void UpdateKeyHint(int client, bool force = false)
 					{
 						if(fSHStageWRTime == 0.0)
 						{
-							Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);							
+							Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "StageText", client, stage);							
 						}
 						
 						char sStageWRName[MAX_NAME_LENGTH];
@@ -2591,7 +2588,7 @@ void UpdateKeyHint(int client, bool force = false)
 				{
 					if (fStageWR != 0.0)
 					{
-						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "HudStage", client, stage);
+						Format(sMessage, sizeof(sMessage), "%s%s- %T %d -", sMessage, (strlen(sMessage) > 0)? "\n\n":"", "StageText", client, stage);
 						char sStageWRName[MAX_NAME_LENGTH];
 						Shavit_GetStageWRName(style, sStageWRName, MAX_NAME_LENGTH, stage);
 

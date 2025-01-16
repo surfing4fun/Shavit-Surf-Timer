@@ -1607,7 +1607,7 @@ public Action Command_DeleteStageRecord(int client, int args)
 		int records = GetStageRecorCount(i);
 
 		char sStage[64];
-		FormatEx(sStage, sizeof(sStage), "%T %d", "WRStage", client, i);
+		FormatEx(sStage, sizeof(sStage), "%T %d", "StageText", client, i);
 
 		if(records > 0)
 		{
@@ -1784,7 +1784,7 @@ public Action Command_DeleteAll_Stage(int client, int args)
 		int records = GetStageRecorCount(i);
 
 		char sStage[64];
-		FormatEx(sStage, sizeof(sStage), "%T %d", "WRStage", client, i);
+		FormatEx(sStage, sizeof(sStage), "%T %d", "StageText", client, i);
 
 		if(records > 0)
 		{
@@ -1871,7 +1871,7 @@ public int MenuHandler_DeleteAll_Stage_Second(Menu menu, MenuAction action, int 
 void DeleteAllStageSubmenu(int client)
 {
 	char sStage[32];
-	FormatEx(sStage, sizeof(sStage), "%T %d", "WRStage", client, gA_WRCache[client].iLastStage);
+	FormatEx(sStage, sizeof(sStage), "%T %d", "StageText", client, gA_WRCache[client].iLastStage);
 
 	Menu menu = new Menu(MenuHandler_DeleteAllStage);
 	menu.SetTitle("%T\n ", "DeleteAllStageRecordsMenuTitle", client, gS_Map, sStage, gS_StyleStrings[gA_WRCache[client].iLastStyle].sStyleName);
@@ -2175,7 +2175,7 @@ public void SQL_OpenDelete_Callback(Database db, DBResultSet results, const char
 	}
 	else
 	{
-		FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client,  gA_WRCache[client].iLastStage);
+		FormatEx(sTrack, sizeof(sTrack), "%T %d", "StageText", client,  gA_WRCache[client].iLastStage);
 	}
 
 	Menu menu = new Menu(OpenDelete_Handler);
@@ -3071,7 +3071,7 @@ void RetrieveWRMenu(int client, int track, int stage = 0)
 		for(int i = 1; i <= iStageCount; i++)
 		{
 			IntToString(i, sSelection, sizeof(sSelection));
-			FormatEx(sMenu, sizeof(sMenu), "%T %d", "WRStage", client, i);
+			FormatEx(sMenu, sizeof(sMenu), "%T %d", "StageText", client, i);
 			selectstage.AddItem(sSelection, sMenu);
 		}
 
@@ -3413,7 +3413,7 @@ public void SQL_WR_Callback(Database db, DBResultSet results, const char[] error
 		}
 		else
 		{
-			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "StageText", client, stage);
 		}
 
 		FormatEx(sFormattedTitle, 192, "%T\n%s", "WRRecordFor", client, sMap, sTrack, sRanks);
@@ -3653,7 +3653,7 @@ public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error
 		}
 		else
 		{
-			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "StageText", client, stage);
 		}
 
 		char sDisplay[192];
@@ -3813,10 +3813,10 @@ public Action Command_PersonalBest(int client, int args)
 	pack.WriteString(validmap);
 	pack.WriteString(name);
 
-	char query[512];
+	char query[2048];
 	FormatEx(query, sizeof(query),
-	"SELECT id, style, track, 0 as stage, time, date, name FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.auth = %d AND p.map = '%s' UNION ALL "...
-	"SELECT id, style, track, stage, time, date, name FROM %sstagetimes s JOIN %susers u ON s.auth = u.auth WHERE s.auth = %d AND s.map = '%s';",
+	"SELECT id, style, track, 0 as stage, time, name FROM %splayertimes p JOIN %susers u ON p.auth = u.auth WHERE p.auth = %d AND p.map = '%s' UNION ALL "...
+	"SELECT id, style, track, stage, time, name FROM %sstagetimes s JOIN %susers u ON s.auth = u.auth WHERE s.auth = %d AND s.map = '%s';",
 	gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap, gS_MySQLPrefix, gS_MySQLPrefix, steamid, validmap);
 
 	QueryLog(gH_SQL, SQL_PersonalBest_Callback, query, pack, DBPrio_Low);
@@ -3862,12 +3862,10 @@ public void SQL_PersonalBest_Callback(Database db, DBResultSet results, const ch
 		int track = results.FetchInt(2);
 		int stage = results.FetchInt(3);
 		float time = results.FetchFloat(4);
-		char date[32];
-		FormatTime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", results.FetchInt(5));
 
 		if (!name[0])
 		{
-			results.FetchString(6, name, sizeof(name));
+			results.FetchString(5, name, sizeof(name));
 		}
 
 		char track_name[32];
@@ -3878,14 +3876,14 @@ public void SQL_PersonalBest_Callback(Database db, DBResultSet results, const ch
 		}
 		else
 		{
-			FormatEx(track_name, sizeof(track_name), "%T %d", "WRStage", client, stage);
+			FormatEx(track_name, sizeof(track_name), "%T %d", "StageText", client, stage);
 		}
 
 		char formated_time[32];
 		FormatSeconds(time, formated_time, sizeof(formated_time));
 
 		char display[256];
-		Format(display, sizeof(display), "%s - %s - %s", track_name, gS_StyleStrings[style].sStyleName, formated_time);
+		Format(display, sizeof(display), "%s - %s: %s", track_name, gS_StyleStrings[style].sStyleName, formated_time);
 
 		char info[16];
 
@@ -3893,7 +3891,7 @@ public void SQL_PersonalBest_Callback(Database db, DBResultSet results, const ch
 		menu.AddItem(info, display);
 	}
 
-	menu.SetTitle("%T", "ListPersonalBest", client, name, map);
+	menu.SetTitle("%T\n ", "ListPersonalBest", client, name, map);
 
 	menu.ExitButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -4082,7 +4080,7 @@ public void SQL_SubMenu_Callback(Database db, DBResultSet results, const char[] 
 		}
 		else
 		{
-			FormatEx(sTrack, sizeof(sTrack), "%T %d", "WRStage", client, stage);
+			FormatEx(sTrack, sizeof(sTrack), "%T %d", "StageText", client, stage);
 		}
 
 		Shavit_PrintSteamIDOnce(client, iSteamID, sName);
@@ -4514,7 +4512,7 @@ public void Shavit_OnFinishStage(int client, int track, int style, int stage, fl
 	FormatSeconds(time, sTime, 32);
 
 	char sStage[16];
-	Format(sStage, 16, "%T %d", "WRStage", bEveryone ? LANG_SERVER:client, stage);
+	Format(sStage, 16, "%T %d", "StageText", bEveryone ? LANG_SERVER:client, stage);
 
 	char sDifferenceWR[32];
 	FormatSeconds(fDifferenceWR, sDifferenceWR, 32, true);

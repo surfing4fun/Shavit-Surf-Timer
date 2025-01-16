@@ -306,9 +306,9 @@
 	{
 		"en"		"records"
 	}
-	"WRStage"
+	"WRRank"
 	{
-		"en"		"Stage"
+		"en"		"Rank"
 	}
 	"WRRecordFor"
 	{

@@ -134,10 +134,6 @@
 	{
 		"en"		"World records"
 	}
-	"StageText"
-	{
-		"en"		"Stage"
-	}
 	"WRCounts"
 	{
 		"en"		" WRs"

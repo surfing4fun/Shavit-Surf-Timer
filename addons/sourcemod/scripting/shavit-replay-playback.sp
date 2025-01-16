@@ -1970,13 +1970,11 @@ void AddReplayBots()
 		if(gA_LoopingBotConfig[i].bStageLoop)
 		{
 			track = 0;
-			// Shavit_PrintToChatAll("[DEBUG] stageloop params: %d %d %d", track, style, stage);
 			hasFrames = FindNextLoop(track, style, stage, i);
 		}
 		else
 		{
 			stage = 0;
-			// Shavit_PrintToChatAll("[DEBUG] normal params: %d %d %d", track, style, stage);
 			hasFrames = FindNextLoop(track, style, stage, i);
 		}
 
@@ -2324,7 +2322,7 @@ void FormatStyle(const char[] source, int style, bool central, int track, int st
 	}
 	else if (stage > 0)
 	{
-		FormatEx(sTrack, 32, "%T %d", "ReplayStageText", LANG_SERVER, stage);
+		FormatEx(sTrack, 32, "%T %d", "StageText", LANG_SERVER, stage);
 		FormatEx(sTrackTag, 4, "S%d", stage);
 	}
 
@@ -3103,7 +3101,7 @@ public Action Command_DeleteReplay(int client, int args)
 			FormatEx(sInfo, 8, "%d;s%d", iStyle, k);
 
 			char sStage[32];
-			FormatEx(sStage, 32, "%T %d", "ReplayStageText", client, k);
+			FormatEx(sStage, 32, "%T %d", "StageText", client, k);
 
 			char sDisplay[64];
 
@@ -3215,7 +3213,7 @@ public int DeleteConfirmation_Callback(Menu menu, MenuAction action, int param1,
 			GetTrackName(param1, gI_MenuTrack[param1], sTrack, 32);
 
 			char sStage[32];
-			FormatEx(sStage, 32, "%T %d", "ReplayStageText", param1, gI_MenuStage[param1]);
+			FormatEx(sStage, 32, "%T %d", "StageText", param1, gI_MenuStage[param1]);
 
 			LogAction(param1, param1, "Deleted replay for %s on map %s. (%s%s)",
 			gS_StyleStrings[style].sStyleName, gS_Map, gI_MenuStage[param1] == 0 ? "Track: ":"", gI_MenuStage[param1] == 0 ? sTrack:sStage);
@@ -3596,7 +3594,7 @@ public int MenuHandler_TrackType(Menu menu, MenuAction action, int param1, int p
 					FormatEx(sInfo, 8, "s_%d", i);
 
 					char sStage[32];
-					FormatEx(sStage, 32, "%T %d", "ReplayStageText", param1, i);
+					FormatEx(sStage, 32, "%T %d", "StageText", param1, i);
 
 					submenu.AddItem(sInfo, sStage, records ? ITEMDRAW_DEFAULT:ITEMDRAW_DISABLED);
 				}
@@ -3696,7 +3694,7 @@ void OpenReplayStyleMenu(int client, int track, int stage)
 	}
 	else
 	{
-		FormatEx(sTrack, 32, "%T %d", "ReplayStageText", client, stage);
+		FormatEx(sTrack, 32, "%T %d", "StageText", client, stage);
 	}
 
 	Menu menu = new Menu(MenuHandler_ReplayStyle);
@@ -3925,7 +3923,6 @@ int GetNextBit(int start, int[] mask, int max)
 // Need to find the next style/track/track in the loop that have frames.
 bool FindNextLoop(int &track, int &style, int &stage, int config)
 {
-	// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 	int originalTrack = track;
 	int originalStyle = style;
 	// int originalStage = stage;
@@ -3963,7 +3960,6 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 				return false;
 			}
 
-			// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 			hasFrames = gA_FrameCache[style][track][stage].iFrameCount > 0;
 
 			if(hasFrames)
@@ -3996,7 +3992,6 @@ bool FindNextLoop(int &track, int &style, int &stage, int config)
 		}
 
 		style = nextstyle;
-		// Shavit_PrintToChatAll("[DEBUG] inside fnl params: %d %d %d %d", track, style, stage, config);
 		hasFrames = (gA_FrameCache[style][track][stage].iFrameCount > 0);
 
 		if (track == originalTrack && style == originalStyle)

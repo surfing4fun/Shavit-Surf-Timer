@@ -193,10 +193,6 @@
 	{
 		"en"		"You cannot repeat timer on a linear map."
 	}
-	"StageText"
-	{
-		"en"		"Stage"
-	}
 	// ---------- Pauses ---------- //
 	"MessagePause"
 	{

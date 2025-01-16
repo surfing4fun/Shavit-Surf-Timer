@@ -168,10 +168,6 @@
 		"#format"	"{1:s},{2:s}"
 		"en"		"Your timer was forced to stop because {1}All Zones{2} have been deleted."
 	}
-	"StageText"
-	{
-		"en"		"Stage"
-	}
 	// ---------- Panel Text ---------- //
 	"AbortZoneCreation"
 	{

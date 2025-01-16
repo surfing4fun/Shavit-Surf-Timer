@@ -136,7 +136,6 @@ bool gB_Eventqueuefix = false;
 bool gB_Zones = false;
 bool gB_ReplayPlayback = false;
 bool gB_Rankings = false;
-bool gB_HUD = false;
 bool gB_AdminMenu = false;
 
 // use to clear players checkpoint times
@@ -489,7 +488,6 @@ public void OnPluginStart()
 	gB_Zones = LibraryExists("shavit-zones");
 	gB_ReplayPlayback = LibraryExists("shavit-replay-playback");
 	gB_Rankings = LibraryExists("shavit-rankings");
-	gB_HUD = LibraryExists("shavit-hud");
 	gB_AdminMenu = LibraryExists("adminmenu");
 
 	// database connections
@@ -650,10 +648,6 @@ public void OnLibraryAdded(const char[] name)
 	{
 		gB_Rankings = true;
 	}
-	else if(StrEqual(name, "shavit-hud"))
-	{
-		gB_HUD = true;
-	}
 	else if(StrEqual(name, "eventqueuefix"))
 	{
 		gB_Eventqueuefix = true;
@@ -677,10 +671,6 @@ public void OnLibraryRemoved(const char[] name)
 	else if(StrEqual(name, "shavit-rankings"))
 	{
 		gB_Rankings = false;
-	}
-	else if(StrEqual(name, "shavit-hud"))
-	{
-		gB_HUD = false;
 	}
 	else if(StrEqual(name, "eventqueuefix"))
 	{
@@ -997,6 +987,7 @@ public Action Command_TeleportEnd(int client, int args)
 	}
 
 	Shavit_SetPracticeMode(client, true, false);
+
 	Call_StartForward(gH_Forwards_OnEnd);
 	Call_PushCell(client);
 	Call_PushCell(track);
