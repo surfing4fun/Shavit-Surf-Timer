@@ -2391,9 +2391,9 @@ void UpdateKeyHint(int client, bool force = false)
 	{
 		style = Shavit_GetBhopStyle(target);
 		track = Shavit_GetClientTrack(target);
+		stage = Shavit_GetClientLastStage(target);
 		fTargetPB = Shavit_GetClientPB(target, style, track);
 		fTargetStagePB = Shavit_GetClientStagePB(target, style, stage);
-		stage = Shavit_GetClientLastStage(target);
 		bOnlyStageMode = Shavit_IsOnlyStageMode(target) && track == Track_Main;
 	}
 	else
@@ -2436,7 +2436,7 @@ void UpdateKeyHint(int client, bool force = false)
 
 		if((gI_HUDSettings[client] & HUD_TIMELEFT) > 0 && GetMapTimeLeft(iTimeLeft) && iTimeLeft > 0)
 		{
-			FormatEx(sMessage, 256, (iTimeLeft > 60)? "%s%s%T: %d minutes":"%s%s%T: %d seconds", sMessage, (strlen(sMessage) > 0)? "\n":"", "HudTimeLeft", client, (iTimeLeft > 60) ? (iTimeLeft / 60)+1 : iTimeLeft);
+			FormatEx(sMessage, 256, (iTimeLeft > 60)? "%s%s%T: %d %T":"%s%s%T: %d %T", sMessage, (strlen(sMessage) > 0)? "\n":"", "HudTimeLeft", client, (iTimeLeft > 60) ? (iTimeLeft / 60)+1 : iTimeLeft, (iTimeLeft > 60)? "HudMinutes":"HudSeconds", client);
 		}
 
 		if ((0 <= style < gI_Styles) && (0 <= track <= TRACKS_SIZE))
@@ -2508,10 +2508,6 @@ void UpdateKeyHint(int client, bool force = false)
 					}
 				}
 
-				char sTargetPB[64];
-				FormatSeconds(fTargetPB, sTargetPB, sizeof(sTargetPB));
-				Format(sTargetPB, sizeof(sTargetPB), "%T: %s", "HudPersonalBest", client, sTargetPB);
-
 				float fSelfPB = Shavit_GetClientPB(client, style, track);
 				char sSelfPB[64];
 				FormatSeconds(fSelfPB, sSelfPB, sizeof(sSelfPB));
@@ -2521,14 +2517,22 @@ void UpdateKeyHint(int client, bool force = false)
 				{
 					if((gI_HUD2Settings[client] & HUD2_SPLITPB) == 0 && target != client)
 					{
+						char sName[64];
+
 						if(fTargetPB != 0.0)
 						{
-							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%N)", sMessage, sTargetPB, Shavit_GetRankForTime(style, fTargetPB, track), target);
+							Format(sName, sizeof(sName), "%N", target);
+							TrimDisplayString(sName, sName, sizeof(sName), gCV_RecordNameSymbolLength.IntValue);
+							char sTargetPB[64];
+							FormatSeconds(fTargetPB, sTargetPB, sizeof(sTargetPB));
+							Format(sTargetPB, sizeof(sTargetPB), "%T: %s", "HudPersonalBest", client, sTargetPB);
+
+							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%s)", sMessage, sTargetPB, Shavit_GetRankForTime(style, fTargetPB, track), sName);
 						}
 
 						if(fSelfPB != 0.0)
 						{
-							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%N)", sMessage, sSelfPB, Shavit_GetRankForTime(style, fSelfPB, track), client);
+							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d)", sMessage, sSelfPB, Shavit_GetRankForTime(style, fSelfPB, track), client);
 						}
 					}
 					else if(fSelfPB != 0.0)
@@ -2601,10 +2605,6 @@ void UpdateKeyHint(int client, bool force = false)
 					}					
 				}
 
-				char sTargetStagePB[64];
-				FormatSeconds(fTargetStagePB, sTargetStagePB, sizeof(sTargetStagePB));
-				Format(sTargetStagePB, sizeof(sTargetStagePB), "%T: %s", "HudPersonalBest", client, sTargetStagePB);
-				
 				float fSelfStagePB = Shavit_GetClientStagePB(client, style, stage);
 				char sSelfStagePB[64];
 				
@@ -2613,16 +2613,27 @@ void UpdateKeyHint(int client, bool force = false)
 
 				if(!bReplay)
 				{
+					char sName[64];
+
 					if((gI_HUD2Settings[client] & HUD2_SPLITPB) == 0 && target != client)
 					{
 						if(fTargetStagePB != 0.0)
 						{
-							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%N)", sMessage, sTargetStagePB, Shavit_GetStageRankForTime(style, fTargetStagePB, stage), target);
+							Format(sName, sizeof(sName), "%N", target);
+							TrimDisplayString(sName, sName, sizeof(sName), gCV_RecordNameSymbolLength.IntValue);
+
+							char sTargetStagePB[64];
+							FormatSeconds(fTargetStagePB, sTargetStagePB, sizeof(sTargetStagePB));
+							Format(sTargetStagePB, sizeof(sTargetStagePB), "%T: %s", "HudPersonalBest", client, sTargetStagePB);
+
+							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%s)", sMessage, sTargetStagePB, Shavit_GetStageRankForTime(style, fTargetStagePB, stage), sName);
 						}
 
 						if(fSelfStagePB != 0.0)
 						{
-							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d) (%N)", sMessage, sSelfStagePB, Shavit_GetStageRankForTime(style, fSelfStagePB, stage), client);
+							Format(sName, sizeof(sName), "%N", client);
+							TrimDisplayString(sName, sName, sizeof(sName), gCV_RecordNameSymbolLength.IntValue);
+							Format(sMessage, sizeof(sMessage), "%s\n%s (#%d)", sMessage, sSelfStagePB, Shavit_GetStageRankForTime(style, fSelfStagePB, stage));
 						}
 					}
 					else if(fSelfStagePB != 0.0)
