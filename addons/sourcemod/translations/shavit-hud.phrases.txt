@@ -128,6 +128,14 @@
 		"#format"	"{1:d}"
 		"en"		"(Speed Limit: {1})"
 	}
+	"HudMinutes"
+	{
+		"en"		"minutes"
+	}
+	"HudSeconds"
+	{
+		"en"		"seconds"
+	}
 	// ---------- Menus ---------- //
 	"HUDMenuTitle"
 	{

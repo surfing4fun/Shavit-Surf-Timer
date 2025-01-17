@@ -145,16 +145,13 @@ public void OnPluginStart()
 	gH_OnReplaySaved = CreateGlobalForward("Shavit_OnReplaySaved", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell, Param_Cell, Param_Cell, Param_String);
 
 	gCV_Enabled = new Convar("shavit_replay_recording_enabled", "1", "Enable replay bot functionality?", 0, true, 0.0, true, 1.0);
-	gCV_PlaybackPostRunTime = new Convar("shavit_replay_postruntime", "0.1", "Time (in seconds) to record after a player enters the end zone.", 0, true, 0.0, true, 2.0);
+	gCV_PlaybackPostRunTime = new Convar("shavit_replay_postruntime", "0.2", "Time (in seconds) to record after a player enters the end zone.", 0, true, 0.0, true, 2.0);
 	gCV_PreRunAlways = new Convar("shavit_replay_prerun_always", "1", "Record prerun frames outside the start zone?", 0, true, 0.0, true, 1.0);
-	gCV_PlaybackPreRunTime = new Convar("shavit_replay_preruntime", "1.5", "Time (in seconds) to record before a player leaves start zone.", 0, true, 0.0, true, 3.0);
+	gCV_PlaybackPreRunTime = new Convar("shavit_replay_preruntime", "1.7", "Time (in seconds) to record before a player leaves start zone.", 0, true, 0.0, true, 3.0);
 	gCV_TimeLimit = new Convar("shavit_replay_timelimit", "7200.0", "Maximum amount of time (in seconds) to allow saving to disk.\nDefault is 7200 (2 hours)\n0 - Disabled", 0, true, 0.0);
 	gCV_ClearFrameDelay = new Convar("shavit_replay_clearframedelay", "0.2", "Time of delay before call ClearFrames(),\nin order to avoid cleaning frame before replay edit finish.", 0, true, 0.1, true, 0.5);
 
 	Convar.AutoExecConfig();
-
-	// RegConsoleCmd("sm_rt", Command_RecorderTest, "Test.");
-
 
 	gF_Tickrate = (1.0 / GetTickInterval());
 
@@ -749,6 +746,11 @@ public int CaculateStagePreFrames(int client, int start, int stage)
 	}
 
 	int iStartFrame = start - iMaxPreFrames;
+
+	if(iStartFrame <= 0)
+	{
+		return start;
+	}
 
 	frame_t aStartFrame;
 	frame_t aFrame2;
