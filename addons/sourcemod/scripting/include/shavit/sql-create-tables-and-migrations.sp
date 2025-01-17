@@ -62,7 +62,8 @@ enum
 	Migration_AddStagetimesStartvelAndEndvel,
 	Migration_AddCptimesStagetimeAndAttempts,
 	Migration_AddCpwrsStagetimeAndAttempts, 
-	Migration_AddUsersFirstlogin, //39
+	Migration_AddUsersFirstlogin, 
+	Migration_SetZoneSpeedLimitFlagToDefault, //49
 	// Migration_AddCpwrsStartvelAndEndvel,
 	// Migration_AddCptimesStartvelAndEndvel,
 	MIGRATIONS_END
@@ -109,6 +110,7 @@ char gS_MigrationNames[][] = {
 	"AddCptimesStagetimeAndAttempts",
 	"AddCpwrsStagetimeAndAttempts",	
 	"AddUsersFirstlogin",
+	"SetZoneSpeedLimitFlagToDefault",
 	// "AddCpwrsStartvelAndEndvel",
 	// "AddCptimesStartvelAndEndvel",
 };
@@ -444,8 +446,8 @@ void ApplyMigration(int migration)
 		case Migration_AddStagetimesStartvelAndEndvel: ApplyMigration_AddStagetimesStartvelAndEndvel();
 		case Migration_AddCptimesStagetimeAndAttempts: ApplyMigration_AddCptimesStagetimeAndAttempts();
 		case Migration_AddCpwrsStagetimeAndAttempts: ApplyMigration_AddCpwrsStagetimeAndAttempts();
-		case Migration_AddUsersFirstlogin: ApplyMigration_AddUsersFirstlogin()
-
+		case Migration_AddUsersFirstlogin: ApplyMigration_AddUsersFirstlogin();
+		case Migration_SetZoneSpeedLimitFlagToDefault: ApplyMigration_SetZoneSpeedLimitFlagToDefault();
 		// case Migration_AddCpwrsStartvelAndEndvel: ApplyMigration_AddCpwrsStartvelAndEndvel();
 		// case Migration_AddCptimesStartvelAndEndvel: ApplyMigration_AddCptimesStartvelAndEndvel();
 	}
@@ -665,6 +667,13 @@ void ApplyMigration_AddUsersFirstlogin()
 		FormatEx(sQuery, 128, "ALTER TABLE `%susers` ADD COLUMN `firstlogin` INTEGER NOT NULL DEFAULT -1", gS_SQLPrefix);
 	}
 	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_AddUsersFirstlogin, DBPrio_High);
+}
+
+void ApplyMigration_SetZoneSpeedLimitFlagToDefault()
+{
+	char sQuery[128];
+	FormatEx(sQuery, 128, "UPDATE `%smapzones` SET speedlimit = 3 WHERE speedlimit = 1;", gS_SQLPrefix);
+	QueryLog(gH_SQL, SQL_TableMigrationSingleQuery_Callback, sQuery, Migration_SetZoneSpeedLimitFlagToDefault, DBPrio_High);
 }
 
 public void SQL_Migration_DeprecateExactTimeInt_Query(Database db, DBResultSet results, const char[] error, any data)
