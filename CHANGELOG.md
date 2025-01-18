@@ -1,6 +1,86 @@
 CHANGELOG.md file for bhoptimer -- https://github.com/shavitush/bhoptimer
 Note: Dates are UTC+0.
 
+# Shavit SurfTimer - Change log - 2025-1-18 -
+* Update [`v1.0.4 Bugfix...v1.0.5`]
+
+## WARNING
+- New ranking system is no longer support SQL version without window function, please check your database version before update
+
+## Separate control of the prespeed limit for each stage zone/track:
+**New option 'Speed Limit Options' added in zone edit / create menu, to control the ways to stop client from gaining speed in start zone:**
+> * **Limit horizental speed:** Keep player's maximum velocity lower than a specific value (runspeed + shavit_core_prestrafelimit).
+> * **Block Bunnyhop:** Stop player if they jump more than once in start zone.
+> * **Block Pre-jump:** Stop player jumping inside start zone.
+> * **Reduce speed when exceeding limit:** Scale player's velocity to 1/3 if they exceeded limit.
+> * **Start timer if vertical speed exists:** Work as same as the functionality of `shavit_core_nozaxisspeed`.
+
+**If you have two or more start zone on a track, only the highest level of speed limit will apply to all start zone in this track.**
+
+## New ranking system
+**New ranking system add rank as factor to caculate points**
+* point = rank point (RP) + finish point (FP)
+> RP : Main - (250, 850] | Bonus - (150, 400] | Stage - (50, 250]
+FP : Main - 18.33 | Bonus - 35.0
+* Formula
+> Main = (RP + records * ( tier^2 / 9 - tier )) / rank + (FP * (tier + (tier-4)^2 * tier))
+Bonus = (RP + ( records / 2 )) / rank + FP
+Stage = (RP + records * ( tier^2 / 16 - tier )) / rank + ( tier * 2 )
+
+## New features
+* Persistent data for personal replay: Saved replay for a player after disconnected from server
+* New sounds config option `wrcp` for beating stage records
+* Caculate and storage attempts and stage times for main run on staged map
+* Add checkpoint records comparison menu
+* Add 'Reset speed after teleport' Option for Teleport Zone
+* Storage `First login` for each users, and display in Profile menu (Thanks for suggestion from @Calig)
+* Auto hook map start zone / end zone / stages / checkpoints for surf maps for specific targetname patterns triggers
+* Integrates newmap feature in shavit-mapchooser [github](https://github.com/Nairdaa/shavit-newmaps)
+* Command `!mapinfo <map>` to display info of a map in chat. 
+* Add mapinfo HUD on key hint.
+
+## Bug fixes
+* Fix uncorrect exit back on recent record sub menu
+* Fix problem still able to set teleport destination in another stage zone
+* Fix error on table create
+* Fix bug cause StartTimer stopped by Shavit_OnStartPre after player use noclip
+* Fix bug cause ArrayList.Resize to negative value when Edit replay frames for stage records
+* Fix bug casue error when fetch wrcp from another map
+* Fix speedometer feature disabled cause by plugin late load
+* Fix translation name typos
+
+## The following commands are available in new version
+* `!cpwr` - to see world record's checkpoint records
+* `!cppb` - to see personal records's checkpoint records
+* `!cpr` / `ccpr` - to see comparison between PB and WR
+* `!specbot` - spectate a replay bot
+* `!recalcall` - recaculate all points (Admin menu)
+* `!newmaps` - open new map menu
+* `!saveloc` - alias command of `!save`
+* `!teleprev` `!telenext` - alias command of `!prevcp` `!nextcp`
+
+## Merge stuffs from shavit bhoptimer & pull reqest
+* [SourceMod 12 fixes.](https://github.com/bhopppp/Shavit-Surf-Timer/commit/82c29e5205fc503be79289023da2ed8e5e08065a) (Thank you @Cynosphere)
+* [Fix database verison parsing.](https://github.com/shavitush/bhoptimer/commit/e5976001cfb3b51f4e0517a51c17c723089f53af) (Thank you @Awesomerly)
+
+## Change details
+* Teleport to zone changes: Set client to practice mode after teleport to zone [[commit]](https://github.com/bhopppp/Shavit-Surf-Timer/commit/6d4f5b9d93ce6d2c836c976716831b0b8d9ce5bc)
+* Remove style settings: `prespeed_type` `blockprejump` `nozaxisspeed` [[commit]](https://github.com/bhopppp/Shavit-Surf-Timer/commit/a6d9b4ca3a50cfa6deba62e4249c58525f7b0a8a)
+* Handle speed limit logic in shavit-core instead of shavit-misc [[commit]](https://github.com/bhopppp/Shavit-Surf-Timer/commit/a6d9b4ca3a50cfa6deba62e4249c58525f7b0a8a)
+* Check player's speed when zone increment is 1 (Timer started) instead of when `EndTouchPost` called [[commit]](https://github.com/bhopppp/Shavit-Surf-Timer/commit/a6d9b4ca3a50cfa6deba62e4249c58525f7b0a8a)
+* Check if a client inside a stage zone when Start/End Touch a zone instead of every tick [[commit]](https://github.com/bhopppp/Shavit-Surf-Timer/commit/c9760fe7cca94e479fde6b8c59ecdbb8044b1bd7)
+* Move command sm_useshtier from shavit-ranking to shavit-wrsh [[commit]](https://github.com/bhopppp/Shavit-Surf-Timer/commit/3e6b30f6be5222498c5b382fd0ee1047ef89fdc5)
+
+* Convar changes: 
+> Remove: `shavit_misc_prespeed` `shavit_misc_prestrafezones` `shavit_misc_prestrafelimit` `shavit_core_blockjump` `shavit_core_nozaxisspeed`
+ Add: `shavit_core_prestrafezones` `shavit_core_prestrafelimit` `shavit_hud_recordnamesymbollength` `shavit_zone_defaultzoneprespeedlimit` `shavit_replay_playernamesymbollength` `shavit_personalreplay_persistdata_expiredtime` `shavit_wrsh_mapnamefix`
+ Default change:`shavit_replay_preruntime`: 2.0 -> 1.7 `shavit_replay_postruntime`: 0.1 -> 0.2
+
+* Native change: `Shavit_GetZoneUseSpeedLimit` bool -> `Shavit_GetTrackSpeedLimitFlags` int
+* Add natives: `Shavit_GetClientStageAttempts` `Shavit_SetClientStageAttempts` `Shavit_GetClientStageAttempt` `Shavit_SetClientStageAttempt` `Shavit_GetClientStageFinishTimes` `Shavit_SetClientStageFinishTimes` `Shavit_GetClientStageFinishTime` `Shavit_SetClientStageFinishTime`
+
+
+
 # Shavit SurfTimer - Change log - 2024-11-20 -
 * Update [`v1.0.4...v1.0.4 Bugfix`]
 
