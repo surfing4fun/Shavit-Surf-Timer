@@ -226,7 +226,7 @@ public Plugin myinfo =
 	author = "shavit, GAMMA CASE, rtldg, KiD Fearless, Kryptanyte, carnifex, rumour, BoomShotKapow, Nuko, Technoblazed, Kxnrl, Extan, sh4hrazad, OliviaMourning",
 	description = "Map zones for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/bhopppp/Shavit-Surf-Timer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -1941,6 +1941,7 @@ public void OnClientConnected(int client)
 
 	Reset(client);
 
+	gI_ZoneStage[client][1] = -1;
 	gF_Modifier[client] = 16.0;
 	gI_AdjustAxis[client] = 0;
 	gI_GridSnap[client] = 16;

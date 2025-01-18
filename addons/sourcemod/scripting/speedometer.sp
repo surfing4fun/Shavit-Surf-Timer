@@ -100,11 +100,11 @@ bool gB_Late;
 
 public Plugin myinfo =
 {
-	name = "Speedometer",
+	name = "[shavit-surf] Speedometer",
 	author = "KikI",
 	description = "A advanced center speed hud plugin work with shavit surf timer",
 	version = "1.3.0",
-	url = ""
+	url = "https://github.com/bhopppp/Shavit-Surf-Timer"
 };
 
 public void OnAllPluginsLoaded()

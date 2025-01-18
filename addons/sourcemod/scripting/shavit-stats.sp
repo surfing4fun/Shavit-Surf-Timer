@@ -85,10 +85,10 @@ Convar gCV_SavePlaytime = null;
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Player Stats",
-	author = "shavit, rtldg, Nuko",
+	author = "shavit, rtldg, Nuko, *Surf integration version modified by KikI",
 	description = "Player stats for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)

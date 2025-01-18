@@ -150,10 +150,10 @@ chatstrings_t gS_ChatStrings;
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Miscellaneous",
-	author = "shavit, Technoblazed, strafe, EvanIMK, Nickelony, rtldg, ofirgall",
+	author = "shavit, Technoblazed, strafe, EvanIMK, Nickelony, rtldg, ofirgall, *Surf integration version modified by KikI",
 	description = "Miscellaneous features for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -1345,7 +1345,7 @@ public Action Shavit_OnUserCmdPre(int client, int &buttons, int &impulse, float 
 
 	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
 
-	if (!bNoclip && Shavit_GetStyleSettingBool(gI_Style[client], "prespeed") && bInStart)
+	if (!bNoclip && bInStart)
 	{
 		float prespeed_ez_vel = Shavit_GetStyleSettingFloat(gI_Style[client], "prespeed_ez_vel");
 

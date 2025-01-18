@@ -140,10 +140,10 @@ chatstrings_t gS_ChatStrings;
 public Plugin myinfo =
 {
 	name = "[shavit-surf] HUD",
-	author = "shavit, strafe, KiD Fearless, rtldg, Technoblazed, Nairda, Nuko, GAMMA CASE",
+	author = "shavit, strafe, KiD Fearless, rtldg, Technoblazed, Nairda, Nuko, GAMMA CASE, *Surf integration version modified by KikI",
 	description = "HUD for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -2682,7 +2682,7 @@ void UpdateKeyHint(int client, bool force = false)
 
 					GetClientName(iSpectatorClients[i], sName, sizeof(sName));
 					ReplaceString(sName, sizeof(sName), "#", "?");
-					TrimDisplayString(sName, sName, sizeof(sName), gCV_RecordNameSymbolLength.IntValue);
+					TrimDisplayString(sName, sName, sizeof(sName), gCV_SpecNameSymbolLength.IntValue);
 					Format(sMessage, 256, "%s\n%s", sMessage, sName);
 				}
 			}

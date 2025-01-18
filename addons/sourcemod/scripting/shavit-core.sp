@@ -203,10 +203,10 @@ bool gB_KZMap[TRACKS_SIZE];
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Core",
-	author = "shavit, rtldg, KiD Fearless, GAMMA CASE, Technoblazed, carnifex, ofirgall, Nairda, Extan, rumour, OliviaMourning, Nickelony, sh4hrazad, BoomShotKapow, strafe",
+	author = "shavit, rtldg, KiD Fearless, GAMMA CASE, Technoblazed, carnifex, ofirgall, Nairda, Extan, rumour, OliviaMourning, Nickelony, sh4hrazad, BoomShotKapow, strafe, *Surf integration version modified by KikI",
 	description = "The core for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)

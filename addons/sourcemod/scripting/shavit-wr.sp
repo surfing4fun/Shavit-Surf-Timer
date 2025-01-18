@@ -143,10 +143,10 @@ bool gB_RRSelectStage[MAXPLAYERS+1];
 public Plugin myinfo =
 {
 	name = "[shavit-surf] World Records",
-	author = "shavit, SaengerItsWar, KiD Fearless, rtldg, BoomShotKapow, Nuko",
+	author = "shavit, SaengerItsWar, KiD Fearless, rtldg, BoomShotKapow, Nuko, *Surf integration version modified by KikI",
 	description = "World records shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)

@@ -62,8 +62,8 @@ public Plugin myinfo =
     name = "[shavit-surf] Personal replay",
     author = "KikI",
     description = "Save client's most recent replay on cache.",
-    version = "1.0",
-    url = ""
+    version = "1.1",
+    url = "https://github.com/bhopppp/Shavit-Surf-Timer"
 };
 
 public void OnPluginStart()

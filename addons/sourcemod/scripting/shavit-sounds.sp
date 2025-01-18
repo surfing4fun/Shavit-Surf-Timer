@@ -52,10 +52,10 @@ Handle gH_OnPlaySound = null;
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Sounds",
-	author = "shavit, KiD Fearless",
+	author = "shavit, KiD Fearless, *Surf integration version modified by KikI",
 	description = "Play custom sounds when timer-related events happen for shavit surf timer.  (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)

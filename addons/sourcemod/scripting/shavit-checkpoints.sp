@@ -116,11 +116,11 @@ int gI_Offset_m_lastLadderPos = 0;
 
 public Plugin myinfo =
 {
-	name = "[shavit] Checkpoints",
-	author = "shavit, kidfearless, Nairda, GAMMA CASE, rumour, rtldg, sh4hrazad, Ciallo-Ani, OliviaMourning, Nuko, yupi2",
-	description = "Checkpoints for shavit's bhop timer.",
+	name = "[shavit-surf] Checkpoints",
+	author = "shavit, kidfearless, Nairda, GAMMA CASE, rumour, rtldg, sh4hrazad, Ciallo-Ani, OliviaMourning, Nuko, yupi2, *Surf integration version modified by KikI",
+	description = "Checkpoints for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -189,6 +189,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_tele", Command_Tele, "Teleports to a checkpoint. Usage: sm_tele [number]");
 	RegConsoleCmd("sm_prevcp", Command_PrevCheckpoint, "Selects the previous checkpoint.");
 	RegConsoleCmd("sm_teleprev", Command_PrevCheckpoint, "Selects the previous checkpoint.");
+	RegConsoleCmd("sm_nextcp", Command_NextCheckpoint, "Selects the next checkpoint.");
 	RegConsoleCmd("sm_telenext", Command_NextCheckpoint, "Selects the next checkpoint.");
 	RegConsoleCmd("sm_deletecp", Command_DeleteCheckpoint, "Deletes the current checkpoint.");
 	gH_CheckpointsCookie = RegClientCookie("shavit_checkpoints", "Checkpoints settings", CookieAccess_Protected);

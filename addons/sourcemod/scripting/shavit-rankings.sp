@@ -87,7 +87,6 @@ EngineVersion gEV_Type = Engine_Unknown;
 ArrayList gA_ValidMaps = null;
 StringMap gA_MapTiers = null;
 
-// Convar gCV_PointsPerTier = null;
 Convar gCV_BasicFinishPoints_Main = null;
 Convar gCV_BasicFinishPoints_Bonus = null;
 Convar gCV_BasicFinishPoints_Stage = null;
@@ -133,10 +132,10 @@ int gI_WRHoldersCvar;
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Rankings",
-	author = "shavit, rtldg",
+	author = "shavit, rtldg, *Surf integration version modified by KikI",
 	description = "A fair and competitive ranking system shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)

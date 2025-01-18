@@ -37,10 +37,10 @@
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Replay Recorder",
-	author = "shavit, rtldg, KiD Fearless, Ciallo-Ani, BoomShotKapow",
+	author = "shavit, rtldg, KiD Fearless, Ciallo-Ani, BoomShotKapow, *Surf integration version modified by KikI",
 	description = "A replay recorder for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 enum struct finished_run_info

@@ -274,10 +274,10 @@ ClosestPos gH_ClosestPos[STYLE_LIMIT][TRACKS_SIZE][MAX_STAGES];//[STYLE_LIMIT][T
 public Plugin myinfo =
 {
 	name = "[shavit-surf] Replay Bot",
-	author = "shavit, rtldg, carnifex, KiD Fearless",
+	author = "shavit, rtldg, carnifex, KiD Fearless, *Surf integration version modified by KikI",
 	description = "A replay bot for shavit surf timer. (This plugin is base on shavit's bhop timer)",
 	version = SHAVIT_SURF_VERSION,
-	url = "https://github.com/shavitush/bhoptimer"
+	url = "https://github.com/shavitush/bhoptimer  https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)

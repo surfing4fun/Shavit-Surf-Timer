@@ -46,7 +46,7 @@ public Plugin myinfo =
 	author = "KikI",
 	description = "Fetching top records of current maps from Surf Heaven.",
 	version = "0.0.1",
-	url = ""
+	url = "https://github.com/bhopppp/Shavit-Surf-Timer"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
