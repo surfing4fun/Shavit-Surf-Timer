@@ -206,8 +206,8 @@ public void OnClientCookiesCached(int client)
 
 	if (!GetClientCookieInt(client, gH_SpeedometerHudCookie_RefreshPreTickCookie, gI_SpeedometerHud_RefreshPreTick[client]))
 	{
-		gI_SpeedometerHud_RefreshPreTick[client] = 5;
-		SetClientCookieInt(client, gH_SpeedometerHudCookie_RefreshPreTickCookie, 5);
+		gI_SpeedometerHud_RefreshPreTick[client] = 2;
+		SetClientCookieInt(client, gH_SpeedometerHudCookie_RefreshPreTickCookie, 2);
 	}
 
 	if (!GetClientCookieInt(client, gH_SpeedometerHudCookie_SpeedDynamicColor, gI_SpeedometerHud_SpeedDynamicColor[client]))
@@ -219,32 +219,32 @@ public void OnClientCookiesCached(int client)
 	//Color Cookie
 	if (!GetClientCookieInt(client, gH_SpeedometerColorCookie_Default, gI_SpeedometerColor_Default[client]))
 	{
-		gI_SpeedometerColor_Default[client] = 1;
-		SetClientCookieInt(client, gH_SpeedometerColorCookie_Default, 1);
+		gI_SpeedometerColor_Default[client] = White;
+		SetClientCookieInt(client, gH_SpeedometerColorCookie_Default, White);
 	}
 
 	if (!GetClientCookieInt(client, gH_SpeedometerColorCookie_Increase, gI_SpeedometerColor_SpeedIncrease[client]))
 	{
-		gI_SpeedometerColor_SpeedIncrease[client] = 6;
-		SetClientCookieInt(client, gH_SpeedometerColorCookie_Increase, 6);
+		gI_SpeedometerColor_SpeedIncrease[client] = Blue;
+		SetClientCookieInt(client, gH_SpeedometerColorCookie_Increase, Blue);
 	}
 
 	if (!GetClientCookieInt(client, gH_SpeedometerColorCookie_Decrease, gI_SpeedometerColor_SpeedDecrease[client]))
 	{
-		gI_SpeedometerColor_SpeedDecrease[client] = 8;
-		SetClientCookieInt(client, gH_SpeedometerColorCookie_Decrease, 8);
+		gI_SpeedometerColor_SpeedDecrease[client] = LightRed;
+		SetClientCookieInt(client, gH_SpeedometerColorCookie_Decrease, LightRed);
 	}
 
 	if (!GetClientCookieInt(client, gH_SpeedometerColorCookie_Greater, gI_SpeedometerColor_SpeedGreater[client]))
 	{
-		gI_SpeedometerColor_SpeedGreater[client] = 6;
-		SetClientCookieInt(client, gH_SpeedometerColorCookie_Greater, 6);
+		gI_SpeedometerColor_SpeedGreater[client] = Green;
+		SetClientCookieInt(client, gH_SpeedometerColorCookie_Greater, Green);
 	}
 
 	if (!GetClientCookieInt(client, gH_SpeedometerColorCookie_Less, gI_SpeedometerColor_SpeedLess[client]))
 	{
-		gI_SpeedometerColor_SpeedLess[client] = 8;
-		SetClientCookieInt(client, gH_SpeedometerColorCookie_Less, 8);
+		gI_SpeedometerColor_SpeedLess[client] = Red;
+		SetClientCookieInt(client, gH_SpeedometerColorCookie_Less, Red);
 	}
 	//Color Cookie
 
