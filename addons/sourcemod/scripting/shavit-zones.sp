@@ -5015,7 +5015,7 @@ void CreateSpeedLimitOptionMenu(int client, int item=0)
 	menu.AddItem("reducespeed", sMenuItem);
 
 	FormatEx(sMenuItem, 64, "[%T] %T", ((gA_EditCache[client].iSpeedLimitFlags & ZSLF_NoVerticalSpeed) > 0) ? "ItemEnabled":"ItemDisabled", client, "ZoneNoVerticalSpeed", client);
-	menu.AddItem("nozverticalspeed", sMenuItem);
+	menu.AddItem("noverticalspeed", sMenuItem);
 
 	menu.ExitBackButton = true;
 	menu.ExitButton = false;
@@ -5027,8 +5027,8 @@ public int MenuHandler_SpeedLimitOption(Menu menu, MenuAction action, int param1
 {
 	if(action == MenuAction_Select)
 	{
-		char sInfo[16];
-		menu.GetItem(param2, sInfo, 16);
+		char sInfo[32];
+		menu.GetItem(param2, sInfo, 32);
 
 		if(StrEqual(sInfo, "speedlimit"))
 		{
@@ -5046,7 +5046,7 @@ public int MenuHandler_SpeedLimitOption(Menu menu, MenuAction action, int param1
 		{
 			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_ReduceSpeed;
 		}
-		else if(StrEqual(sInfo, "nozverticalspeed"))
+		else if(StrEqual(sInfo, "noverticalspeed"))
 		{
 			gA_EditCache[param1].iSpeedLimitFlags ^= ZSLF_NoVerticalSpeed;
 		}
