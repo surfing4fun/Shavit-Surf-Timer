@@ -4302,7 +4302,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	int iGroundEntity = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
 
-	if(!bNoclip && bShouldApplyLimit)
+	if(!bNoclip && bShouldApplyLimit && GetTimerStatus(client) == Timer_Running)
 	{
 		int iPrevGroundEntity = (gI_GroundEntity[client] != -1) ? EntRefToEntIndex(gI_GroundEntity[client]) : -1;
 		if (bBlockBhop && !bBlockJump && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0 )
