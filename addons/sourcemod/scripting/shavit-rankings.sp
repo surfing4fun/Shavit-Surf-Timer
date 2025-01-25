@@ -97,6 +97,7 @@ Convar gCV_BasicRankPoints_Stage = null;
 Convar gCV_MaxRankPoints_Main = null;
 Convar gCV_MaxRankPoints_Bonus = null;
 Convar gCV_MaxRankPoints_Stage = null;
+Convar gCV_ExtraFinishPointsMulitiplier = null;
 
 Convar gCV_LastLoginRecalculate = null;
 Convar gCV_MVPRankOnes_Slow = null;
@@ -105,6 +106,7 @@ Convar gCV_MVPRankOnes_Main = null;
 Convar gCV_DefaultTier = null;
 Convar gCV_DefaultMaxVelocity = null;
 Convar gCV_MinMaxVelocity = null;
+
 
 ConVar sv_maxvelocity = null;
 
@@ -186,9 +188,9 @@ public void OnPluginStart()
 	
 	//its really a great design but someone may thought there are not enough point for beat a records, so i decide to rework it :( 
 	//gCV_PointsPerTier = new Convar("shavit_rankings_pointspertier", "50.0", "Base points to use for per-tier scaling.\nRead the design idea to see how it works: https://github.com/shavitush/bhoptimer/issues/465", 0, true, 1.0);
-	gCV_BasicFinishPoints_Main = new Convar("shavit_rankings_basicfinishpoint_main", "18.33", "Basic point for player when finished main.", 0, true, 0.0, false, 0.0);
+	gCV_BasicFinishPoints_Main = new Convar("shavit_rankings_basicfinishpoint_main", "22.0", "Basic point for player when finished main.", 0, true, 0.0, false, 0.0);
 	gCV_BasicFinishPoints_Bonus = new Convar("shavit_rankings_basicfinishpoint_bonus", "35.0", "Basic point for player when finished bonus.", 0, true, 0.0, false, 0.0);
-	gCV_BasicFinishPoints_Stage = new Convar("shavit_rankings_basicfinishpoint_stage", "2.0", "Basic point for player when finished stage. (0.0 for using tier for basic point)", 0, true, 0.0, false, 0.0);
+	gCV_BasicFinishPoints_Stage = new Convar("shavit_rankings_basicfinishpoint_stage", "1.0", "Basic point for player when finished stage. (0.0 for using tier for basic point)", 0, true, 0.0, false, 0.0);
 	
 	gCV_BasicRankPoints_Main = new Convar("shavit_rankings_basicrankpoint_main", "350.0", "Max point for player's rank of main.", 0, true, 0.0, false, 0.0);
 	gCV_BasicRankPoints_Bonus = new Convar("shavit_rankings_basicrankpoint_bonus", "150.0", "Max point for player's rank of bonus.", 0, true, 0.0, false, 0.0);
@@ -198,6 +200,8 @@ public void OnPluginStart()
 	gCV_MaxRankPoints_Bonus = new Convar("shavit_rankings_maxrankpoint_bonus", "400.0", "Max point for player's rank of bonus.", 0, true, 0.0, false, 0.0);
 	gCV_MaxRankPoints_Stage = new Convar("shavit_rankings_maxrankpoint_stage", "300.0", "Max point for player's rank of stage.", 0, true, 0.0, false, 0.0);
 
+	gCV_ExtraFinishPointsMulitiplier = new Convar("shavit_rankings_extrafinishpoint_multiplier", "5.5", "YOU DONT NEED TO TOUCH THIS USUALLY\nThe mulitiplier to caculate extra finish points.\nFormula: tier * (max(0, tier-{X})**2) * basic_finsh_point", 0, true, 0.0, true, 10.0);
+
 	gCV_LastLoginRecalculate = new Convar("shavit_rankings_llrecalc", "0", "Maximum amount of time (in minutes) since last login to recalculate points for a player.\nsm_recalcall does not respect this setting.\n0 - disabled, don't filter anyone", 0, true, 0.0);
 	gCV_MVPRankOnes_Slow = new Convar("shavit_rankings_mvprankones_slow", "1", "Uses a slower but more featureful MVP counting system.\nEnables the WR Holder ranks & counts for every style & track.\nYou probably won't need to change this unless you have hundreds of thousands of player times in your database.", 0, true, 0.0, true, 1.0);
 	gCV_MVPRankOnes = new Convar("shavit_rankings_mvprankones", "2", "Set the players' amount of MVPs to the amount of #1 times they have.\n0 - Disabled\n1 - Enabled, for all styles.\n2 - Enabled, for default style only.\n(CS:S/CS:GO only)", 0, true, 0.0, true, 2.0);
@@ -205,6 +209,7 @@ public void OnPluginStart()
 	gCV_DefaultTier = new Convar("shavit_rankings_default_tier", "1", "Sets the default tier for new maps added.", 0, true, 0.0, true, 10.0);
 	gCV_DefaultMaxVelocity = new Convar("shavit_rankings_default_maxvelocity", "3500.0", "Sets the default sv_maxvelocity for new maps added.", 0, true, 0.0, false, 0.0);
 	gCV_MinMaxVelocity = new Convar("shavit_rankings_min_maxvelocity", "3499.9", "Sets the minimum sv_maxvelocity value.", 0, true, 0.0, false, 0.0);
+	
 
 	sv_maxvelocity = FindConVar("sv_maxvelocity");
 
@@ -1003,7 +1008,7 @@ void FormatRecalculate(bool bUseCurrentMap, int track, int stage, int style, cha
 		fCount = (fCount == 0.0) ? 1.0:fCount;
 		fMaxRankPoint = min(gCV_MaxRankPoints_Main.FloatValue, gCV_BasicRankPoints_Main.FloatValue + fCount * (Pow(fTier, 2.0) / max(9.0-fTier, 1.0)));
 		fBaiscFinishPoint = gCV_BasicFinishPoints_Main.FloatValue;
-		fExtraFinishPoint = fTier * Pow(max(0.0, fTier-4.0), 2.0) * fBaiscFinishPoint;
+		fExtraFinishPoint = fTier * Pow(max(0.0, fTier-gCV_ExtraFinishPointsMulitiplier.FloatValue), 2.0) * fBaiscFinishPoint;
 	}
 	else 
 	{
@@ -1064,9 +1069,9 @@ void FormatRecalculate(bool bUseCurrentMap, int track, int stage, int style, cha
 		}
 		else if(track == Track_Main)
 		{
-			FormatEx(sPointCalculate, sizeof(sPointCalculate), "%s(%f, %f + Ranked.c * (POW(Ranked.tier, 2.0) / %s((9.0 - Ranked.tier), 1.0))) / Ranked.r + ((Ranked.tier + (Ranked.tier * POW(%s(0.0, Ranked.tier - 4.0), 2.0))) * %f * %f)", 
+			FormatEx(sPointCalculate, sizeof(sPointCalculate), "%s(%f, %f + Ranked.c * (POW(Ranked.tier, 2.0) / %s((9.0 - Ranked.tier), 1.0))) / Ranked.r + ((Ranked.tier + (Ranked.tier * POW(%s(0.0, Ranked.tier - %f), 2.0))) * %f * %f)", 
 			gI_Driver == Driver_sqlite ? "MIN":"LEAST", gCV_MaxRankPoints_Main.FloatValue, gCV_BasicRankPoints_Main.FloatValue, gI_Driver == Driver_sqlite ? "MAX":"GREATEST", 
-			gI_Driver == Driver_sqlite ? "MAX":"GREATEST", fBaiscFinishPoint, fMultiplier);
+			gI_Driver == Driver_sqlite ? "MAX":"GREATEST", gCV_ExtraFinishPointsMulitiplier.FloatValue, fBaiscFinishPoint, fMultiplier);
 		}
 		else
 		{
@@ -1130,10 +1135,10 @@ public Action Command_RecalcAll(int client, int args)
 					"	COUNT(TS.map) OVER(PARTITION BY map, track, style) c, tier "...
 					"	FROM %splayertimes TS "...
 					"	JOIN %smaptiers AS MT ON TS.map = MT.map) AS Ranked ON PT.id = Ranked.id "...
-					"	SET PT.points = ( LEAST(%f, %f + Ranked.c * (POW(Ranked.tier, 2.0) / GREATEST((9.0 - Ranked.tier), 1.0))) / Ranked.r ) + (Ranked.tier * POW(GREATEST(0.0, Ranked.tier - 4.0), 2.0) + Ranked.tier) * %f * %f "...
+					"	SET PT.points = ( LEAST(%f, %f + Ranked.c * (POW(Ranked.tier, 2.0) / GREATEST((9.0 - Ranked.tier), 1.0))) / Ranked.r ) + (Ranked.tier * POW(GREATEST(0.0, Ranked.tier - %f), 2.0) + Ranked.tier) * %f * %f "...
 					"	WHERE PT.style = %d AND PT.track = 0;",
 					gS_MySQLPrefix, gS_MySQLPrefix, gS_MySQLPrefix, 
-					gCV_MaxRankPoints_Main.FloatValue, gCV_BasicRankPoints_Main.FloatValue, gCV_BasicFinishPoints_Main.FloatValue, fMultiplier, i);
+					gCV_MaxRankPoints_Main.FloatValue, gCV_BasicRankPoints_Main.FloatValue, gCV_ExtraFinishPointsMulitiplier.FloatValue, gCV_BasicFinishPoints_Main.FloatValue, fMultiplier, i);
 
 				AddQueryLog(trans, sQuery);
 
@@ -2121,7 +2126,7 @@ float Sourcepawn_GetRecordPoints(int track, int stage, int rank, float stylemult
 	{
 		fMaxRankPoint = min(gCV_MaxRankPoints_Main.FloatValue, gCV_BasicRankPoints_Main.FloatValue + fCount * (Pow(tier, 2.0) / max(9.0-tier, 1.0)));
 		fBaiscFinishPoint = gCV_BasicFinishPoints_Main.FloatValue;
-		fExtraFinishPoint = tier * Pow(max(0.0, tier-4.0), 2.0) * fBaiscFinishPoint;
+		fExtraFinishPoint = tier * Pow(max(0.0, tier-gCV_ExtraFinishPointsMulitiplier.FloatValue), 2.0) * fBaiscFinishPoint;
 	}
 	else // stage
 	{
