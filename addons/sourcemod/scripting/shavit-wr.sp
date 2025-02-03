@@ -3659,8 +3659,8 @@ public void SQL_RR_Callback(Database db, DBResultSet results, const char[] error
 		char sDisplay[192];
 		FormatEx(sDisplay, 192, "[%s/%s] %s - %s @ %s", gS_StyleStrings[iStyle].sShortName, sTrack, sMap, sName, sTime);
 
-		char sInfo[64];
-		FormatEx(sInfo, 192, "%d;%d", stage, results.FetchInt(0));
+		char sInfo[MAX_NAME_LENGTH];
+		FormatEx(sInfo, sizeof(sInfo), "%d;%d;%s", stage, results.FetchInt(0), sMap); // stage;id;map
 
 		menu.AddItem(sInfo, sDisplay);
 	}
@@ -3685,9 +3685,10 @@ public int RRMenu_Handler(Menu menu, MenuAction action, int param1, int param2)
 
 		if(StringToInt(sInfo) != -1)
 		{
-			char sExploded[2][32];
+			char sExploded[3][256];
 			ExplodeString(sInfo, ";", sExploded, 3, 256, true);
 			gI_RRMenuPos[param1] = GetMenuSelectionPosition();
+			gA_WRCache[param1].sClientMap = sExploded[2];
 			OpenSubMenu(param1, StringToInt(sExploded[1]), StringToInt(sExploded[0]));
 		}
 	}
