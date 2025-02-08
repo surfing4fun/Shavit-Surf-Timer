@@ -634,7 +634,7 @@
 	}
 	"Zone_Checkpoint"
 	{
-		"en"		"Checkpont Zone"
+		"en"		"Checkpoint Zone"
 	}
 	"Zone_NoTimerGravity"
 	{
