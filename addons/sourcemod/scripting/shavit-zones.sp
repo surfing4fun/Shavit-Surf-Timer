@@ -334,6 +334,13 @@ public void OnPluginStart()
 		RegConsoleCmd(cmd, Command_Stages, cmd[6]);
 	}
 
+	for (int i = 10; i <= MAX_STAGES; i++)
+	{
+		char cmd[30];
+		FormatEx(cmd, sizeof(cmd), "sm_s%d%cGo to stage %d", i, 0, i); // 😈
+		RegConsoleCmd(cmd, Command_Stages, cmd[7]);
+	}
+
 	// events
 	if(gEV_Type == Engine_TF2)
 	{
@@ -2714,7 +2721,7 @@ public Action Command_Stages(int client, int args)
 	}
 	else if ('0' <= sCommand[4] <= '9')
 	{
-		iStage = sCommand[4] - '0';
+		iStage = StringToInt(sCommand[4]);
 	}
 	else if (args > 0)
 	{
