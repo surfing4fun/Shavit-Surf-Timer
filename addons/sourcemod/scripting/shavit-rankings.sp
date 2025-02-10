@@ -409,7 +409,17 @@ public void SQL_FillMapSettingCache_Callback(Database db, DBResultSet results, c
 		Call_Finish();
 
 		char sQuery[512];
-		FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, tier, maxvelocity) VALUES ('%s', %d, %f);", gS_MySQLPrefix, gS_Map, gI_Tier, gCV_DefaultMaxVelocity.FloatValue);
+		
+		// in case some gA_MapTiers is not cached because of database connection issues
+		if(gI_Driver == Driver_sqlite)
+		{
+			FormatEx(sQuery, sizeof(sQuery), "INSERT OR IGNORE INTO %smaptiers (map, tier, maxvelocity) VALUES ('%s', %d, %f);", gS_MySQLPrefix, gS_Map, gI_Tier, gF_MaxVelocity);
+		}
+		else
+		{
+			FormatEx(sQuery, sizeof(sQuery), "INSERT IGNORE INTO %smaptiers (map, tier, maxvelocity) VALUES ('%s', %d, %f);", gS_MySQLPrefix, gS_Map, gI_Tier, gF_MaxVelocity);
+		}
+		
 		QueryLog(gH_SQL, SQL_SetMapTier_Callback, sQuery, 0, DBPrio_High);
 	}
 }
@@ -848,7 +858,7 @@ public Action Command_SetMaxVelocity(int client, int args)
 	Shavit_LogMessage("%L - set sv_maxvelocity of `%s` to %f", client, gS_Map, fMaxVelocity);
 
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, maxvelocity) VALUES ('%s', %f);", gS_MySQLPrefix, map, fMaxVelocity);
+	FormatEx(sQuery, sizeof(sQuery), "UPDATE %smaptiers SET maxvelocity = %f WHERE map = '%s';", gS_MySQLPrefix, fMaxVelocity, map);
 
 	QueryLog(gH_SQL, SQL_SetMapMaxVelocity_Callback, sQuery, fMaxVelocity);
 
@@ -890,12 +900,52 @@ public Action Command_SetTier(int client, int args)
 	{
 		GetCmdArg(2, map, sizeof(map));
 		TrimString(map);
-		LowercaseString(map);
 
 		if (!map[0])
 		{
 			Shavit_PrintToChat(client, "Invalid map name");
 			return Plugin_Handled;
+		}
+
+		LowercaseString(map);
+
+		Menu mapmatches = new Menu(SetMapTier_MatchesMenuHandler);
+		mapmatches.SetTitle("%T", "Choose Map", client);
+
+		int length = gA_ValidMaps.Length;
+		int iLastIndex = -1;
+		for (int i = 0; i < length; i++)
+		{
+			char entry[PLATFORM_MAX_PATH];
+			gA_ValidMaps.GetString(i, entry, PLATFORM_MAX_PATH);
+
+			if (StrContains(entry, map) != -1)
+			{
+				char sInfo[PLATFORM_MAX_PATH];
+				FormatEx(sInfo, sizeof(sInfo), "%s;%d", entry, tier);
+				mapmatches.AddItem(sInfo, entry);
+				iLastIndex = i;
+			}
+		}
+
+		switch (mapmatches.ItemCount)
+		{
+			case 0:
+			{
+				delete mapmatches;
+				Shavit_PrintToChat(client, "%t", "Map was not found", map);
+				return Plugin_Handled;
+			}
+			case 1:
+			{
+				gA_ValidMaps.GetString(iLastIndex, map, sizeof(map));
+				delete mapmatches;
+			}
+			default:
+			{
+				mapmatches.Display(client, MENU_TIME_FOREVER);
+				return Plugin_Handled;
+			}
 		}
 	}
 
@@ -906,11 +956,11 @@ public Action Command_SetTier(int client, int args)
 	Call_PushCell(tier);
 	Call_Finish();
 
-	Shavit_PrintToChat(client, "%T", "SetTier", client, gS_ChatStrings.sVariable2, tier, gS_ChatStrings.sText);
+	Shavit_PrintToChat(client, "%T", "SetTier", client, gS_ChatStrings.sVariable, map, gS_ChatStrings.sText, gS_ChatStrings.sVariable2, tier, gS_ChatStrings.sText);
 	Shavit_LogMessage("%L - set tier of `%s` to %d", client, map, tier);
 
 	char sQuery[512];
-	FormatEx(sQuery, sizeof(sQuery), "REPLACE INTO %smaptiers (map, tier) VALUES ('%s', %d);", gS_MySQLPrefix, map, tier);
+	FormatEx(sQuery, sizeof(sQuery), "UPDATE %smaptiers SET tier = %d WHERE map = '%s';", gS_MySQLPrefix, tier, map);
 
 	DataPack data = new DataPack();
 	data.WriteCell(client ? GetClientSerial(client) : 0);
@@ -920,6 +970,47 @@ public Action Command_SetTier(int client, int args)
 
 	return Plugin_Handled;
 }
+
+public int SetMapTier_MatchesMenuHandler(Menu menu, MenuAction action, int param1, int param2)
+{
+	if (action == MenuAction_Select)
+	{
+		char sInfo[PLATFORM_MAX_PATH];
+		menu.GetItem(param2, sInfo, sizeof(sInfo));
+
+		char sExploded[2][PLATFORM_MAX_PATH];
+		ExplodeString(sInfo, ";", sExploded, 2, PLATFORM_MAX_PATH);
+
+		int tier = StringToInt(sExploded[1]);
+
+		gA_MapTiers.SetValue(sExploded[0], tier);
+
+		Call_StartForward(gH_Forwards_OnTierAssigned);
+		Call_PushString(sExploded[0]);
+		Call_PushCell(tier);
+		Call_Finish();
+
+		Shavit_PrintToChat(param1, "%T", "SetTier", param1, gS_ChatStrings.sVariable, sExploded[0], gS_ChatStrings.sText, gS_ChatStrings.sVariable2, tier, gS_ChatStrings.sText);
+		Shavit_LogMessage("%L - set tier of `%s` to %d", param1, sExploded[0], tier);
+
+		char sQuery[512];
+		FormatEx(sQuery, sizeof(sQuery), "UPDATE %smaptiers SET tier = %d WHERE map = '%s';", gS_MySQLPrefix, tier, sExploded[0]);
+
+		DataPack data = new DataPack();
+		data.WriteCell(GetClientSerial(param1));
+		data.WriteString(sExploded[0]);
+
+		QueryLog(gH_SQL, SQL_SetMapTier_Callback, sQuery, data);
+	}
+	else if (action == MenuAction_End)
+	{
+		delete menu;
+	}
+
+	return 0;
+}
+
+
 
 public void SQL_SetMapTier_Callback(Database db, DBResultSet results, const char[] error, DataPack data)
 {
