@@ -130,6 +130,7 @@ Convar gCV_UseHUDFix = null;
 Convar gCV_SpecNameSymbolLength = null;
 Convar gCV_RecordNameSymbolLength = null;
 Convar gCV_BlockYouHaveSpottedHint = null;
+ConVar gCV_NoWeaponOnSpawn = null;
 Convar gCV_DefaultHUD = null;
 Convar gCV_DefaultHUD2 = null;
 
@@ -212,6 +213,7 @@ public void OnPluginStart()
 	gCV_RecordNameSymbolLength = new Convar("shavit_hud_recordnamesymbollength", "10", "Maximum player name length that should be displayed in record section", 0, true, 0.0, true, float(MAX_NAME_LENGTH));
 	gCV_SpecNameSymbolLength = new Convar("shavit_hud_specnamesymbollength", "10", "Maximum player name length that should be displayed in spectators section", 0, true, 0.0, true, float(MAX_NAME_LENGTH));
 	gCV_BlockYouHaveSpottedHint = new Convar("shavit_hud_block_spotted_hint", "1", "Blocks the hint message for spotting an enemy or friendly (which covers the center HUD)", 0, true, 0.0, true, 1.0);
+	gCV_NoWeaponOnSpawn = new Convar("shavit_hud_noweapon_onspawn", "0", "Dont give players a weapon on spawn if they dont specific weapon setting", 0, true, 0.0, true, 1.0);
 
 	char defaultHUD[8];
 	IntToString(HUD_DEFAULT, defaultHUD, 8);
@@ -1040,6 +1042,17 @@ void GivePlayerDefaultGun(int client)
 {
 	if (!(gI_HUDSettings[client] & (HUD_GLOCK|HUD_USP)))
 	{
+		if(gCV_NoWeaponOnSpawn.BoolValue)
+		{
+			int iWeapon = GetPlayerWeaponSlot(client, CS_SLOT_SECONDARY);
+			RemovePlayerItem(client, iWeapon);
+			AcceptEntityInput(iWeapon, "Kill");
+
+			int iKnife = GetPlayerWeaponSlot(client, CS_SLOT_KNIFE); 
+			RemovePlayerItem(client, iKnife);
+			AcceptEntityInput(iKnife, "Kill");
+		}
+
 		return;
 	}
 
@@ -1051,7 +1064,7 @@ void GivePlayerDefaultGun(int client)
 	{
 		strcopy(sWeapon, 32, (gEV_Type == Engine_CSS) ? "weapon_usp" : "weapon_usp_silencer");
 	}
-	else
+	else if(gI_HUDSettings[client] & HUD_GLOCK)
 	{
 		strcopy(sWeapon, 32, "weapon_glock");
 	}
