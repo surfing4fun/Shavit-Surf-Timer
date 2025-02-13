@@ -1,0 +1,119 @@
+"Phrases"
+{
+	"PaintMenuTitle"
+	{
+		"en"		"Paint Menu"
+	}
+	"PaintTips"
+	{
+		"en"		"Tips: Excute: bind <KEY> \"+paint\" in consle to bind a key to paint \n  "
+	}
+	"PaintColor"
+	{
+		"en"		"Paint Color"
+	}
+	"PaintSize"
+	{
+		"en"		"Paint Size"
+	}
+	"PaintObject"
+	{
+		"en"		"Paint Object"
+	}
+	"ObjectAll"
+	{
+		"en"		"All players"
+	}
+	"ObjectSingle"
+	{
+		"en"		"Own"
+	}
+	"PaintClear"
+	{
+		"en"		"Clear Paint"
+	}
+	"PaintCleared"
+	{
+		"en"		"Paint has been cleared."
+	}
+	"PaintColorMenuTitle"
+	{
+		"en"		"Select A Color: "
+	}
+	"PaintSizeMenuTitle"
+	{
+		"en"		"Select A Size: "
+	}
+	"PaintSizeSmall"
+	{
+		"en"		"Small"
+	}
+	"PaintSizeMedium"
+	{
+		"en"		"Medium"
+	}
+	"PaintSizeLarge"
+	{
+		"en"		"Large"
+	}
+	"PaintColorRandom"
+	{
+		"en"		"Random"
+	}
+	"PaintColorWhite"
+	{
+		"en"		"White"
+	}
+	"PaintColorBlack"
+	{
+		"en"		"Black"
+	}
+	"PaintColorBlue"
+	{
+		"en"		"Blue"
+	}
+	"PaintColorLightBlue"
+	{
+		"en"		"Light Blue"
+	}
+	"PaintColorBrown"
+	{
+		"en"		"Brown"
+	}
+	"PaintColorCyan"
+	{
+		"en"		"Cyan"
+	}
+	"PaintColorGreen"
+	{
+		"en"		"Green"
+	}
+	"PaintColorDarkGreen"
+	{
+		"en"		"Dark Green"
+	}
+	"PaintColorRed"
+	{
+		"en"		"Red"
+	}
+	"PaintColorOrange"
+	{
+		"en"		"Orange"
+	}
+	"PaintColorYellow"
+	{
+		"en"		"Yellow"
+	}
+	"PaintColorPink"
+	{
+		"en"		"Pink"
+	}
+	"PaintColorLightPink"
+	{
+		"en"		"Light Pink"
+	}
+	"PaintColorPurple"
+	{
+		"en"		"Purple"
+	}
+}
