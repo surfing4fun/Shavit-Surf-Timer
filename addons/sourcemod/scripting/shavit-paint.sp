@@ -38,12 +38,14 @@ char gS_PaintSizes[][][64] =    // Modify this to add more sizes
 
 
 int gI_Sprites[sizeof(gS_PaintColors) - 1][sizeof(gS_PaintSizes)];
+int gI_Eraser[sizeof(gS_PaintSizes)];
 
 int gI_PlayerPaintColor[MAXPLAYERS+1];
 int gI_PlayerPaintSize[MAXPLAYERS+1];
 
 float gF_LastPaint[MAXPLAYERS+1][3];
 bool gB_IsPainting[MAXPLAYERS+1];
+bool gB_ErasePaint[MAXPLAYERS+1];
 bool gB_PaintToAll[MAXPLAYERS+1];
 
 /* COOKIES */
@@ -114,6 +116,12 @@ public void OnMapStart()
 			gI_Sprites[color - 1][size] = PrecachePaint(buffer); // color - 1 because starts from [1], [0] is reserved for random
 		}
 	}
+
+	for (int size = 0; size < sizeof(gS_PaintSizes); size++)
+	{
+		Format(buffer, sizeof(buffer), "decals/paint/paint_eraser%s.vmt", gS_PaintSizes[size][1]);
+		gI_Eraser[size] = PrecachePaint(buffer); 
+	}
 }
 
 public Action Command_EnablePaint(int client, int args)
@@ -140,7 +148,7 @@ public Action Command_Paint(int client, int args)
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
-	if (cmdnum % 3 != 0)
+	if (cmdnum % 2 != 0)
 	{
 		return Plugin_Continue;
 	}
@@ -150,12 +158,19 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		static float pos[3];
 		TraceEye(client, pos);
 
-		if (GetVectorDistance(pos, gF_LastPaint[client], true) > PAINT_DISTANCE_SQ)
+		if (GetVectorDistance(pos, gF_LastPaint[client], true) > PAINT_DISTANCE_SQ) 
 		{
-			AddPaint(client, pos, gI_PlayerPaintColor[client], gI_PlayerPaintSize[client]);
-
-			gF_LastPaint[client] = pos;
+			if (gB_ErasePaint[client])
+			{
+				EracePaint(client, pos, gI_PlayerPaintSize[client]);
+			}
+			else
+			{
+				AddPaint(client, pos, gI_PlayerPaintColor[client], gI_PlayerPaintSize[client]);
+			}			
 		}
+
+		gF_LastPaint[client] = pos;
 	}
 
 	return Plugin_Continue;
@@ -168,14 +183,17 @@ void OpenPaintMenu(int client)
 	menu.SetTitle("%T\n  \n%T", "PaintMenuTitle", client, "PaintTips", client);
 
 	char sMenuItem[64];
-	FormatEx(sMenuItem, sizeof(sMenuItem), "%T", "PaintColor", client);
+	FormatEx(sMenuItem, sizeof(sMenuItem), "%T: %T", "PaintColor", client, gS_PaintColors[gI_PlayerPaintColor[client]][0], client);
 	menu.AddItem("color", sMenuItem);
 
-	FormatEx(sMenuItem, sizeof(sMenuItem), "%T", "PaintSize", client);
+	FormatEx(sMenuItem, sizeof(sMenuItem), "%T: %T", "PaintSize", client, gS_PaintSizes[gI_PlayerPaintSize[client]][0], client);
 	menu.AddItem("size", sMenuItem);
 
-	FormatEx(sMenuItem, sizeof(sMenuItem), "%T: %T", "PaintObject", client, gB_PaintToAll[client] ? "ObjectAll":"ObjectSingle", client);
+	FormatEx(sMenuItem, sizeof(sMenuItem), "%T: %T\n ", "PaintObject", client, gB_PaintToAll[client] ? "ObjectAll":"ObjectSingle", client);
 	menu.AddItem("object", sMenuItem);
+
+	FormatEx(sMenuItem, sizeof(sMenuItem), "%T: %T", "PaintEraser", client, gB_ErasePaint[client] ? "EraserOn":"EraserOff", client);
+	menu.AddItem("erase", sMenuItem);
 
 	FormatEx(sMenuItem, sizeof(sMenuItem), "%T", "PaintClear", client);
 	menu.AddItem("clear", sMenuItem);
@@ -197,6 +215,11 @@ public int PaintHelper_MenuHandler(Menu menu, MenuAction action, int param1, int
 		else if(StrEqual(sInfo, "size"))
 		{
 			OpenPaintSizeMenu(param1);
+		}
+		else if(StrEqual(sInfo, "erase"))
+		{
+			gB_ErasePaint[param1] = !gB_ErasePaint[param1];
+			OpenPaintMenu(param1);
 		}
 		else if(StrEqual(sInfo, "clear"))
 		{
@@ -334,6 +357,12 @@ void AddPaint(int client, float pos[3], int paint = 0, int size = 0)
 	{
 		TE_SendToClient(client);
 	}
+}
+
+void EracePaint(int client, float pos[3], int size = 0)
+{
+	TE_SetupWorldDecal(pos, gI_Eraser[size]);
+	TE_SendToClient(client);
 }
 
 int PrecachePaint(char[] filename)

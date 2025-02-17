@@ -20,6 +20,18 @@
 	{
 		"en"		"Paint Object"
 	}
+	"PaintEraser"
+	{	
+		"en"		"Paint Eraser"
+	}
+	"EraserOn"
+	{
+		"en"		"ON"
+	}
+	"EraserOff"
+	{
+		"en"		"OFF"
+	}
 	"ObjectAll"
 	{
 		"en"		"All players"
