@@ -338,12 +338,10 @@ public void OnPluginStart()
 	gEV_Type = GetEngineVersion();
 	gB_Protobuf = (GetUserMessageType() == UM_Protobuf);
 
-	if(gEV_Type == Engine_CSGO)
-	{
-		sv_autobunnyhopping = FindConVar("sv_autobunnyhopping");
-		sv_autobunnyhopping.BoolValue = false;
-	}
-	else if(gEV_Type != Engine_CSS && gEV_Type != Engine_TF2)
+	sv_autobunnyhopping = FindConVar("sv_autobunnyhopping");
+	if (sv_autobunnyhopping) sv_autobunnyhopping.BoolValue = false;
+
+	if (gEV_Type != Engine_CSGO && gEV_Type != Engine_CSS && gEV_Type != Engine_TF2)
 	{
 		SetFailState("This plugin was meant to be used in CS:S, CS:GO and TF2 *only*.");
 	}
@@ -3706,7 +3704,7 @@ public void Shavit_OnEnterZone(int client, int type, int track, int id, int enti
 	{
 		gF_ZoneSpeedLimit[client] = float(data);
 	}
-	else
+	else if (type != Zone_Autobhop)
 	{
 		return;
 	}
@@ -3721,7 +3719,7 @@ public void Shavit_OnLeaveZone(int client, int type, int track, int id, int enti
 		return;		
 	}
 
-	if (type != Zone_Airaccelerate && type != Zone_CustomSpeedLimit)
+	if (type != Zone_Airaccelerate && type != Zone_CustomSpeedLimit && type != Zone_Autobhop)
 	{
 		return;		
 	}
@@ -4843,7 +4841,17 @@ void UpdateStyleSettings(int client)
 {
 	if(sv_autobunnyhopping != null)
 	{
-		sv_autobunnyhopping.ReplicateToClient(client, (GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop") && gB_Auto[client])? "1":"0");
+		sv_autobunnyhopping.ReplicateToClient(client,
+			(
+				gB_Auto[client]
+				&&
+				(
+					GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")
+				    || (gB_Zones && Shavit_InsideZone(client, Zone_Autobhop, gA_Timers[client].iTimerTrack))
+				)
+			)
+			? "1":"0"
+		);
 	}
 
 	if(sv_enablebunnyhopping != null)
