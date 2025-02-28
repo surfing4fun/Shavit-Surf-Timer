@@ -1552,7 +1552,7 @@ void UpdatePointsForSinglePlayer(int client)
 
 	FormatEx(sQuery, sizeof(sQuery),
 		"UPDATE %susers SET points = (SELECT SUM(points) FROM "...
-		"(SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) PT WHERE PT.auth = %d) WHERE users.auth = %d;",
+		"(SELECT points, auth FROM %splayertimes UNION ALL SELECT points, auth FROM %sstagetimes) PT WHERE PT.auth = %d) WHERE auth = %d;",
 		gS_MySQLPrefix, gS_MySQLPrefix, gS_MySQLPrefix, auth, auth);
 
 	QueryLog(gH_SQL, SQL_UpdateAllPoints_Callback, sQuery, GetClientSerial(client));
