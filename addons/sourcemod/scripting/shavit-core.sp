@@ -582,7 +582,7 @@ void LoadDHooks()
 		SetFailState("Failed to get ProcessMovement offset");
 	}
 
-	Handle processMovement = DHookCreate(offset, HookType_Raw, ReturnType_Void, ThisPointer_Ignore, DHook_ProcessMovement);
+	Handle processMovement = DHookCreate(offset, HookType_Raw, ReturnType_Void, ThisPointer_Ignore, DHook_ProcessMovementPre);
 	DHookAddParam(processMovement, HookParamType_CBaseEntity);
 	DHookAddParam(processMovement, HookParamType_ObjectPtr);
 	DHookRaw(processMovement, false, IGameMovement);
@@ -628,6 +628,13 @@ void LoadDHooks()
 
 public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
+	if (convar == sv_autobunnyhopping)
+	{
+		if (convar.BoolValue)
+			convar.BoolValue = false;
+		return;
+	}
+
 	gB_StyleCookies = (newValue[0] != '!');
 	gI_DefaultStyle = StringToInt(newValue[1]);
 }
@@ -4013,7 +4020,7 @@ public MRESReturn DHook_AcceptInput_player_speedmod_Post(int pThis, DHookReturn 
 	return MRES_Ignored;
 }
 
-public MRESReturn DHook_ProcessMovement(Handle hParams)
+public MRESReturn DHook_ProcessMovementPre(Handle hParams)
 {
 	int client = DHookGetParam(hParams, 1);
 
@@ -4120,6 +4127,8 @@ public MRESReturn DHook_ProcessMovementPost(Handle hParams)
 	Call_PushCell(client);
 	Call_PushCell(time);
 	Call_Finish();
+
+	MaybeDoPhysicsUntouch(client);
 
 	return MRES_Ignored;
 }

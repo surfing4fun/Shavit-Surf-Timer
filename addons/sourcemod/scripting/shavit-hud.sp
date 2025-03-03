@@ -1045,12 +1045,18 @@ void GivePlayerDefaultGun(int client)
 		if(gCV_NoWeaponOnSpawn.BoolValue)
 		{
 			int iWeapon = GetPlayerWeaponSlot(client, CS_SLOT_SECONDARY);
-			RemovePlayerItem(client, iWeapon);
-			AcceptEntityInput(iWeapon, "Kill");
+			if (iWeapon != -1)
+    		{
+				RemovePlayerItem(client, iWeapon);
+				AcceptEntityInput(iWeapon, "Kill");
+			}
 
 			int iKnife = GetPlayerWeaponSlot(client, CS_SLOT_KNIFE); 
-			RemovePlayerItem(client, iKnife);
-			AcceptEntityInput(iKnife, "Kill");
+			if (iKnife != -1)
+    		{
+				RemovePlayerItem(client, iKnife);
+				AcceptEntityInput(iKnife, "Kill");
+			}
 		}
 
 		return;
