@@ -4851,14 +4851,8 @@ void UpdateStyleSettings(int client)
 	if(sv_autobunnyhopping != null)
 	{
 		sv_autobunnyhopping.ReplicateToClient(client,
-			(
-				gB_Auto[client]
-				&&
-				(
-					GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")
-				    || (gB_Zones && Shavit_InsideZone(client, Zone_Autobhop, gA_Timers[client].iTimerTrack))
-				)
-			)
+			(gB_Auto[client] && GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")) 
+			|| (gB_Zones && Shavit_InsideZone(client, Zone_Autobhop, gA_Timers[client].iTimerTrack))
 			? "1":"0"
 		);
 	}
