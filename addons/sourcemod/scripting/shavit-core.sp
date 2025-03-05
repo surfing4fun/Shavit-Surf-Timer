@@ -4848,6 +4848,8 @@ void UpdateAiraccelerate(int client, float airaccelerate)
 
 void UpdateStyleSettings(int client)
 {
+	if (IsFakeClient(client)) return;
+
 	if(sv_autobunnyhopping != null)
 	{
 		sv_autobunnyhopping.ReplicateToClient(client,
