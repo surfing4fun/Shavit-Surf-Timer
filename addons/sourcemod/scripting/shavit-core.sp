@@ -4312,7 +4312,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if(!bNoclip && bShouldApplyLimit && GetTimerStatus(client) == Timer_Running)
 	{
 		int iPrevGroundEntity = (gI_GroundEntity[client] != -1) ? EntRefToEntIndex(gI_GroundEntity[client]) : -1;
-		if (bBlockBhop && !bBlockJump && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0 )
+		if (bBlockBhop && !bBlockJump && iPrevGroundEntity == -1 && iGroundEntity != -1 && (buttons & IN_JUMP) > 0)
 		{	// block bhop
 			DumbSetVelocity(client, view_as<float>({0.0, 0.0, 0.0}));
 		}
@@ -4591,21 +4591,32 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	if (bBlockJump && (vel[2] > 0 || (buttons & IN_JUMP) > 0) && !bInWater)
 	{
+		sv_autobunnyhopping.ReplicateToClient(client, "0");
+		
+		vel[2] = 0.0;
+		buttons &= ~IN_JUMP;
+
 		if((iLastButtons & IN_JUMP) == 0 && (buttons & IN_JUMP) > 0 && bOnGround)
 		{
 			Shavit_PrintToChat(client, "%T", "NotAllowJump", client);
 		}
-
-		vel[2] = 0.0;
-		buttons &= ~IN_JUMP;
 	}
 	else if ((buttons & IN_JUMP) > 0 && mtMoveType == MOVETYPE_WALK && !bInWater)
 	{
 		if ((gB_Auto[client] && GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")) 
 		|| (gB_Zones && Shavit_InsideZone(client, Zone_Autobhop, gA_Timers[client].iTimerTrack)))
 		{	// just force autobhop enabled in autobhop zone whatever situation
-			SetEntProp(client, Prop_Data, "m_nOldButtons", (iOldButtons &= ~IN_JUMP));			
+			sv_autobunnyhopping.ReplicateToClient(client, "1");
+			SetEntProp(client, Prop_Data, "m_nOldButtons", (iOldButtons &= ~IN_JUMP));	
 		}
+		else
+		{
+			sv_autobunnyhopping.ReplicateToClient(client, "0");
+		}
+	}
+	else
+	{
+		sv_autobunnyhopping.ReplicateToClient(client, "0");
 	}
 
 	if(mtMoveType == MOVETYPE_NOCLIP)
@@ -4849,15 +4860,6 @@ void UpdateAiraccelerate(int client, float airaccelerate)
 void UpdateStyleSettings(int client)
 {
 	if (IsFakeClient(client)) return;
-
-	if(sv_autobunnyhopping != null)
-	{
-		sv_autobunnyhopping.ReplicateToClient(client,
-			(gB_Auto[client] && GetStyleSettingBool(gA_Timers[client].bsStyle, "autobhop")) 
-			|| (gB_Zones && Shavit_InsideZone(client, Zone_Autobhop, gA_Timers[client].iTimerTrack))
-			? "1":"0"
-		);
-	}
 
 	if(sv_enablebunnyhopping != null)
 	{
