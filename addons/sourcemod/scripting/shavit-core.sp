@@ -4591,15 +4591,15 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 	if (bBlockJump && (vel[2] > 0 || (buttons & IN_JUMP) > 0) && !bInWater)
 	{
-		sv_autobunnyhopping.ReplicateToClient(client, "0");
-		
-		vel[2] = 0.0;
-		buttons &= ~IN_JUMP;
-
 		if((iLastButtons & IN_JUMP) == 0 && (buttons & IN_JUMP) > 0 && bOnGround)
 		{
 			Shavit_PrintToChat(client, "%T", "NotAllowJump", client);
 		}
+
+		sv_autobunnyhopping.ReplicateToClient(client, "0");
+		
+		vel[2] = 0.0;
+		buttons &= ~IN_JUMP;
 	}
 	else if ((buttons & IN_JUMP) > 0 && mtMoveType == MOVETYPE_WALK && !bInWater)
 	{
