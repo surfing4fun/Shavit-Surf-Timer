@@ -1823,7 +1823,14 @@ void TeleportToCheckpoint(int client, int index, bool suppressMessage, int targe
 
 	gI_TimesTeleported[client]++;
 
-	if(Shavit_InsideZone(client, Zone_Start, -1))
+	int iZoneStage;
+	int iTrack = Shavit_GetClientTrack(client);
+		
+	bool bInsideStageZone = iTrack == Track_Main ? Shavit_InsideZoneStage(client, iZoneStage):false;
+	bool bInStart = Shavit_InsideZone(client, Zone_Start, iTrack) || 
+						(Shavit_IsOnlyStageMode(client) && bInsideStageZone && iZoneStage == Shavit_GetClientLastStage(client));
+
+	if(bInStart && !Shavit_IsPaused(client))
 	{
 		Shavit_StopTimer(client);
 	}

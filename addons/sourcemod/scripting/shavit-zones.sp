@@ -6448,6 +6448,11 @@ public void TouchPost(int entity, int other)
 				return;
 			}
 
+			if(Shavit_IsPaused(other))
+			{
+				return;
+			}
+
 			// start timer instantly for main track, but require bonuses to have the current timer stopped
 			// so you don't accidentally step on those while running
 			if (Shavit_GetTimerStatus(other) == Timer_Stopped || Shavit_GetClientTrack(other) != Track_Main)
