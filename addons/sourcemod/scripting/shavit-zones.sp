@@ -334,12 +334,13 @@ public void OnPluginStart()
 		RegConsoleCmd(cmd, Command_Stages, cmd[6]);
 	}
 
-	for (int i = 10; i <= MAX_STAGES; i++)
-	{
-		char cmd[30];
-		FormatEx(cmd, sizeof(cmd), "sm_s%d%cGo to stage %d", i, 0, i); // 😈
-		RegConsoleCmd(cmd, Command_Stages, cmd[7]);
-	}
+  for (int i = 10; i <= MAX_STAGES; i++)
+  {
+    char cmd[30];
+    FormatEx(cmd, sizeof(cmd), "sm_s%d%cGo to stage %d", i, 0, i); // 😈
+    int len = strlen(cmd);
+    RegConsoleCmd(cmd, Command_Stages, cmd[len - 1]);
+  }
 
 	// events
 	if(gEV_Type == Engine_TF2)

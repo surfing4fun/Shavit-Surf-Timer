@@ -1,7 +1,35 @@
 #include <sourcemod>
 #include <shavit>
 #include <SteamWorks>
+#include <sdktools>
 #include <steamworks-profileurl>
+#include <shavit/core>
+#include <shavit/hud>
+#include <shavit/steamid-stocks>
+
+// Retry count plugin :D
+int gI_RestartCounter[MAXPLAYERS+1];
+public void OnClientPutInServer(int client)
+{
+	gI_RestartCounter[client] = -2;
+}
+
+public void Shavit_OnRestart(int client, int track)
+{
+	gI_RestartCounter[client] += 1;
+}
+
+public Action Shavit_OnTopLeftHUD(int client, int target, char[] topleft, int topleftlength, int track, int style)
+{
+	if (1 <= target < MaxClients)
+	{
+		FormatEx(topleft, topleftlength, "RESTART COUNTER = %d", gI_RestartCounter[target]);
+		return Plugin_Changed;
+	}
+
+	return Plugin_Continue;
+}
+// Retry count plugin :D
 
 #pragma newdecls required
 #pragma semicolon 1
@@ -13,7 +41,14 @@ int g_iMainColor;
 int g_iBonusColor;
 int g_iStageCount;
 
+Handle g_hWRTrie;
+
+int gI_Driver = Driver_unknown;
+Database gH_SQL = null;
+
 ConVar g_cvHostname;
+ConVar g_cvHostPort;
+ConVar g_cvIpAddress;
 ConVar g_cvWebhookRecords;
 ConVar g_cvWebhookMapChange;
 ConVar g_cvBotProfilePicture;
@@ -49,11 +84,15 @@ public void OnPluginStart()
     g_cvSendOffstyleRecords = CreateConVar("shavit-discord-send-offstyle", "1", "Whether to send offstyle records or not 1 Enabled 0 Disabled");
     g_cvSendStageRecords = CreateConVar("shavit-discord-send-stage", "0", "Wheter to send a stage record or not 1 Enabled 0 Disabled");
     g_cvHostname = FindConVar("hostname");
+    g_cvIpAddress = FindConVar("ip");
+    g_cvHostPort = FindConVar("hostport");
 
     HookConVarChange(g_cvMainEmbedColor, CvarChanged);
     HookConVarChange(g_cvBonusEmbedColor, CvarChanged);
 
     UpdateColorCvars();
+
+    g_hWRTrie = CreateTrie();
 
     RegAdminCmd("sm_discordtest", CommandDiscordTest, ADMFLAG_ROOT);
     AutoExecConfig(true, "plugin.shavit-discord-steamworks");
@@ -97,9 +136,14 @@ public void OnMapStart()
     StringMap tiersMap = null;
     int tier = 0;
     g_iStageCount = Shavit_GetStageCount(Track_Main);
-	tiersMap = Shavit_GetMapTiers();
+	  tiersMap = Shavit_GetMapTiers();
     tiersMap.GetValue(g_sMapName, tier);
     Format(g_sMapTier, sizeof(g_sMapTier), "%s", tier);
+
+    gH_SQL = Shavit_GetDatabase(gI_Driver);
+    char sQuery[512];
+    FormatEx(sQuery, sizeof(sQuery), "SELECT wrs.style, wrs.track, wrs.auth, users.name, users.steamID FROM wrs LEFT JOIN users ON wrs.auth = users.auth WHERE wrs.map = '%s';", g_sMapName);
+    QueryLog(gH_SQL, SQL_GetActualWRList_Callback, sQuery, 0, DBPrio_High);
 
     // [TODO] Refactor
     char webhook[256];
@@ -126,7 +170,81 @@ public void OnMapStart()
         botAvatar,
         recordTxt);
 
-    // SendMessageRaw(jsonStr, webhook);
+    SendMessageRaw(jsonStr, webhook);
+}
+
+public void SQL_GetActualWRList_Callback(Database db, DBResultSet results, const char[] error, any data)
+{
+    if (results == null)
+    {
+        LogError("SQL query failed: %s", error);
+        return;
+    }
+
+    while (results.FetchRow())
+    {
+        int style = results.FetchInt(0);
+        int track = results.FetchInt(1);
+
+        int steamID = results.FetchInt(2);
+        // Fetch the extra 'name' field from users (assumed to be the 5th column)
+        char sName[128];
+        results.FetchString(3, sName, sizeof(sName));
+        
+        // Fetch steam id 64
+        // char sSteamID[128];
+        // results.FetchString(4, sSteamID, sizeof(sSteamID));
+
+
+        char steam64[40];
+		    AccountIDToSteamID64(steamID, steam64, sizeof(steam64));
+
+        char key[64];
+        Format(key, sizeof(key), "%d_%d", style, track);
+
+        // Combine auth and sName into one string (using a '|' as a delimiter)
+        char combinedValue[128];
+        Format(combinedValue, sizeof(combinedValue), "%s|%s", steam64, sName);
+
+        PrintToServer("%i|%s", steamID, steam64);
+        SetTrieString(g_hWRTrie, key, combinedValue);
+    }
+}
+
+void ProcessTrieEntry(const char[] key, char[] authOut, int authOutLen, char[] nameOut, int nameOutLen)
+{
+    char combinedValue[128];
+    if (!GetTrieString(g_hWRTrie, key, combinedValue, 64))
+    {
+        PrintToServer("No trie entry found for key: %s", key);
+        return;
+    }
+    
+    int pos = StrContains(combinedValue, "|", false);
+    if (pos == -1)
+    {
+        PrintToServer("Error: The trie value is not in the expected format.");
+        return;
+    }
+    
+    char authStr[40];
+    int iterate = 0;
+    for (iterate = 0; iterate < pos && iterate < sizeof(authStr)-1; iterate++)
+    {
+        authStr[iterate] = combinedValue[iterate];
+    }
+    authStr[iterate] = '\0';  // Null-terminate the string.
+
+    char nameStr[64];
+    int nameIndex = 0;
+    for (int i = pos + 1; combinedValue[i] != '\0' && nameIndex < sizeof(nameStr) - 1; i++, nameIndex++)
+    {
+        nameStr[nameIndex] = combinedValue[i];
+    }
+    nameStr[nameIndex] = '\0';
+    
+    strcopy(nameOut, nameOutLen, nameStr);
+    strcopy(authOut, authOutLen, authStr);
 }
 
 public Action CommandDiscordTest(int client, int args)
@@ -141,7 +259,6 @@ public Action CommandDiscordTest(int client, int args)
 // Listen
 public void Shavit_OnWorldRecord(int client, int style, float time, int jumps, int strafes, float sync, int track, int stage, float oldwr)
 {
-
     if (g_cvMinimumrecords.IntValue > 0 && Shavit_GetRecordAmount(style, track) < g_cvMinimumrecords.IntValue)
     {
         return;
@@ -166,15 +283,15 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
 {
     char styleMsg[512];
     Shavit_GetStyleStrings(style, sStyleName, styleMsg, sizeof(styleMsg));
-    
+
     char recordTxt[1024];
     if (track == Track_Main)
     {
-        Format(recordTxt, sizeof(recordTxt), "[T%i] __**%s**__ - **Main** - **%s**", g_sMapTier, g_sMapName, styleMsg);
+        Format(recordTxt, sizeof(recordTxt), "Tier %i · Track: Main · Style: %s · Points: [???]", g_sMapTier, styleMsg);
     }
     else
     {
-        Format(recordTxt, sizeof(recordTxt), "[T%i] __**%s**__ - **Bonus #%i** - **%s**", g_sMapTier, g_sMapName, track, styleMsg);
+        Format(recordTxt, sizeof(recordTxt), "Tier %i · Track: Bonus %i · Style: %s · Points: [???]", g_sMapTier, track, styleMsg);
     }
 
     char authId[64];
@@ -194,21 +311,42 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
         g_cvBotProfilePicture.GetString(playerProfilePicture, sizeof(playerProfilePicture));
     }
 
-    char timeFieldValue[128];
-    {
-        char tmp[64];
-        FormatSeconds(time, tmp, sizeof(tmp));
-        Format(tmp, sizeof(tmp), "%ss", tmp);
-        char oldTime[32];
-        FormatSeconds(time - oldwr, oldTime, sizeof(oldTime));
-        Format(timeFieldValue, sizeof(timeFieldValue), "%s (%ss)", tmp, oldTime);
-    }
+    char styleTrack[64];
+    Format(styleTrack, sizeof(styleTrack), "%d_%d", style, track);
+
+    // Me mama Proxychains
+    char oldWRPlayerAuth[64];
+    char oldWRPlayerName[64];
+    ProcessTrieEntry(styleTrack, oldWRPlayerAuth, sizeof(oldWRPlayerAuth), oldWRPlayerName, sizeof(oldWRPlayerName));
+    SanitizeName(oldWRPlayerName);
+
+    char oldWRPlayerUrl[512];
+    Format(oldWRPlayerUrl, sizeof(oldWRPlayerUrl), "http://www.steamcommunity.com/profiles/%s", oldWRPlayerAuth);
+
+    char newTimeStr[32];
+    FormatSeconds(time, newTimeStr, sizeof(newTimeStr));
+    Format(newTimeStr, sizeof(newTimeStr), "%ss", newTimeStr);
+
+    char oldWrTimeStr[32];
+    FormatSeconds(oldwr, oldWrTimeStr, sizeof(oldWrTimeStr));
+    Format(oldWrTimeStr, sizeof(oldWrTimeStr), "%ss", oldWrTimeStr);
+
+    float diff = time - oldwr;
+    char diffWrTimeStr[32];
+    FormatSeconds(diff, diffWrTimeStr, sizeof(diffWrTimeStr));
+    Format(diffWrTimeStr, sizeof(diffWrTimeStr), "%ss", diffWrTimeStr);
 
     char statsFieldValue[128];
-    Format(statsFieldValue, sizeof(statsFieldValue), "**Strafes**: %i  **Sync**: %.2f%%  **Jumps**: %i", strafes, sync, jumps);
+    Format(statsFieldValue, sizeof(statsFieldValue), "Strafes: %i · Sync: %.2f%% · Jumps: %i · Attempts: %i", strafes, sync, jumps, gI_RestartCounter[client]);
 
     char hostname[512];
     g_cvHostname.GetString(hostname, sizeof(hostname));
+
+    char ipAddress[512];
+    g_cvIpAddress.GetString(ipAddress, sizeof(ipAddress));
+
+    char hostPort[512];
+    g_cvHostPort.GetString(hostPort, sizeof(hostPort));
 
     char footerUrl[1024];
     g_cvFooterUrl.GetString(footerUrl, sizeof(footerUrl));
@@ -234,21 +372,28 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
 
     // Construct the final JSON string in one Format() call.
     char jsonStr[4096];
-    Format(jsonStr, sizeof(jsonStr),
-           "{\"username\":\"%s\",\"avatar_url\":\"%s\",\"embeds\":[{\"title\":\"%s\",\"color\":\"%s\",\"fields\":[{\"name\":\"Time\",\"value\":\"%s\",\"inline\":true},{\"name\":\"Stats\",\"value\":\"%s\",\"inline\":true}],\"author\":{\"name\":\"%s\",\"url\":\"%s\",\"icon_url\":\"%s\"},\"footer\":{\"text\":\"%s\",\"icon_url\":\"%s\"},\"image\":{\"url\":\"%s\"}}]}",
-           botUserName,
-           botAvatar,
-           recordTxt,
-           color,
-           timeFieldValue,
-           statsFieldValue,
-           name,
-           playerUrl,
-           playerProfilePicture,
-           hostname,
-           footerUrl,
-           mapImageUrl
-          );
+    Format(jsonStr, sizeof(jsonStr), "{\"username\":\"%s\",\"avatar_url\":\"%s\",\"embeds\":[{\"description\":\"%s\",\"color\":\"%s\",\"author\":{\"name\":\"New server record on %s!\",\"url\":\"%s\",\"icon_url\":\"%s\"},\"fields\":[{\"name\":\"Player\",\"value\":\"[%s](%s)\",\"inline\":true},{\"name\":\"Time\",\"value\":\"%s\\n*(%s)*\",\"inline\":true},{\"name\":\"Previous time\",\"value\":\"%s\\n[%s](%s)\",\"inline\":true},{\"name\":\"Run stats\",\"value\":\"%s\"}],\"image\":{\"url\":\"%s\"},\"footer\":{\"text\":\"%s  ·  steam://connect/%s:%s\",\"icon_url\":\"%s\"}}]}", 
+      botUserName, 
+      botAvatar, 
+      recordTxt, 
+      color, 
+      g_sMapName,
+      playerUrl, 
+      playerProfilePicture, 
+      name, 
+      playerUrl, 
+      newTimeStr, 
+      diffWrTimeStr,
+      oldWrTimeStr,
+      oldWRPlayerName,
+      oldWRPlayerUrl,
+      statsFieldValue,
+      mapImageUrl,
+      hostname,
+      ipAddress,
+      hostPort,
+      footerUrl
+    );
 
     // [TODO] Refactor
     char webhook[256];
