@@ -18,17 +18,6 @@ public void Shavit_OnRestart(int client, int track)
 {
 	gI_RestartCounter[client] += 1;
 }
-
-public Action Shavit_OnTopLeftHUD(int client, int target, char[] topleft, int topleftlength, int track, int style)
-{
-	if (1 <= target < MaxClients)
-	{
-		FormatEx(topleft, topleftlength, "RESTART COUNTER = %d", gI_RestartCounter[target]);
-		return Plugin_Changed;
-	}
-
-	return Plugin_Continue;
-}
 // Retry count plugin :D
 
 #pragma newdecls required
@@ -40,6 +29,8 @@ char g_sMapTier[PLATFORM_MAX_PATH];
 int g_iMainColor;
 int g_iBonusColor;
 int g_iStageCount;
+
+bool g_bHasPreviousWR;
 
 Handle g_hWRTrie;
 
@@ -92,8 +83,6 @@ public void OnPluginStart()
 
     UpdateColorCvars();
 
-    g_hWRTrie = CreateTrie();
-
     RegAdminCmd("sm_discordtest", CommandDiscordTest, ADMFLAG_ROOT);
     AutoExecConfig(true, "plugin.shavit-discord-steamworks");
 }
@@ -142,7 +131,7 @@ public void OnMapStart()
 
     gH_SQL = Shavit_GetDatabase(gI_Driver);
     char sQuery[512];
-    FormatEx(sQuery, sizeof(sQuery), "SELECT wrs.style, wrs.track, wrs.auth, users.name, users.steamID FROM wrs LEFT JOIN users ON wrs.auth = users.auth WHERE wrs.map = '%s';", g_sMapName);
+    FormatEx(sQuery, sizeof(sQuery), "SELECT wrs.style, wrs.track, wrs.auth, users.name FROM wrs LEFT JOIN users ON wrs.auth = users.auth WHERE wrs.map = '%s';", g_sMapName);
     QueryLog(gH_SQL, SQL_GetActualWRList_Callback, sQuery, 0, DBPrio_High);
 
     // [TODO] Refactor
@@ -160,6 +149,11 @@ public void OnMapStart()
     char botAvatar[1024];
     g_cvBotProfilePicture.GetString(botAvatar, sizeof(botAvatar));
 
+    g_hWRTrie = CreateTrie();
+    ClearTrie(g_hWRTrie);
+    g_hWRTrie = CreateTrie();
+    g_bHasPreviousWR = false;
+
     char recordTxt[64];
     Format(recordTxt, sizeof(recordTxt), "%s", "Teste");
     // Construct the final JSON string in one Format() call.
@@ -170,7 +164,7 @@ public void OnMapStart()
         botAvatar,
         recordTxt);
 
-    SendMessageRaw(jsonStr, webhook);
+    // SendMessageRaw(jsonStr, webhook);
 }
 
 public void SQL_GetActualWRList_Callback(Database db, DBResultSet results, const char[] error, any data)
@@ -187,14 +181,9 @@ public void SQL_GetActualWRList_Callback(Database db, DBResultSet results, const
         int track = results.FetchInt(1);
 
         int steamID = results.FetchInt(2);
-        // Fetch the extra 'name' field from users (assumed to be the 5th column)
+        
         char sName[128];
         results.FetchString(3, sName, sizeof(sName));
-        
-        // Fetch steam id 64
-        // char sSteamID[128];
-        // results.FetchString(4, sSteamID, sizeof(sSteamID));
-
 
         char steam64[40];
 		    AccountIDToSteamID64(steamID, steam64, sizeof(steam64));
@@ -203,20 +192,27 @@ public void SQL_GetActualWRList_Callback(Database db, DBResultSet results, const
         Format(key, sizeof(key), "%d_%d", style, track);
 
         // Combine auth and sName into one string (using a '|' as a delimiter)
+        // TODO: Use explode string
         char combinedValue[128];
         Format(combinedValue, sizeof(combinedValue), "%s|%s", steam64, sName);
 
-        PrintToServer("%i|%s", steamID, steam64);
+        // DEBUG
+        // PrintToServer("%i|%s", steamID, steam64);
         SetTrieString(g_hWRTrie, key, combinedValue);
     }
 }
-
-void ProcessTrieEntry(const char[] key, char[] authOut, int authOutLen, char[] nameOut, int nameOutLen)
+void ProcessAndUpdateTrieEntry(const char[] key, char[] authOut, int authOutLen, char[] nameOut, int nameOutLen, char[] name, char[] authId)
 {
+    // Update the trie with the new name and authId for future lookups.
+    char newCombined[128];
+    Format(newCombined, sizeof(newCombined), "%s|%s", authId, name);
+
     char combinedValue[128];
     if (!GetTrieString(g_hWRTrie, key, combinedValue, 64))
     {
+        SetTrieString(g_hWRTrie, key, newCombined);
         PrintToServer("No trie entry found for key: %s", key);
+        g_bHasPreviousWR = true;
         return;
     }
     
@@ -227,7 +223,7 @@ void ProcessTrieEntry(const char[] key, char[] authOut, int authOutLen, char[] n
         return;
     }
     
-    char authStr[40];
+    char authStr[40]; 
     int iterate = 0;
     for (iterate = 0; iterate < pos && iterate < sizeof(authStr)-1; iterate++)
     {
@@ -237,7 +233,7 @@ void ProcessTrieEntry(const char[] key, char[] authOut, int authOutLen, char[] n
 
     char nameStr[64];
     int nameIndex = 0;
-    for (int i = pos + 1; combinedValue[i] != '\0' && nameIndex < sizeof(nameStr) - 1; i++, nameIndex++)
+    for (int i = pos + 1; combinedValue[i] != '\0' && nameIndex < sizeof(nameStr)-1; i++, nameIndex++)
     {
         nameStr[nameIndex] = combinedValue[i];
     }
@@ -245,7 +241,11 @@ void ProcessTrieEntry(const char[] key, char[] authOut, int authOutLen, char[] n
     
     strcopy(nameOut, nameOutLen, nameStr);
     strcopy(authOut, authOutLen, authStr);
+    g_bHasPreviousWR = true;
+
+    SetTrieString(g_hWRTrie, key, newCombined);
 }
+
 
 public Action CommandDiscordTest(int client, int args)
 {
@@ -317,19 +317,24 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
     // Me mama Proxychains
     char oldWRPlayerAuth[64];
     char oldWRPlayerName[64];
-    ProcessTrieEntry(styleTrack, oldWRPlayerAuth, sizeof(oldWRPlayerAuth), oldWRPlayerName, sizeof(oldWRPlayerName));
-    SanitizeName(oldWRPlayerName);
-
     char oldWRPlayerUrl[512];
-    Format(oldWRPlayerUrl, sizeof(oldWRPlayerUrl), "http://www.steamcommunity.com/profiles/%s", oldWRPlayerAuth);
+    char oldWrTimeStr[32];
+    // if (g_bHasPreviousWR) {
+      ProcessAndUpdateTrieEntry(styleTrack, oldWRPlayerAuth, sizeof(oldWRPlayerAuth), oldWRPlayerName, sizeof(oldWRPlayerName), name, authId);
+      SanitizeName(oldWRPlayerName);
+      Format(oldWRPlayerUrl, sizeof(oldWRPlayerUrl), "http://www.steamcommunity.com/profiles/%s", oldWRPlayerAuth);
+      FormatSeconds(oldwr, oldWrTimeStr, sizeof(oldWrTimeStr));
+      Format(oldWrTimeStr, sizeof(oldWrTimeStr), "%ss", oldWrTimeStr);
+    // } else {
+    //   Format(oldWRPlayerName, sizeof(oldWRPlayerName), "");
+    //   Format(oldWRPlayerUrl, sizeof(oldWRPlayerUrl), "");
+    //   Format(oldWrTimeStr, sizeof(oldWrTimeStr), "");
+    // }
 
     char newTimeStr[32];
     FormatSeconds(time, newTimeStr, sizeof(newTimeStr));
     Format(newTimeStr, sizeof(newTimeStr), "%ss", newTimeStr);
 
-    char oldWrTimeStr[32];
-    FormatSeconds(oldwr, oldWrTimeStr, sizeof(oldWrTimeStr));
-    Format(oldWrTimeStr, sizeof(oldWrTimeStr), "%ss", oldWrTimeStr);
 
     float diff = time - oldwr;
     char diffWrTimeStr[32];
