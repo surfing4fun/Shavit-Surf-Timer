@@ -25,6 +25,7 @@ public void Shavit_OnRestart(int client, int track)
 
 char g_sMapName[PLATFORM_MAX_PATH];
 char g_sMapTier[PLATFORM_MAX_PATH];
+char g_sPublicIP[32];
 
 int g_iMainColor;
 int g_iBonusColor;
@@ -39,7 +40,6 @@ Database gH_SQL = null;
 
 ConVar g_cvHostname;
 ConVar g_cvHostPort;
-ConVar g_cvIpAddress;
 ConVar g_cvWebhookRecords;
 ConVar g_cvWebhookMapChange;
 ConVar g_cvBotProfilePicture;
@@ -75,16 +75,32 @@ public void OnPluginStart()
     g_cvSendOffstyleRecords = CreateConVar("shavit-discord-send-offstyle", "1", "Whether to send offstyle records or not 1 Enabled 0 Disabled");
     g_cvSendStageRecords = CreateConVar("shavit-discord-send-stage", "0", "Wheter to send a stage record or not 1 Enabled 0 Disabled");
     g_cvHostname = FindConVar("hostname");
-    g_cvIpAddress = FindConVar("ip");
     g_cvHostPort = FindConVar("hostport");
 
     HookConVarChange(g_cvMainEmbedColor, CvarChanged);
     HookConVarChange(g_cvBonusEmbedColor, CvarChanged);
 
+    GetPublicIP();
     UpdateColorCvars();
 
     RegAdminCmd("sm_discordtest", CommandDiscordTest, ADMFLAG_ROOT);
     AutoExecConfig(true, "plugin.shavit-discord-steamworks");
+}
+
+public void GetPublicIP()
+{
+    int ip[4];
+
+    if (SteamWorks_GetPublicIP(ip))
+    {
+        Format(g_sPublicIP, sizeof(g_sPublicIP), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+    }
+    else
+    {
+        strcopy(g_sPublicIP, sizeof(g_sPublicIP), "0.0.0.0");
+    }
+    
+    PrintToServer("Public IP: %s", g_sPublicIP);
 }
 
 public void UpdateColorCvars()
@@ -347,9 +363,6 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
     char hostname[512];
     g_cvHostname.GetString(hostname, sizeof(hostname));
 
-    char ipAddress[512];
-    g_cvIpAddress.GetString(ipAddress, sizeof(ipAddress));
-
     char hostPort[512];
     g_cvHostPort.GetString(hostPort, sizeof(hostPort));
 
@@ -395,7 +408,7 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
       statsFieldValue,
       mapImageUrl,
       hostname,
-      ipAddress,
+      g_sPublicIP,
       hostPort,
       footerUrl
     );
