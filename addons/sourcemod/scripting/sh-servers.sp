@@ -9,7 +9,7 @@
 #define MAX_SERVERS 32
 #define REFRESH_TIME 60.0
 #define CHAT_HINT_TIME 240.0
-#define API_URL "http://54.207.239.161:3000/health-check"
+#define API_URL "https://surfing4.fun/api/health-check"
 
 char g_sServerName[MAX_SERVERS][64];
 char g_sMapName[MAX_SERVERS][64];
