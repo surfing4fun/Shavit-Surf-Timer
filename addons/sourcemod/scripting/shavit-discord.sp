@@ -388,6 +388,9 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
     char botAvatar[1024];
     g_cvBotProfilePicture.GetString(botAvatar, sizeof(botAvatar));
 
+    char siteMapUrl[1024];
+    Format(siteMapUrl, sizeof(siteMapUrl), "https://www.surfing4.fun/index.php?sv=surf&m=%s&s=%i&t=%i", g_sMapName, style, track);
+
     // Construct the final JSON string in one Format() call.
     char jsonStr[4096];
     Format(jsonStr, sizeof(jsonStr), "{\"username\":\"%s\",\"avatar_url\":\"%s\",\"embeds\":[{\"description\":\"%s\",\"color\":\"%s\",\"author\":{\"name\":\"New server record on %s!\",\"url\":\"%s\",\"icon_url\":\"%s\"},\"fields\":[{\"name\":\"Player\",\"value\":\"[%s](%s)\",\"inline\":true},{\"name\":\"Time\",\"value\":\"%s\\n*(%s)*\",\"inline\":true},{\"name\":\"Previous time\",\"value\":\"%s\\n[%s](%s)\",\"inline\":true},{\"name\":\"Run stats\",\"value\":\"%s\"}],\"image\":{\"url\":\"%s\"},\"footer\":{\"text\":\"%s  ·  steam://connect/%s:%s\",\"icon_url\":\"%s\"}}]}", 
@@ -396,7 +399,7 @@ void FormatEmbedMessage(int client, int style, float time, int jumps, int strafe
       recordTxt, 
       color, 
       g_sMapName,
-      playerUrl, 
+      siteMapUrl, 
       playerProfilePicture, 
       name, 
       playerUrl, 
