@@ -209,8 +209,6 @@ void UpdateHostname()
     {
         ServerCommand("sm_cvar hostname \"[ Surfing4Fun ] Surf\"");
     }
-
-    ServerCommand("heartbeat");
 }
 
 /**
