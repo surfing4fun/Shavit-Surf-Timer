@@ -43,6 +43,9 @@
 #include <shavit/wrsh>	
 #endif
 
+#include <SteamWorks>
+#include <json>
+
 #include <DynamicChannels>
 
 #undef REQUIRE_EXTENSIONS
@@ -50,6 +53,7 @@
 
 #pragma newdecls required
 #pragma semicolon 1
+#pragma dynamic 262144
 
 #define MAX_HINT_SIZE 227
 #define HUD_PRINTCENTER 4
@@ -117,6 +121,24 @@ char gS_HintPadding[MAX_HINT_SIZE];
 bool gB_AlternateCenterKeys[MAXPLAYERS+1]; // use for css linux gamers
 
 char gS_Map[PLATFORM_MAX_PATH];
+
+// Sufing 4 Fun Globals
+bool g_bKSFLoaded = false;
+bool g_bKSFLoading = false;
+
+int g_iKSFRetryAttempts = 0;
+const int KSF_MAX_RETRIES = 150;
+const float KSF_RETRY_DELAY = 5.0;
+
+#define KSF_API_BASE "https://surfing4.fun/api/maps/"
+#define MAX_STYLES 10
+#define MAX_TRACKS 16
+
+// Top player data per [style][track]
+char g_sKSFTopName[MAX_STYLES][MAX_TRACKS][64];
+char g_sKSFTopTime[MAX_STYLES][MAX_TRACKS][16];
+
+// You must define these depending on your server setup
 
 // hud handle
 Handle gH_HUDTopleft = null;
@@ -463,6 +485,8 @@ public void OnClientPutInServer(int client)
 public void OnMapStart()
 {
 	GetLowercaseMapName(gS_Map);
+  ResetKSFData();
+  FetchKSFTopRecord();
 }
 
 public Action Timer_QueryWindowsCvar(Handle timer, any data)
@@ -2475,27 +2499,46 @@ void UpdateKeyHint(int client, bool force = false)
 
 			if ((gI_HUDSettings[client] & HUD_WRPB) > 0 && !bOnlyStageMode)
 			{
+
+
 				float fWRTime = Shavit_GetWorldRecord(style, track);
 			#if USE_WRSH
 				if(gB_WRSH)
 				{
-					float fSHWRTime = Shavit_GetSHMapRecordTime(track);
-					if(fSHWRTime > 0.0)
-					{
-						char sSHWRTime[16];
-						FormatSeconds(fSHWRTime, sSHWRTime, 16);
+					float fSHWRTime = 1.0;
+					// if(fSHWRTime > 0.0)
+					// {
+					// 	char sSHWRTime[16];
+					// 	FormatSeconds(fSHWRTime, sSHWRTime, 16);
 
-						char sSHWRName[32];
-						Shavit_GetSHMapRecordName(track, sSHWRName, 32);
+					// 	char sSHWRName[32];
+					// 	Shavit_GetSHMapRecordName(track, sSHWRName, 32);
 
-						TrimDisplayString(sSHWRName, sSHWRName, sizeof(sSHWRName), gCV_RecordNameSymbolLength.IntValue);
+					// 	TrimDisplayString(sSHWRName, sSHWRName, sizeof(sSHWRName), gCV_RecordNameSymbolLength.IntValue);
 
-						Format(sMessage, sizeof(sMessage), "%s%sSH: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sSHWRTime, sSHWRName);
-					}
-					else if(fSHWRTime == -1.0)
-					{
-						Format(sMessage, sizeof(sMessage), "%s%sSH: Loading...", sMessage, (strlen(sMessage) > 0)? "\n\n":"");
-					}
+					// 	Format(sMessage, sizeof(sMessage), "%s%sSH: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sSHWRTime, sSHWRName);
+					// }
+					// else if(fSHWRTime == -1.0)
+					// {
+					// 	Format(sMessage, sizeof(sMessage), "%s%sSH: Loading...", sMessage, (strlen(sMessage) > 0)? "\n\n":"");
+					// }
+
+          char sKSFWRName[64];
+          char sKSFWRTime[16];
+          strcopy(sKSFWRName, sizeof(sKSFWRName), g_sKSFTopName[style][track]);
+          strcopy(sKSFWRTime, sizeof(sKSFWRTime), g_sKSFTopTime[style][track]);
+
+          SanitizeHUDText(sKSFWRName, sizeof(sKSFWRName));
+          SanitizeHUDText(sKSFWRTime, sizeof(sKSFWRTime));
+
+          if (sKSFWRName[0] != '\0' && sKSFWRTime[0] != '\0')
+          {
+              Format(sMessage, sizeof(sMessage), "%s%sKSF: %s (%s)", sMessage, (strlen(sMessage) > 0)? "\n\n":"", sKSFWRTime, sKSFWRName);
+          }
+          else
+          {
+              Format(sMessage, sizeof(sMessage), "%s%sKSF: Loading...", sMessage, (strlen(sMessage) > 0)? "\n\n":"");
+          }
 
 					if (fWRTime != 0.0)
 					{
@@ -2877,4 +2920,172 @@ void PrintCSGOHUDText(int client, const char[] str)
 	pb.AddString("params", NULL_STRING);
 
 	EndMessage();
+}
+
+// Custom Surfing 4 Fun methods
+
+void FetchKSFTopRecord()
+{
+    g_bKSFLoaded = false;
+    g_bKSFLoading = true;
+    g_iKSFRetryAttempts = 0;
+
+    AttemptFetchKSF();
+}
+
+void AttemptFetchKSF()
+{
+    char url[256];
+    Format(url, sizeof(url), "%s%s", KSF_API_BASE, gS_Map);
+
+    Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, url);
+    if (request == INVALID_HANDLE)
+    {
+        PrintToServer("[KSF] Failed to create HTTP request.");
+        ScheduleRetryKSF();
+        return;
+    }
+
+    SteamWorks_SetHTTPRequestAbsoluteTimeoutMS(request, 3000);
+    SteamWorks_SetHTTPCallbacks(request, KSF_OnHTTPResponse);
+    SteamWorks_SendHTTPRequest(request);
+}
+
+public void KSF_OnHTTPResponse(Handle request, bool bFailure, bool bRequestSuccessful, EHTTPStatusCode statusCode)
+{
+    g_bKSFLoading = false;
+
+    if (bFailure || !bRequestSuccessful || statusCode != k_EHTTPStatusCode200OK)
+    {
+        PrintToServer("[KSF] HTTP request failed. Retrying...");
+        ScheduleRetryKSF();
+        return;
+    }
+
+    SteamWorks_GetHTTPResponseBodyCallback(request, KSF_OnHTTPResponseBody);
+}
+
+void ScheduleRetryKSF()
+{
+    if (g_iKSFRetryAttempts < KSF_MAX_RETRIES)
+    {
+        g_iKSFRetryAttempts++;
+        CreateTimer(KSF_RETRY_DELAY, Timer_RetryFetchKSF);
+    }
+    else
+    {
+        PrintToServer("[KSF] Max retry attempts reached. Giving up.");
+    }
+}
+
+public Action Timer_RetryFetchKSF(Handle timer)
+{
+    AttemptFetchKSF();
+    return Plugin_Stop;
+}
+
+
+public void KSF_OnHTTPResponseBody(const char[] body, any data)
+{
+    int pos = 0;
+    JSON_Object root = json_decode(body, _, pos);
+    if (root == null)
+    {
+        PrintToServer("[KSF] Failed to parse JSON.");
+        return;
+    }
+
+    JSON_Object styles = root.GetObject("styles");
+    if (styles == null)
+    {
+        PrintToServer("[KSF] styles object not found.");
+        delete root;
+        return;
+    }
+
+    // Only parse necessary styles
+    static const char sStyleNames[][] = { "forward" };
+
+    for (int style = 0; style < sizeof(sStyleNames); style++)
+    {
+        JSON_Object styleObj = styles.GetObject(sStyleNames[style]);
+        if (styleObj == null)
+        {
+            continue;
+        }
+
+        // Track 0 = mapRecords
+        JSON_Object mapRecords = styleObj.GetObject("mapRecords");
+        if (mapRecords != null && mapRecords.IsArray && mapRecords.Length > 0)
+        {
+            char index[8];
+            IntToString(0, index, sizeof(index)); // rank 1 = index 0
+            JSON_Object topRecord = mapRecords.GetObject(index);
+            if (topRecord != null)
+            {
+                topRecord.GetString("name", g_sKSFTopName[style][0], sizeof(g_sKSFTopName[][]));
+                topRecord.GetString("time", g_sKSFTopTime[style][0], sizeof(g_sKSFTopTime[][]));
+            }
+        }
+
+        // Bonus tracks (track 1, 2, 3, etc.)
+        JSON_Object bonusRecords = styleObj.GetObject("bonusesRecords");
+        if (bonusRecords != null)
+        {
+            int bonuses = bonusRecords.Length;
+            for (int bonusId = 1; bonusId <= bonuses; bonusId++)
+            {
+                char bonusKey[8];
+                IntToString(bonusId, bonusKey, sizeof(bonusKey));
+
+                JSON_Object bonusArray = bonusRecords.GetObject(bonusKey);
+                if (bonusArray != null && bonusArray.IsArray && bonusArray.Length > 0)
+                {
+                    char index[8];
+                    IntToString(0, index, sizeof(index));
+                    JSON_Object topBonus = bonusArray.GetObject(index);
+                    if (topBonus != null)
+                    {
+                        int track = bonusId; // track = bonusId
+                        topBonus.GetString("name", g_sKSFTopName[style][track], sizeof(g_sKSFTopName[][]));
+                        topBonus.GetString("time", g_sKSFTopTime[style][track], sizeof(g_sKSFTopTime[][]));
+                    }
+                }
+            }
+        }
+    }
+
+    g_bKSFLoading = false;
+    g_bKSFLoaded = true;
+
+    PrintToServer("[KSF] Top 1s fetched successfully.");
+
+    delete root;
+}
+
+
+void SanitizeHUDText(char[] str, int maxlen)
+{
+    for (int i = 0; i < maxlen && str[i] != '\0'; i++)
+    {
+        if (str[i] < 32 || str[i] > 126)
+        {
+            str[i] = '?';
+        }
+    }
+}
+
+public void ResetKSFData()
+{
+    g_bKSFLoading = true;
+    g_bKSFLoaded = false;
+
+    for (int style = 0; style < MAX_STYLES; style++)
+    {
+        for (int track = 0; track < MAX_TRACKS; track++)
+        {
+            g_sKSFTopName[style][track][0] = '\0';
+            g_sKSFTopTime[style][track][0] = '\0';
+        }
+    }
 }
