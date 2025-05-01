@@ -6,6 +6,7 @@
 
 Database g_db = null;
 ConVar g_cvAutoBhop;
+ConVar g_cvEnableBhop;
 char g_sMapName[PLATFORM_MAX_PATH];
 
 public Plugin myinfo =
@@ -20,6 +21,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
     g_cvAutoBhop = FindConVar("sv_autobunnyhopping");
+    g_cvEnableBhop = FindConVar("sv_enablebunnyhopping");
 
     char error[256];
     g_db = SQL_Connect("default", true, error, sizeof(error));
@@ -75,6 +77,7 @@ public void OnBhopQueryResult(Database db, DBResultSet results, const char[] err
 
     int enabled = results.FetchInt(0);
     g_cvAutoBhop.SetBool(enabled != 0);
+    g_cvEnableBhop.SetBool(enabled != 0);
 
     PrintToServer("[autobhop_enabler] sv_autobunnyhopping set to %d for map: %s", enabled, g_sMapName);
 }
@@ -107,6 +110,7 @@ public Action Command_SetAutoBhop(int client, int args)
     }
 
     g_cvAutoBhop.SetBool(newValue != 0);
+    g_cvEnableBhop.SetBool(newValue != 0);
 
     PrintToChatAll("[autobhop_enabler] %N toggled autobhop to %d on map %s.", client, newValue, g_sMapName);
     return Plugin_Handled;

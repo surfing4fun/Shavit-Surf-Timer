@@ -2957,7 +2957,7 @@ public void KSF_OnHTTPResponse(Handle request, bool bFailure, bool bRequestSucce
 
     if (bFailure || !bRequestSuccessful || statusCode != k_EHTTPStatusCode200OK)
     {
-        PrintToServer("[KSF] HTTP request failed. Retrying...");
+        // PrintToServer("[KSF] HTTP request failed. Retrying...");
         ScheduleRetryKSF();
         return;
     }
