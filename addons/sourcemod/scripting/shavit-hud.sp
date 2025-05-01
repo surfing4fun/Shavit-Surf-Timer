@@ -130,7 +130,7 @@ int g_iKSFRetryAttempts = 0;
 const int KSF_MAX_RETRIES = 150;
 const float KSF_RETRY_DELAY = 5.0;
 
-#define KSF_API_BASE "https://surfing4.fun/api/maps/"
+#define KSF_API_BASE "https://api.surfing4.fun/ksf-scraper/"
 #define MAX_STYLES 10
 #define MAX_TRACKS 16
 
