@@ -16,6 +16,7 @@ char g_sMapName[MAX_SERVERS][64];
 char g_sPlayers[MAX_SERVERS][16];
 char g_sAddress[MAX_SERVERS][32];
 int  g_iServerCount;
+bool g_bFetching = false;
 
 public Plugin myinfo = {
     name = "Server Hop (API)",
@@ -54,12 +55,22 @@ public Action Timer_ChatHint(Handle timer, any data)
 
 void FetchServerList()
 {
+    if (g_bFetching)
+    {
+        PrintToServer("[ServerHop] Fetch already in progress.");
+        return;
+    }
+
+    g_bFetching = true;
+
     Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, API_URL);
     if (request == INVALID_HANDLE)
     {
         PrintToServer("[ServerHop] Failed to create HTTP request.");
+        g_bFetching = false;
         return;
     }
+
     SteamWorks_SetHTTPRequestAbsoluteTimeoutMS(request, 5000);
     SteamWorks_SetHTTPCallbacks(request, OnHTTPResponse);
     SteamWorks_SendHTTPRequest(request);
@@ -69,6 +80,7 @@ public void OnHTTPResponse(Handle request, bool bFailure, bool bRequestSuccessfu
 {
     if (bFailure || !bRequestSuccessful || statusCode != k_EHTTPStatusCode200OK)
     {
+        g_bFetching = false;
         return;
     }
 
@@ -79,12 +91,17 @@ public void OnHTTPResponseBody(const char[] body, any data)
 {
     int pos = 0;
     JSON_Object root = json_decode(body, _, pos);
-    if (root == null) return;
+    if (root == null)
+    {
+        g_bFetching = false;
+        return;
+    }
 
     JSON_Object servers = root.GetObject("servers");
     if (servers == null || !servers.IsArray)
     {
         delete root;
+        g_bFetching = false;
         return;
     }
 
@@ -98,7 +115,10 @@ public void OnHTTPResponseBody(const char[] body, any data)
         JSON_Object entry = servers.GetObject(indexKey);
         if (entry == null) continue;
 
-        char name[64], map[64], players[16], address[32];
+        if (!entry.HasKey("name") || !entry.HasKey("map") || !entry.HasKey("players") || !entry.HasKey("address"))
+            continue;
+
+        char name[64] = "", map[64] = "", players[16] = "", address[32] = "";
         entry.GetString("name",    name,    sizeof(name));
         entry.GetString("map",     map,     sizeof(map));
         entry.GetString("players", players, sizeof(players));
@@ -113,12 +133,14 @@ public void OnHTTPResponseBody(const char[] body, any data)
     }
 
     delete root;
+    g_bFetching = false;
 }
 
 public Action Command_Servers(int client, int args)
 {
-    if (g_iServerCount == 0)
+    if (g_bFetching || g_iServerCount == 0)
     {
+        PrintToChat(client, "\x04[ServerHop]\x01 Lista de servidores ainda não está disponível. Tente novamente em alguns segundos.");
         return Plugin_Handled;
     }
 
@@ -128,7 +150,7 @@ public Action Command_Servers(int client, int args)
     char display[256], key[8];
     for (int i = 0; i < g_iServerCount; i++)
     {
-        Format(display, sizeof(display),"[%s] %s\n Map: %s",
+        Format(display, sizeof(display),"[%s] %s\nMap: %s",
                g_sPlayers[i],
                g_sServerName[i],
                g_sMapName[i]
@@ -148,12 +170,22 @@ public int MenuHandler(Menu menu, MenuAction action, int client, int item)
         char key[4];
         menu.GetItem(item, key, sizeof(key));
         int idx = StringToInt(key);
+
+        if (idx < 0 || idx >= g_iServerCount)
+        {
+            PrintToChat(client, "[ServerHop] Servidor inválido.");
+            return 0;
+        }
+
         char cmd[80];
         Format(cmd, sizeof(cmd), "redirect %s", g_sAddress[idx]);
         ClientCommand(client, cmd);
         PrintToServer("[ServerHop] Redirecting client %N to %s", client, g_sAddress[idx]);
     }
+    else if (action == MenuAction_End)
+    {
+        delete menu; // Only safe here
+    }
 
-    delete menu;
     return 0;
 }
